@@ -352,3 +352,8 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 .large-science #entry-wrap,.ph-answer #entry-wrap{font-size:inherit;}
 
 #deck-progress{font:14px ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center;}#deck-progress-label{margin:0 0 12px;}
+
+.answer-footer{position:fixed;left:24px;right:24px;bottom:24px;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.answer-footer #casino-progress{flex:1;min-width:0;max-width:420px;margin:0;padding:12px 0;background:var(--paper);text-align:left;}
+#game-screen .answer-footer #feedback{position:static;flex:none;max-width:45%;}
+@media(max-width:600px){.answer-footer{left:16px;right:16px;bottom:16px;gap:12px;}.answer-footer #casino-progress{font-size:13px;}#game-screen .answer-footer #feedback{font-size:14px;padding:10px 12px;}}

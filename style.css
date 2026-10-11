@@ -340,7 +340,7 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 
 #casino-progress{width:min(100%,420px);margin:0 auto 12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:14px;text-align:center;}#casino-progress label{display:block;margin-bottom:6px;}#casino-progress-bar{display:block;width:100%;height:14px;accent-color:var(--ink);background:var(--paper);border:1px solid var(--ink);}#casino-progress-bar::-webkit-progress-bar{background:var(--paper);}#casino-progress-bar::-webkit-progress-value{background:var(--ink);}#casino-progress-bar::-moz-progress-bar{background:var(--ink);}
 
-.roulette-payouts{padding-left:1.5em;line-height:1.6;color:var(--muted);}
+.roulette-payouts{list-style:none;padding-left:0;line-height:1.6;color:var(--muted);}
 
 .roulette-wheel-column{min-width:0;}
 

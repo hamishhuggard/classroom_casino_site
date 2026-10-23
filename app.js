@@ -59,7 +59,9 @@ let musicTimer,musicStep=0,musicEffectPause=false;
 const musicVoices=new Set();
 let selectedUnit='electricity_magnetism';
 let returnToPreferences=false;
-const menuIds=['start-game','menu-leaderboard','menu-settings','finish-run'];
+const menuIds=['start-game','menu-leaderboard','menu-settings','menu-class','finish-run'];
+// Question numbers are a debugging aid: shown only with ?show_number=true.
+const showNumber=new URLSearchParams(location.search).get('show_number')==='true';
 function questionNumber(){
   if(!current?.source?.id)return '';
   if(current.source.questionNumber)return current.source.questionNumber;
@@ -68,11 +70,11 @@ function questionNumber(){
   const index=items.findIndex(item=>item.id===current.source.id);return index>=0?index+1:'';
 }
 function renderCasinoProgress(){const target=rouletteTarget;const progress=$('casino-progress');progress.hidden=!activeRun||!$('roulette-enabled').checked;$('casino-progress-bar').max=target;$('casino-progress-bar').value=rouletteCorrectCount;$('casino-progress-label').textContent=`${Math.max(0,target-rouletteCorrectCount)} questions until you can gamble`; }
-function hud(){$('casino-score').textContent=`$${score}`;renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEVEL ${position+1}${questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
+function hud(){$('casino-score').textContent=`$${score}`;renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEVEL ${position+1}${showNumber&&questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
 function renderDeckProgress(){const box=$('deck-progress');box.hidden=!activeRun||!reviewDeck;if(!reviewDeck)return;const progress=reviewDeck.progress;$('deck-progress-label').textContent=`LEVEL ${progress.position+1} · ${progress.seen}/${progress.total} new questions attempted · ${progress.pending} awaiting review${currentReview?.review?' · REVIEW '+(currentReview.stage+1)+'/3 (LEVEL '+(enabled.indexOf(questionLevel)+1)+')':''}`;}
-function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new ReviewDeck(enabled.map(index=>({index,cards:levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4').map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))})));}
-function makeRevisionQuestion(base,mixed){const item=mixed&&typeof CasinoPractice!=='undefined'?CasinoPractice.generate(base):base;return q(item.cloze||item.prompt,item.answer,{kind:'revision',aliases:item.aliases||[],caseSensitive:!!item.caseSensitive||/chemical symbol|formula|base pairs|neutral formula|genotype =/.test(item.prompt),worked:item.explanation,source:item});}
-function finishDeck(){stop();currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
+function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new (globalThis.CasinoDiagnostic?.deckFor(selectedUnit)||ReviewDeck)(enabled.map(index=>({index,cards:levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4').map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))})));}
+function makeRevisionQuestion(base,mixed){const item=typeof base.gen==='function'?Physics12.generate(base):mixed&&typeof CasinoPractice!=='undefined'?CasinoPractice.generate(base):base;return q(item.cloze||item.prompt,item.answer,{kind:'revision',aliases:item.aliases||[],caseSensitive:!!item.caseSensitive||/chemical symbol|formula|base pairs|neutral formula|genotype =/.test(item.prompt),worked:item.explanation,source:item});}
+function finishDeck(){stop();if(globalThis.CasinoDiagnostic?.finish(selectedUnit))return;currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
 function stop(){clearInterval(timer);clearTimeout(beepTimer);$('clock').textContent='';}
 function focus(){setTimeout(()=>{if(screen==='game'&&!$('rule-dialog').open&&!$('settings-dialog').open&&!$('preferences-dialog').open&&!$('roulette-dialog').open&&!$('chapter-dialog').open&&!$('skill-dialog').open)answerFocusTarget().focus();},0);}
 function startTimer(reset=true){stop();if(screen!=='game'||!activeRun||$('rule-dialog').open||$('settings-dialog').open||$('chapter-dialog').open||$('preferences-dialog').open||$('skill-dialog').open||$('roulette-dialog').open||!$('timed').checked)return;if(reset)seconds=30;$('clock').textContent=`${seconds}s`;timer=setInterval(()=>{seconds--;$('clock').textContent=`${seconds}s`;if(seconds<=0)fail(true);},1000);scheduleBeep();}
@@ -165,7 +167,7 @@ function circuitRules(index){
 function questionInstruction(){
   const type=current.source?.visual?.type;
   const instructions={punnett:current.source?.fields?'Fill in the Punnett square:':current.source?.id==='G3'?'Fill in the missing genotype in the Punnett square:':'Use the Punnett square to complete the statement:',graph:'Use the distance–time graph to find the speed:',weight:'Calculate the weight:',journey:'Calculate the average speed:',forces:'Use the forces shown to complete the statement:',reaction:'Complete the reaction:',circuit:'Find the missing current or voltage:',atom:'Use the isotope cell to complete the statement:',shells:'Complete the electron arrangement:',particle:'State the particle’s charge:'};
-  return `${questionNumber()||questionLevel+1}) ${instructions[type]||'Complete the statement:'}`;
+  return `${showNumber?(questionNumber()||questionLevel+1)+') ':''}${instructions[type]||'Complete the statement:'}`;
 }
 function render(){
   const reminder=$('unit-reminder');reminder.hidden=true;reminder.classList.remove('unit-missing');$('game-screen').appendChild(reminder);
@@ -174,7 +176,7 @@ function render(){
   $('game-screen').classList.toggle('large-circuit-question',current.source?.visual?.type==='circuit');
   $('answer-suffix').hidden=true;$('game-screen').classList.toggle('statement-question',simple);$('game-screen').classList.toggle('cloze-question',true);
   $('prompt').textContent=questionInstruction();$('prompt').classList.toggle('sr-only',false);
-  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div class="choice-question">${scienceMarkup(current.prompt.replace(/____/g,'…'))}</div><div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
+  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(current.prompt.replace(/____/g,'…')).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
   else if(current.kind==='revision'&&current.source?.visual?.type==='circuit')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,answerMarkup:clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='F2')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true})}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='punnett')$('diagram').innerHTML=`<div class="cloze-game punnett-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,fields:current.source.fields,answerMarkup:current.source.id==='G3'||current.source.fields?'':clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
@@ -183,6 +185,7 @@ function render(){
   else if(current.kind==='revision'&&current.source?.id==='G4')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div>Natural selection depends on</div><div class="large-science">survival</div><div>and</div><div class="large-science"><span id="cloze-answer-slot"></span></div></div>`;
   else if(current.kind==='revision'&&current.source?.id==='G1')$('diagram').innerHTML=`<div class="cloze-game">${casinoDiagram({...current.source.visual,answerMarkup:clozeSentence('This section of DNA is a ____','<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&['L2-1','L2-3','L2-11'].includes(current.source?.id))$('diagram').innerHTML=`<div class="cloze-game">${revisionVisual(current)}${clozeSentence({'G1':'This section of DNA is a ____','L2-1':'electrons = ____','L2-3':'formula = ____','L2-11':'v = ____'}[current.source.id],'<span id="cloze-answer-slot"></span>')}</div>`;
+  else if(current.kind==='revision'&&current.source?.phys)$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}${clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.recall)$('diagram').innerHTML=`<div class="cloze-game recall-cloze">${clozeSentence(current.prompt,'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='G2')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div>The genotype</div><div class="large-science">${scienceMarkup(current.source.visual.alleles)}</div><div>is</div><div class="large-science"><span id="cloze-answer-slot"></span></div></div>`;
   else if(current.kind==='revision'&&current.source?.id==='A3')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div class="large-science">${scienceMarkup(current.source.visual.label)}</div><div>forms by</div><div class="large-science"><span id="cloze-answer-slot"></span></div><div>electrons</div></div>`;
@@ -220,6 +223,7 @@ function expectedAnswerUnit(question){
 function renderAnswerHint(){$('feedback').innerHTML=escapeMarkup(answerHint()).replace(/\s*ENTER/g,'<strong class="enter-key">ENTER</strong>');}
 function answerHint(){return 'type an answer and press ENTER';}
 function matches(value){
+  if(current.source?.phys&&current.source.numeric)return Physics12.checkNumeric(current.source,value)==='ok';
   if(['positive','negative'].includes(current.answer)){const signs={positive:['positive','+','+ve'],negative:['negative','-','-ve']};if(signs[current.answer].includes(scientificInput(value).toLowerCase()))return true;}
   if(current.source?.fields){const expected=current.answer.split(','),parts=scientificInput(value).split(',').map(x=>x.trim());return parts.length===expected.length&&parts.every((x,i)=>current.caseSensitive?x===expected[i]:normalize(x)===normalize(expected[i]));}
   if(/^\d+(?:,\d+)+$/.test(current.answer)){const input=scientificInput(value);if(!/^[\d\s\p{P}]+$/u.test(input))return false;const parts=input.match(/\d+/g)||[],expected=current.answer.split(',');return parts.length===expected.length&&parts.every((part,i)=>Number(part)===Number(expected[i]));}
@@ -234,7 +238,7 @@ function matches(value){
   return [current.answer,...(current.aliases||[])].some(a=>/^[A-Z][A-Za-z]*[0-9₂₃₄]/.test(a)?scientificInput(a)===scientificInput(value).replace(/[.,!?;]+$/,''):normalize(a)===normalize(value));
 }
 
-function fail(timeout=false){playEffect('wrong');stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`,timeout?'Time’s up':'Try again');}
+function fail(timeout=false){playEffect('wrong');globalThis.CasinoResults?.record(false);stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`,timeout?'Time’s up':'Try again');}
 let correctFlashTimer;
 function flashCorrect(){
   clearTimeout(correctFlashTimer);$('answer-result').innerHTML=`<span class="submitted-answer">${scienceMarkup($('answer').value)}</span><span class="answer-mark" aria-label="Correct">✓</span>`;renderAnswerHint();
@@ -244,18 +248,19 @@ function flashCorrect(){
 function completedLevel(completed,advance){if(advance)position++;next();}
 $('answer-form').addEventListener('submit',e=>{
   e.preventDefault();if($('roulette-dialog').open)return;
-  if(expectedAnswerUnit(current)&&/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)\s*[.!?;]*$/.test(scientificInput($('answer').value))){
+  if(current.source?.phys&&current.source.numeric?Physics12.checkNumeric(current.source,$('answer').value)==='nounit':expectedAnswerUnit(current)&&/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)\s*[.!?;]*$/.test(scientificInput($('answer').value))){
     clearTimeout(correctFlashTimer);renderAnswerHint();
     const reminder=$('unit-reminder');reminder.hidden=false;reminder.classList.remove('unit-missing');void reminder.offsetWidth;reminder.classList.add('unit-missing');focus();return;
   }
   $('unit-reminder').hidden=true;
   if(!matches($('answer').value)){fail();return;}
+  globalThis.CasinoResults?.record(true);
   playEffect('correct');flashCorrect();stop();score+=attempts?5:10;correct++;wrong=0;rouletteCorrectCount++;hud();
   if(reviewDeck)reviewDeck.answer(true);
   const levelFinished=!reviewDeck&&correct===(levels[questionLevel].correctTarget||3),completed=questionLevel,advance=position<enabled.length-1;
   if(levelFinished){correct=0;needsLevelCard=false;}
   const proceed=()=>{if(levelFinished)completedLevel(completed,advance);else{next();if(needsLevelCard){needsLevelCard=false;showRule();}}};
-  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0){rouletteTarget=10;hud();openRoulette(proceed);return;}hud();}
+  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0&&!globalThis.CasinoDiagnostic?.owns(selectedUnit)){rouletteTarget=10;hud();openRoulette(proceed);return;}hud();}
   proceed();
 });
 $('continue').addEventListener('click',()=>{if($('continue').textContent==='Start ↵')playEffect('level');});
@@ -621,7 +626,11 @@ $('skill-rows').addEventListener('click',event=>{const button=event.target.close
 
 // Year 10 units share the original answer, retry, score and roulette loop.
 const circuitLevelCount=levels.length;
-const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT]);
+const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit()],typeof DIAGNOSTIC_UNIT==='undefined'?[]:[DIAGNOSTIC_UNIT]);
+// Classes: each unit belongs to one. URL: ?class=yr12 (or yr10); ?unit=… still works and implies its class.
+const CLASSES=[{id:'yr10',name:'YEAR 10',defaultUnit:'electricity_magnetism'},{id:'yr12',name:'YEAR 12',defaultUnit:'yr12_physics'}];
+const unitClass=id=>id==='yr12_physics'||id==='yr12_diagnostic'?'yr12':'yr10';
+let selectedClass='yr10';const lastUnitForClass={};
 function mixedQuestionPicker(questions){
   // E4 (core comparison) disabled pending a clearer question. Retain its source for revision.
   questions=questions.filter(item=>item.id!=='E4');
@@ -646,12 +655,12 @@ for(const unit of curriculumUnits){
   }
 }
 function renderSkillChoices(){
-  const choices=curriculumUnits.concat([{id:'circuit_extension',name:'Circuit calculations — original extension ladder'}]);
+  const choices=curriculumUnits.concat([{id:'circuit_extension',name:'Circuit calculations — original extension ladder'}]).filter(unit=>unitClass(unit.id)===selectedClass);
   $('skill-rows').innerHTML=choices.map((unit,i)=>`<button type="button" data-unit="${unit.id}" aria-pressed="${unit.id===selectedUnit}"><span class="skill-rank">${String(i+1).padStart(2,'0')}</span><span>${escapeMarkup(unit.name)}</span><span class="skill-selected">${unit.id===selectedUnit?'SELECTED':''}</span></button>`).join('');
 }
 function chooseUnit(id){
   if($('roulette-dialog').open)return;
-  saveRun();reviewDeck=null;currentReview=null;advanceAfterCorrection=false;selectedUnit=id;position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;needsLevelCard=false;lastQuestionKey=null;
+  saveRun();reviewDeck=null;currentReview=null;advanceAfterCorrection=false;selectedUnit=id;selectedClass=unitClass(id);lastUnitForClass[selectedClass]=id;syncClassUi();position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;needsLevelCard=false;lastQuestionKey=null;
   const unit=curriculumUnits.find(u=>u.id===id);
   $('calculations').hidden=!!unit?.mixed;
   enabled=levels.map((l,i)=>({l,i})).filter(({l,i})=>id==='circuit_extension'?i<circuitLevelCount:l.unit===id).map(({i})=>i);
@@ -660,8 +669,21 @@ function chooseUnit(id){
   if(enabled.length){current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;}
   hud();showMenu();
 }
+function syncClassUi(){
+  const cls=CLASSES.find(c=>c.id===selectedClass);$('class').value=selectedClass;$('menu-class').textContent='CLASS: '+cls.name;
+  try{const params=new URLSearchParams(location.search);params.set('class',selectedClass);if(selectedUnit===cls.defaultUnit)params.delete('unit');else params.set('unit',selectedUnit);history.replaceState(null,'','?'+params);}catch{}
+  syncSettingChoices?.();
+}
+function chooseClass(id){if(id===selectedClass||!CLASSES.some(c=>c.id===id))return;chooseUnit(lastUnitForClass[id]||CLASSES.find(c=>c.id===id).defaultUnit);}
+$('class').onchange=()=>chooseClass($('class').value);
+$('menu-class').onclick=()=>{chooseClass(CLASSES[(CLASSES.findIndex(c=>c.id===selectedClass)+1)%CLASSES.length].id);selectMenu(menuIds.indexOf('menu-class'));};
 if(curriculumUnits.length){
-  const requestedUnit=new URLSearchParams(location.search).get('unit');if(curriculumUnits.some(u=>u.id===requestedUnit)||requestedUnit==='circuit_extension')selectedUnit=requestedUnit;
+  const params=new URLSearchParams(location.search),requestedUnit=params.get('unit'),requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12'})[String(params.get('class')||'').toLowerCase()];
+  const validUnit=curriculumUnits.some(u=>u.id===requestedUnit)||requestedUnit==='circuit_extension';
+  if(requestedClass)selectedClass=requestedClass;
+  if(validUnit&&(!requestedClass||unitClass(requestedUnit)===requestedClass))selectedUnit=requestedUnit;
+  else if(requestedClass)selectedUnit=CLASSES.find(c=>c.id===requestedClass).defaultUnit;
+  if(!curriculumUnits.some(u=>u.id===selectedUnit)&&selectedUnit!=='circuit_extension')selectedUnit=curriculumUnits[0].id;
   chooseUnit(selectedUnit);
 }
 
@@ -712,7 +734,7 @@ function scienceSvgMarkup(text){
   const subs='₀₁₂₃₄₅₆₇₈₉',supers='⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻';
   return escapeMarkup(scienceText(text)).replace(/[₀₁₂₃₄₅₆₇₈₉]+/g,run=>'<tspan baseline-shift="sub" font-size="65%">'+[...run].map(c=>subs.indexOf(c)).join('')+'</tspan>').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+/g,run=>'<tspan baseline-shift="super" font-size="65%">'+[...run].map(c=>c==='⁺'?'+':c==='⁻'?'−':supers.indexOf(c)).join('')+'</tspan>');
 }
-function scienceMarkup(text){return escapeMarkup(scienceText(text)).replace(/\b([VRI])(lamp|supply|total)\b/g,'$1<sub>$2</sub>');}
+function scienceMarkup(text){return escapeMarkup(scienceText(text)).replace(/\b([A-Za-z])_([A-Za-z]{1,2}|\d)\b/g,'$1<sub>$2</sub>').replace(/\b([VRI])(lamp|supply|total)\b/g,'$1<sub>$2</sub>');}
 function revisionVisual(question){
   const item=question.source;if(!item)return '';if(item.visual&&typeof casinoDiagram==='function')return casinoDiagram(item.visual);const key=item.id||'',prompt=item.cloze||item.prompt;
   const svg=(body,label,view='0 0 600 230')=>`<svg class="revision-visual" viewBox="${view}" role="img" aria-label="${label}">${body}</svg>`;

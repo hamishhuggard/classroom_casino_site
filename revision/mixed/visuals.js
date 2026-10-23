@@ -8,6 +8,7 @@ function casinoDiagram(data){
  const svg=(body,label,view='0 0 640 260')=>`<svg class="revision-visual" viewBox="${view}" role="img" aria-label="${e(label)}"><title>${e(label)}</title>${body}</svg>`;
  switch(data.type){
   case 'recall':return ''; 
+  case 'svg':return data.svg||'';
   case 'atom':return svg(box(230,15,180,220)+text(247,52,data.z,26,'start')+text(320,125,data.symbol+(data.ionCharge||''),62)+text(320,165,data.name,21)+text(320,201,data.a,30)+text(320,226,'Isotope mass number',13),'Periodic-table-style isotope cell; top number is atomic number');
   case 'shells':if(data.shellInputs)return svg(Array.from({length:data.count},(_,i)=>`<circle cx="360" cy="220" r="${40+i*45}" fill="none" stroke="currentColor" stroke-width="2"/><foreignObject x="338" y="${220-(40+i*45)-18}" width="44" height="38"><div xmlns="http://www.w3.org/1999/xhtml" class="shell-diagram-field">${data.shellInputs[i]}</div></foreignObject>`).join('')+text(360,227,'+',26)+text(360,415,data.label,22),'Fill each electron shell','0 0 720 440');return svg(Array.from({length:data.count},(_,i)=>`<circle cx="320" cy="175" r="${28+i*28}" fill="none" stroke="currentColor" stroke-width="2"/>`).join('')+text(320,30,data.label,22)+text(320,180,'+',26),'Empty electron shells for the stated atom or ion','0 0 640 320');
   case 'particle':return svg(`<circle cx="320" cy="110" r="55" fill="none" stroke="currentColor" stroke-width="3"/>`+text(320,118,data.label,25),'Identify the charge of the labelled subatomic particle');

@@ -359,3 +359,10 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 @media(max-width:600px){.answer-footer{left:16px;right:16px;bottom:16px;gap:12px;}.answer-footer #casino-progress{font-size:13px;}#game-screen .answer-footer #feedback{font-size:14px;padding:10px 12px;}}
 
 #casino-status{flex:1;min-width:0;text-align:left;}#casino-score{display:block;font:bold clamp(32px,4vw,48px)/1.1 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink);margin-bottom:8px;}#casino-status #casino-progress{width:100%;padding:0;}
+
+/* Year 12 physics: compact question text, bounded diagrams and choices so nothing runs under the fixed bottom bar. */
+.phys-cloze .revision-visual,.phys-choice .revision-visual{width:auto;max-width:100%;height:min(30vh,260px);margin:4px auto}
+.phys-choice .choice-question{font-size:clamp(18px,2.1vw,28px);line-height:1.35;margin-bottom:4px}
+.phys-choice .connection-choices{gap:10px}.phys-choice .connection-choices button{font-size:clamp(15px,1.7vw,24px);padding:8px 14px}
+.phys-cloze .cloze-lines{font-size:clamp(20px,2.4vw,32px);line-height:1.45;margin:4px auto}.phys-cloze .cloze-line{margin:4px 0}
+#game-screen{padding-bottom:130px}

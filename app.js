@@ -260,7 +260,7 @@ $('answer-form').addEventListener('submit',e=>{
   const levelFinished=!reviewDeck&&correct===(levels[questionLevel].correctTarget||3),completed=questionLevel,advance=position<enabled.length-1;
   if(levelFinished){correct=0;needsLevelCard=false;}
   const proceed=()=>{if(levelFinished)completedLevel(completed,advance);else{next();if(needsLevelCard){needsLevelCard=false;showRule();}}};
-  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0&&!globalThis.CasinoDiagnostic?.owns(selectedUnit)){rouletteTarget=10;hud();openRoulette(proceed);return;}hud();}
+  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0){rouletteTarget=10;hud();openRoulette(proceed);return;}hud();}
   proceed();
 });
 $('continue').addEventListener('click',()=>{if($('continue').textContent==='Start ↵')playEffect('level');});

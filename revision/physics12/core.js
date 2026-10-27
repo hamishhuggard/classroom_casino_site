@@ -2,12 +2,17 @@
    Level files (level1.js … level5.js) call Physics12.add(level, definition). */
 const Physics12=(()=>{
  const LEVELS=[
-  {id:'yr12_physics-units',name:'Units, symbols & prefixes',summary:'Name and write the SI units, quantity symbols and prefixes used in mechanics and electromagnetism. Unit symbols are case-sensitive: N, not n.'},
+  {id:'yr12_physics-mech-units',name:'Mechanics units & symbols',summary:'Learn the quantity, symbol, unit and unit symbol for each mechanics quantity. Fill in the missing cell. Unit symbols are case-sensitive: N, not n.'},
+  {id:'yr12_physics-em-units',name:'Electromagnetism units & symbols',summary:'Learn the quantity, symbol, unit and unit symbol for each electricity and magnetism quantity. Fill in the missing cell. Unit symbols are case-sensitive.'},
+  {id:'yr12_physics-prefixes',name:'SI prefixes',summary:'Learn the SI prefixes: word, symbol and power of ten. Fill in the missing cell, then convert between prefixed units.'},
   {id:'yr12_physics-multichoice',name:'Directions & concepts — Multiple choice',summary:'Pick the right answer: left- and right-hand rules, vector directions in circular motion, and key ideas in mechanics and electromagnetism.'},
   {id:'yr12_physics-given',name:'Calculate — equation given',summary:'The equation and the givens are shown. Substitute, rearrange if needed, and include the correct unit.'},
   {id:'yr12_physics-recall',name:'Calculate — choose the equation',summary:'Only the givens are shown. Decide which equation applies, then calculate and include the correct unit.'},
   {id:'yr12_physics-word',name:'Word problems',summary:'Short exam-style situations. Pick out the givens, choose the equation, and calculate with units.'}
  ];
+ // Title-card content per level (an HTML table etc.), set by the level files with setCard().
+ const CARDS={};
+ const setCard=(level,card)=>{CARDS[level]=card;};
  const bank=LEVELS.map(()=>[]);
  const TOPICS=['Mechanics','Electromagnetism'];
  const DIRS=['up the page','down the page','left','right','into the page','out of the page'];
@@ -23,7 +28,8 @@ const Physics12=(()=>{
  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
  const svgWrap=(body,label,view='0 0 640 260')=>`<svg class="revision-visual" viewBox="${view}" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title>${body}</svg>`;
  const line=(x1,y1,x2,y2,w=3,extra='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="currentColor" stroke-width="${w}" ${extra}/>`;
- const arrow=(x1,y1,x2,y2,w=4,head=14)=>{const a=Math.atan2(y2-y1,x2-x1),hx=n=>(n).toFixed(1),p=(d)=>[hx(x2-head*Math.cos(a+d)),hx(y2-head*Math.sin(a+d))].join(',');return `<g>${line(x1,y1,x2,y2,w)}<polygon points="${hx(x2)},${hx(y2)} ${p(0.45)} ${p(-0.45)}" fill="currentColor"/></g>`;};
+ const arrow=(x1,y1,x2,y2,w=4,head=14)=>{const a=Math.atan2(y2-y1,x2-x1),hx=n=>(n).toFixed(1),p=(d)=>[hx(x2-head*Math.cos(a+d)),hx(y2-head*Math.sin(a+d))].join(',');const bx=x2-head*0.8*Math.cos(a),by=y2-head*0.8*Math.sin(a); // shaft stops inside the head so it can't poke out past the tip
+  return `<g>${line(x1,y1,bx,by,w)}<polygon points="${hx(x2)},${hx(y2)} ${p(0.45)} ${p(-0.45)}" fill="currentColor"/></g>`;};
  const text=(x,y,s,size=22,anchor='middle')=>`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="currentColor" style="font-size:${size}px">${esc(s)}</text>`;
  const circle=(x,y,r,w=3,fill='none')=>`<circle cx="${x}" cy="${y}" r="${r}" style="fill:${fill}" stroke="currentColor" stroke-width="${w}"/>`;
  const rect=(x,y,w,h,sw=3,fill='none')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" style="fill:${fill}" stroke="currentColor" stroke-width="${sw}"/>`;
@@ -40,8 +46,10 @@ const Physics12=(()=>{
  // ---- numbers and units ----
  const SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','⁻':'-','⁺':'+'};
  const plain=s=>String(s).normalize('NFKC').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]/g,c=>SUP[c]||c).replace(/−|–/g,'-');
+ // Thousands separators: "1,000", "1 000" and "12,345,678" mean 1000, 1000 and 12345678. Other commas are left alone.
+ function dropThousands(s){return s.replace(/(^|[^\d.])(\d{1,3}(?:[, ]\d{3})+)(?![\d,])/g,(m,pre,num)=>pre+num.replace(/[, ]/g,''));}
  function parseNumber(text){
-  let s=plain(text).trim().replace(/\s+/g,' ');
+  let s=dropThousands(plain(text).trim().replace(/\s+/g,' '));
   let m=s.match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*(?:[x×*]|\\times)\s*10\s*\^?\s*\(?([+-]?\d+)\)?$/i)||s.match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*e\s*([+-]?\d+)$/i);
   if(m)return Number(m[1])*Math.pow(10,Number(m[2]));
   m=s.match(/^10\s*\^\s*\(?([+-]?\d+)\)?$/);if(m)return Math.pow(10,Number(m[1]));
@@ -51,7 +59,7 @@ const Physics12=(()=>{
  }
  // Split "12.5 m/s", "3 x 10^8 m/s", "2e-3 A" into {value, unit}. Returns null if no leading number.
  function splitQuantity(text){
-  const s=plain(text).trim().replace(/[.!?;]+$/,'');
+  const s=dropThousands(plain(text).trim().replace(/[.!?;]+$/,''));
   const m=s.match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:\s*(?:[x×*]\s*10\s*\^?\s*\(?[+-]?\d+\)?|e\s*[+-]?\d+))?)\s*(.*)$/i);
   if(!m)return null;
   const value=parseNumber(m[1]);return Number.isNaN(value)?null:{value,unit:m[2].trim()};
@@ -68,6 +76,21 @@ const Physics12=(()=>{
   if(tok==='deg'||tok==='degrees')return '°';
   return tok;
  }
+ // Base-unit symbols that can be run together in one token ("ms", "kgm"). Prefixed units are looked up separately.
+ const BASE_SYMBOLS=['kg','Hz','mol','rad','Wb','Pa','Ω','°','m','g','s','N','J','W','V','A','C','T','F','K','h','L'];
+ const PREFIXES='kmµMcnGdp';
+ function isKnownUnit(tok){
+  const t=unitToken(tok);
+  return BASE_SYMBOLS.includes(t)||new RegExp(`^[${PREFIXES}](?:${BASE_SYMBOLS.filter(b=>b.length===1).join('|')})$`).test(t)||['%','km/h'].includes(t)||t==='min';
+ }
+ // "ms" → ['m','s'], "kgm" → ['kg','m']; null if the token cannot be read as base units.
+ function splitBaseUnits(tok){
+  if(!tok)return [];
+  for(const sym of BASE_SYMBOLS){
+   if(tok.startsWith(sym)){const rest=splitBaseUnits(tok.slice(sym.length));if(rest)return [sym,...rest];}
+  }
+  return null;
+ }
  // "kg m/s", "kg·m·s⁻¹", "N/C", "m s-2", "m/s^2" → canonical "kg^1 m^1 s^-1" style key. Symbols stay case-sensitive.
  function unitKey(text){
   let s=plain(text).trim().replace(/[·⋅•×*]/g,' ').replace(/\s+/g,' ');
@@ -77,7 +100,12 @@ const Physics12=(()=>{
   const add=(part,sign)=>{
    for(const tok of part.trim().split(' ').filter(Boolean)){
     const m=tok.match(/^([^\d^+-]+?)\^?\(?([+-]?\d+)?\)?$/);if(!m)return false;
-    const base=unitToken(m[1]);const e=(m[2]===undefined?1:Number(m[2]))*sign;
+    const e=(m[2]===undefined?1:Number(m[2]))*sign;
+    // "ms^-1", "kgm", "kgm/s": run-together base units. Split them unless the token is a unit in its own right (ms = millisecond, kg, mJ).
+    const pieces=(m[2]!==undefined||!isKnownUnit(m[1]))&&splitBaseUnits(m[1]);
+    // The exponent belongs to the last symbol only: "ms^-1" is m·s⁻¹.
+    if(pieces){pieces.forEach((piece,i)=>{const pe=i===pieces.length-1?e:sign;exps[piece]=(exps[piece]||0)+pe;});continue;}
+    const base=unitToken(m[1]);
     exps[base]=(exps[base]||0)+e;
    }
    return true;
@@ -94,6 +122,7 @@ const Physics12=(()=>{
   if(!q)return 'wrong';
   const want=Number(src.answer),tol=src.tolerance??0.01;
   if(src.answerUnit){
+   if(!q.unit&&src.unitGiven)return Math.abs(q.value-want)<=Math.max(Math.abs(want)*tol,1e-12)?'ok':'wrong';
    if(!q.unit)return 'nounit';
    const ok=[src.answerUnit,...(src.unitAliases||[])].some(u=>unitsEqual(u,q.unit));
    if(!ok)return 'wrong';
@@ -110,17 +139,22 @@ const Physics12=(()=>{
   result.prompt=result.cloze;
   const numeric=!result.choices&&isNumericAnswer(answer);
   result.numeric=numeric;
+  // Conversions ("1.2 A = ____ mA") state the target unit in the question: keep it visible and accept the bare number.
+  result.unitGiven=numeric&&!!out.answerUnit&&/\d[ \t]*(?:[A-Za-zµΩ°]{1,3}(?:\/[A-Za-z]{1,3}[²³]?)?|minutes?|hours?|tonnes?|seconds?)[ \t]*=[ \t]*____[ \t]*[A-Za-zµΩ°]/.test(result.cloze);
   result.caseSensitive=out.caseSensitive!==undefined?out.caseSensitive:!numeric&&!result.choices&&/^[A-Za-zµΩ°]{1,3}$/.test(answer);
   let completed=result.cloze.replace(/____\s*(?:[^\s\n.,;:)]+)?/,m=>answer+(out.answerUnit?' '+out.answerUnit:''));
   result.completedExample=completed;
   return result;
  }
  // Build the unit object the app expects. Question ids are level-prefixed, numbered from 101 so they never clash with Year 10.
+ const NUMBERS_OF=()=>(typeof Physics12!=='undefined'&&Physics12.NUMBERS)||{};
  function unit(){
-  let n=100;
+  // Numbers come from the permanent registry in numbers.js so deleting a question never renumbers the others;
+  // an id not yet in it gets the next free number (run scripts/assign_numbers.cjs to record it).
+  const known=NUMBERS_OF();let n=Math.max(100,...Object.values(known));
   return {id:'yr12_physics',name:'Year 12 Physics — Mechanics & Electromagnetism',status:'ready',mixed:true,physics12:true,source:'NCEA Level 2 Physics (AS 91171 mechanics, AS 91173 electricity & electromagnetism)',
-   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,questions:bank[i].map(def=>({...def,unit:def.topic,questionNumber:++n}))}))};
+   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].map(def=>({...def,unit:def.topic,questionNumber:known[def.id]||++n}))}))};
  }
- return {LEVELS,TOPICS,DIRS,bank,add,generate,unit,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
+ return {LEVELS,TOPICS,DIRS,bank,add,setCard,generate,unit,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
 })();
 if(typeof module!=='undefined')module.exports=Physics12;

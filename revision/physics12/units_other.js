@@ -1,8 +1,19 @@
-/* Year 12 Physics, Level 1: units, symbols and SI prefixes (typed answers, recall only). */
+/* Year 12 Physics, units levels (leftovers): equation symbols, compound units and prefix conversions.
+   The quantity/unit/prefix recall questions that used to live here are replaced by the table questions in level1–3.js,
+   so those skills are skipped. Mechanics → Level 1, electromagnetism → Level 2, conversions → Level 3. */
 (()=>{
 const P=Physics12;
-let nId=0;
-const reg=(topic,skill,gen)=>P.add(1,{id:'L1-'+String(++nId).padStart(2,'0'),topic,skill,gen});
+const SUPERSEDED=new Set(['SI unit symbols','SI unit names','Unit symbol to name','Unit name to symbol','Quantity from a unit','Quantity symbols',
+ 'Prefix symbol to name','Prefix name to symbol','Prefixed unit name to symbol','Prefix to factor','Prefix to power of ten','Power of ten to prefix',
+ 'Equivalent compound units','Compound units to a named unit']); // the last two ("1 N = 1 ____") were dropped as too ambiguous
+const CONVERSIONS=new Set(['Prefixed unit to base unit','Base unit to prefixed unit','Prefix to prefix','km/h to m/s','m/s to km/h','Time and mass conversions','Time conversions']);
+const counters={};
+const reg=(topic,skill,gen)=>{
+ if(SUPERSEDED.has(skill))return;
+ const level=CONVERSIONS.has(skill)?3:topic==='Mechanics'?1:2;
+ counters[level]=(counters[level]||0)+1;
+ P.add(level,{id:`L${level}-X`+String(counters[level]).padStart(2,'0'),topic,skill,gen});
+};
 const both=(skill,mk)=>{reg('Mechanics',skill,mk('Mechanics'));reg('Electromagnetism',skill,mk('Electromagnetism'));};
 const M='Mechanics',E='Electromagnetism';
 const cap=s=>s[0].toUpperCase()+s.slice(1);
@@ -150,12 +161,12 @@ reg(M,'Initial and final',(r,h)=>{
   explanation:`${s} is the ${fin?'final':'initial'} velocity (${fin?'f = final':'i = initial'}).`};
 });
 
-// 11. NZQA symbols
+// 11. Quantity symbols
 const NZ=[['final velocity','v_f',['vf','v f','Vf']],['initial velocity','v_i',['vi','v i','Vi']],['change in velocity','Δv',['delta v','deltav','Delta v']],['change in time','Δt',['delta t','deltat','Delta t']],
  ['change in momentum','Δp',['delta p','deltap','Delta p']],['change in height','Δh',['delta h','deltah','Delta h']],['distance (or displacement)','d'],['time','t'],['acceleration','a']];
-reg(M,'Symbols on the formula sheet',(r,h)=>{
+reg(M,'Symbols for quantities',(r,h)=>{
  const row=h.pick(NZ,r);
- return {cloze:`On the NZQA formula sheet, the symbol for ${row[0]} is ____.`,answer:row[1],aliases:row[2]||[],caseSensitive:true,explanation:`The symbol for ${row[0]} is ${row[1]}.`};
+ return {cloze:`The symbol for ${row[0]} is ____.`,answer:row[1],aliases:row[2]||[],caseSensitive:true,explanation:`The symbol for ${row[0]} is ${row[1]}.`};
 });
 
 // ---- prefixes ----
@@ -174,7 +185,7 @@ both('Prefix symbol to name',topic=>(r,h)=>{
 });
 reg(M,'Prefix name to symbol',(r,h)=>{
  const p=h.pick(PF,r);
- return {cloze:`The symbol for the prefix ${p[1]} is ____.`,answer:p[0],aliases:p[0]==='µ'?[MU,'u']:[],caseSensitive:true,explanation:`${p[1]} is written ${p[0]} (10${sup(p[2])}). Capital M is mega; lower-case m is milli.`};
+ return {cloze:`The symbol for the prefix ${p[1]} is ____.`,answer:p[0],aliases:p[0]==='µ'?[MU,'u','mu','Mu']:[],caseSensitive:true,explanation:`${p[1]} is written ${p[0]} (10${sup(p[2])}). Capital M is mega; lower-case m is milli.`};
 });
 both('Prefixed unit name to symbol',topic=>(r,h)=>{
  const [p,u]=pickPU(topic,r,h);
@@ -264,28 +275,30 @@ reg(E,'Time conversions',(r,h)=>{const g=mkTime(false)(r,h);return g;});
 
 // ---- compound unit identities: [lhs, rhs, rhs aliases, reverse?] ----
 const ID={
- [M]:[['N','kg m/s²',['kg m s-2','kg m s⁻²','kg·m/s²','kg·m·s⁻²','kg m/s2','kg m/s^2','kg m s^-2']],
-  ['J','N m',['Nm','N·m','N.m']],
-  ['W','J/s',['J s-1','J s⁻¹','N m/s','N m s-1']],
-  ['Hz','s⁻¹',['1/s','/s','s-1','per second','1 s-1','1 s⁻¹']],
-  ['N s','kg m/s',['kg m s-1','kg m s⁻¹','kg·m/s','kg·m·s⁻¹']],
-  ['N/kg','m/s²',['m s-2','m s⁻²','m/s2','m/s^2'],true]],
- [E]:[['V','J/C',['J C-1','J C⁻¹']],
-  ['A','C/s',['C s-1','C s⁻¹']],
-  ['C','A s',['As','A·s','A.s']],
-  ['Ω','V/A',['V A-1','V A⁻¹']],
-  ['W','V A',['VA','V·A','J/s','J s-1','J s⁻¹']],
-  ['N/C','V/m',['V m-1','V m⁻¹']],
-  ['T','N/(A m)',['N/A m','N A-1 m-1','N A⁻¹ m⁻¹','N/Am','N·A⁻¹·m⁻¹','N/(Am)','N/(A·m)']]]
+ [M]:[['N','kg m/s²',['kg m s-2','kg m s⁻²','kg·m/s²','kg·m·s⁻²','kg m/s2','kg m/s^2','kg m s^-2'],false,'force','mass × acceleration, in base units'],
+  ['J','N m',['Nm','N·m','N.m'],false,'energy','force × distance'],
+  ['W','J/s',['J s-1','J s⁻¹','N m/s','N m s-1'],false,'power','energy ÷ time'],
+  ['Hz','s⁻¹',['1/s','/s','s-1','per second','1 s-1','1 s⁻¹'],false,'frequency','1 ÷ time'],
+  ['N s','kg m/s',['kg m s-1','kg m s⁻¹','kg·m/s','kg·m·s⁻¹'],false,'impulse','mass × velocity, in base units'],
+  ['N/kg','m/s²',['m s-2','m s⁻²','m/s2','m/s^2'],true,'gravitational field strength','acceleration, in base units']],
+ [E]:[['V','J/C',['J C-1','J C⁻¹'],false,'voltage','energy ÷ charge'],
+  ['A','C/s',['C s-1','C s⁻¹'],false,'current','charge ÷ time'],
+  ['C','A s',['As','A·s','A.s'],false,'charge','current × time'],
+  ['Ω','V/A',['V A-1','V A⁻¹'],false,'resistance','voltage ÷ current'],
+  ['W','V A',['VA','V·A','J/s','J s-1','J s⁻¹'],false,'power','voltage × current'],
+  ['N/C','V/m',['V m-1','V m⁻¹'],false,'electric field strength','voltage ÷ distance'],
+  ['T','N/(A m)',['N/A m','N A-1 m-1','N A⁻¹ m⁻¹','N/Am','N·A⁻¹·m⁻¹','N/(Am)','N/(A·m)'],false,'magnetic field strength','force ÷ (current × length)']]
 };
 both('Equivalent compound units',topic=>(r,h)=>{
- const [l,rhs,al]=h.pick(ID[topic],r);
- return {cloze:`1 ${l} = 1 ____`,answer:rhs,aliases:al,caseSensitive:true,explanation:`1 ${l} = 1 ${rhs}.`};
+ const [l,rhs,al,,q,how]=h.pick(ID[topic],r);
+ return {cloze:`1 ${l} = 1 ____ (${q} = ${how})`,answer:rhs,aliases:al,caseSensitive:true,explanation:`1 ${l} = 1 ${rhs}.`};
 });
 const REVAL={'N':'newton','J':'joule','W':'watt','Hz':'hertz','V':'volt','A':'ampere','C':'coulomb','Ω':'ohm','T':'tesla'};
-both('Compound units to a named unit',topic=>(r,h)=>{
- const [l,rhs]=h.pick(ID[topic].filter(x=>!x[3]),r);
+// Mechanics version removed (Q141: "1 N m = 1 ____" is ambiguous with torque); electromagnetism version kept.
+reg('Electromagnetism','Compound units to a named unit',((topic)=>(r,h)=>{
+ const [l,rhs,,,q]=h.pick(ID[topic].filter(x=>!x[3]),r);
  const nm=REVAL[l];
- return {cloze:`1 ${rhs} = 1 ____`,answer:l,aliases:nm?[nm,cap(nm)]:[],caseSensitive:true,explanation:nm?`1 ${rhs} is called 1 ${nm} (${l}).`:`1 ${rhs} = 1 ${l}.`};
-});
+ return {cloze:`1 ${rhs} = 1 ____ (the named unit for ${q})`,answer:l,aliases:nm?[nm,cap(nm)]:[],caseSensitive:true,explanation:nm?`1 ${rhs} is called 1 ${nm} (${l}).`:`1 ${rhs} = 1 ${l}.`};
+
+})('Electromagnetism'));
 })();

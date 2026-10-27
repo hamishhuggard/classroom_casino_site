@@ -70,14 +70,24 @@ function questionNumber(){
   const index=items.findIndex(item=>item.id===current.source.id);return index>=0?index+1:'';
 }
 function renderCasinoProgress(){const target=rouletteTarget;const progress=$('casino-progress');progress.hidden=!activeRun||!$('roulette-enabled').checked;$('casino-progress-bar').max=target;$('casino-progress-bar').value=rouletteCorrectCount;$('casino-progress-label').textContent=`${Math.max(0,target-rouletteCorrectCount)} questions until you can gamble`; }
-function hud(){$('casino-score').textContent=`$${score}`;renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEVEL ${position+1}${showNumber&&questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
-function renderDeckProgress(){const box=$('deck-progress');box.hidden=!activeRun||!reviewDeck;if(!reviewDeck)return;const progress=reviewDeck.progress;$('deck-progress-label').textContent=`LEVEL ${progress.position+1} · ${progress.seen}/${progress.total} new questions attempted · ${progress.pending} awaiting review${currentReview?.review?' · REVIEW '+(currentReview.stage+1)+'/3 (LEVEL '+(enabled.indexOf(questionLevel)+1)+')':''}`;}
-function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new (globalThis.CasinoDiagnostic?.deckFor(selectedUnit)||ReviewDeck)(enabled.map(index=>({index,cards:levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4').map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))})));}
+// Rolling count-up: the balance ticks up to its new value (cosmetic; falls back to an instant update).
+let shownScore=0,countToken=0;
+function showScore(){
+  const el=$('casino-score'),token=++countToken;
+  if(typeof requestAnimationFrame!=='function'||score<=shownScore||!activeRun){shownScore=score;el.textContent=`$${score}`;return;}
+  const from=shownScore,to=score,start=Date.now(),duration=Math.min(900,250+(to-from)*30);
+  const step=()=>{if(token!==countToken)return;const k=Math.min(1,(Date.now()-start)/duration);shownScore=Math.round(from+(to-from)*k);el.textContent=`$${shownScore}`;if(k<1)requestAnimationFrame(step);};
+  step();
+}
+function hud(){showScore();renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEVEL ${position+1}${showNumber&&questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
+function renderDeckProgress(){const box=$('deck-progress');box.hidden=true; // progress line hidden at Hamish's request; label text still maintained
+  if(!reviewDeck)return;const progress=reviewDeck.progress;$('deck-progress-label').textContent=`LEVEL ${progress.position+1} · ${progress.seen}/${progress.total} new questions attempted · ${progress.pending} awaiting review${currentReview?.review?' · REVIEW '+(currentReview.stage+1)+'/3 (LEVEL '+(enabled.indexOf(questionLevel)+1)+')':''}`;}
+function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new ReviewDeck(enabled.map(index=>({index,cards:levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4').map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))})));}
 function makeRevisionQuestion(base,mixed){const item=typeof base.gen==='function'?Physics12.generate(base):mixed&&typeof CasinoPractice!=='undefined'?CasinoPractice.generate(base):base;return q(item.cloze||item.prompt,item.answer,{kind:'revision',aliases:item.aliases||[],caseSensitive:!!item.caseSensitive||/chemical symbol|formula|base pairs|neutral formula|genotype =/.test(item.prompt),worked:item.explanation,source:item});}
-function finishDeck(){stop();if(globalThis.CasinoDiagnostic?.finish(selectedUnit))return;currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
+function finishDeck(){stop();currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
 function stop(){clearInterval(timer);clearTimeout(beepTimer);$('clock').textContent='';}
-function focus(){setTimeout(()=>{if(screen==='game'&&!$('rule-dialog').open&&!$('settings-dialog').open&&!$('preferences-dialog').open&&!$('roulette-dialog').open&&!$('chapter-dialog').open&&!$('skill-dialog').open)answerFocusTarget().focus();},0);}
-function startTimer(reset=true){stop();if(screen!=='game'||!activeRun||$('rule-dialog').open||$('settings-dialog').open||$('chapter-dialog').open||$('preferences-dialog').open||$('skill-dialog').open||$('roulette-dialog').open||!$('timed').checked)return;if(reset)seconds=30;$('clock').textContent=`${seconds}s`;timer=setInterval(()=>{seconds--;$('clock').textContent=`${seconds}s`;if(seconds<=0)fail(true);},1000);scheduleBeep();}
+function focus(){setTimeout(()=>{if(screen==='game'&&!$('rule-dialog').open&&!$('settings-dialog').open&&!$('preferences-dialog').open&&!$('roulette-dialog').open&&!$('chapter-dialog').open&&!$('skill-dialog').open&&!$('practice-dialog').open)answerFocusTarget().focus();},0);}
+function startTimer(reset=true){stop();if(screen!=='game'||!activeRun||$('rule-dialog').open||$('settings-dialog').open||$('chapter-dialog').open||$('preferences-dialog').open||$('skill-dialog').open||$('practice-dialog').open||$('roulette-dialog').open||!$('timed').checked)return;if(reset)seconds=30;$('clock').textContent=`${seconds}s`;timer=setInterval(()=>{seconds--;$('clock').textContent=`${seconds}s`;if(seconds<=0)fail(true);},1000);scheduleBeep();}
 function escapeMarkup(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function statement(question,answer=''){
   if(question.kind==='revision')return `<div class="statement revision-statement">${revisionVisual(question)}<div class="statement-link">${scienceMarkup(removeProvidedUnit(question,question.prompt)).replace('____',answer?`<span class="statement-answer answer-value">${answer}</span>`:'____')}</div></div>`;
@@ -127,10 +137,11 @@ function correctionLayout(model){
   return copy.innerHTML;
 }
 function showRule(solution='',title='New step'){
-  if(!solution&&title!=='Rule'){startTimer(false);focus();return;}
+  if(!solution&&title!=='Rule'&&!levels[questionLevel]?.cardHtml){startTimer(false);focus();return;} // levels with a table card always show it
   stop();const l=levels[questionLevel],preview=previewStatements(questionLevel),correction=!!solution;
   $('rule-dialog').classList.toggle('statement-card',!!preview||correction);
   $('rule-dialog').classList.toggle('correction-card',correction);
+  $('rule-dialog').classList.toggle('table-card',!!l.cardHtml&&!correction);
   $('card-title').textContent=correction?`${title}${questionNumber()?' · QUESTION '+questionNumber():''}`:`LEVEL ${enabled.indexOf(questionLevel)+1}`;
   $('card-level').textContent=l.name;$('card-level').hidden=!!preview||correction;
   const explanation=levelExplanation(questionLevel);
@@ -164,9 +175,35 @@ function circuitRules(index){
     : `<td${index===introduced?' class="rule-new"':''}><span class="rule-equation">${equation}</span><span class="rule-description">${description}</span></td>`;
   return `<table class="circuit-rules-table circuit-comparison-table"><caption>Series &amp; parallel rules</caption><thead><tr><th scope="col">Name</th><th scope="col">Diagram</th><th scope="col">Branches</th><th scope="col">Current</th><th scope="col">Voltage</th></tr></thead><tbody><tr>${circuit('series')}${cell(9,'I<sub>T</sub> = I<sub>1</sub> = I<sub>2</sub>','Same everywhere')}${cell(17,'V<sub>T</sub> = V<sub>1</sub> + V<sub>2</sub>','Voltage drops add')}</tr><tr>${circuit('parallel')}${cell(14,'I<sub>T</sub> = I<sub>1</sub> + I<sub>2</sub>','Branch currents add')}${cell(16,'V<sub>T</sub> = V<sub>1</sub> = V<sub>2</sub>','Same across each branch')}</tr></tbody></table>${index>=9?'<p class="rule-key">T = total / supply; 1 and 2 label the components or branches.</p>':''}`;
 }
+// Multiple-choice wording: "Arrow ____ shows X." reads better as a question; other blanks show as "…".
+function choiceText(question){
+  let text=question.prompt;
+  if(question.source?.phys)text=text.replace(/Arrow ____ (shows [^\n]*?)\.?(?=\n|$)/,'Which arrow $1?').replace(/\s*Arrow ____\.$/,'');
+  return text.replace(/____/g,'…');
+}
+// Answer box width: 25% longer than the longest acceptable answer (rounded up), measured in character cells.
+function longestAnswerLength(question){
+  const src=question.source||{},unit=src.answerUnit||expectedAnswerUnit(question);
+  const forms=[question.answer,...(question.aliases||[]),...(src.aliases||[])].map(String);
+  if(unit)for(const u of [unit,...(src.unitAliases||[])])forms.push(question.answer+' '+u);
+  return Math.max(1,...forms.map(form=>[...form].length));
+}
+function sizeAnswerBox(entry,slot){
+  const cells=Math.max(4,Math.ceil(longestAnswerLength(current)*1.25));
+  if(!entry.style)return;
+  if(slot?.style){slot.style.width='auto';slot.style.minWidth='0';}
+  entry.style.width=`calc(${(cells*0.65).toFixed(2)}em + .7em)`;entry.style.flex='none';
+}
+// One column (quantity / symbol / unit / unit symbol) or one row (prefix word / symbol / power of ten) with a blank cell holding the answer box.
+function unitTableMarkup(visual){
+  const slot='<span id="cloze-answer-slot"></span>';
+  const body=row=>row.blank?(row.pre?scienceMarkup(row.pre):'')+slot:scienceMarkup(row.value);
+  if(visual.orient==='row')return `<table class="phys-table row-table"><thead><tr>${visual.rows.map(row=>`<th>${scienceMarkup(row.label)}</th>`).join('')}</tr></thead><tbody><tr>${visual.rows.map(row=>`<td${row.blank?' class="blank"':''}>${body(row)}</td>`).join('')}</tr></tbody></table>`;
+  return `<table class="phys-table"><tbody>${visual.rows.map(row=>`<tr><th scope="row">${scienceMarkup(row.label)}</th><td${row.blank?' class="blank"':''}>${body(row)}</td></tr>`).join('')}</tbody></table>`;
+}
 function questionInstruction(){
   const type=current.source?.visual?.type;
-  const instructions={punnett:current.source?.fields?'Fill in the Punnett square:':current.source?.id==='G3'?'Fill in the missing genotype in the Punnett square:':'Use the Punnett square to complete the statement:',graph:'Use the distance–time graph to find the speed:',weight:'Calculate the weight:',journey:'Calculate the average speed:',forces:'Use the forces shown to complete the statement:',reaction:'Complete the reaction:',circuit:'Find the missing current or voltage:',atom:'Use the isotope cell to complete the statement:',shells:'Complete the electron arrangement:',particle:'State the particle’s charge:'};
+  const instructions={punnett:current.source?.fields?'Fill in the Punnett square:':current.source?.id==='G3'?'Fill in the missing genotype in the Punnett square:':'Use the Punnett square to complete the statement:',graph:'Use the distance–time graph to find the speed:',weight:'Calculate the weight:',journey:'Calculate the average speed:',forces:'Use the forces shown to complete the statement:',reaction:'Complete the reaction:',circuit:'Find the missing current or voltage:',atom:'Use the isotope cell to complete the statement:',unittable:'Fill in the missing cell:',shells:'Complete the electron arrangement:',particle:'State the particle’s charge:'};
   return `${showNumber?(questionNumber()||questionLevel+1)+') ':''}${instructions[type]||'Complete the statement:'}`;
 }
 function render(){
@@ -176,7 +213,7 @@ function render(){
   $('game-screen').classList.toggle('large-circuit-question',current.source?.visual?.type==='circuit');
   $('answer-suffix').hidden=true;$('game-screen').classList.toggle('statement-question',simple);$('game-screen').classList.toggle('cloze-question',true);
   $('prompt').textContent=questionInstruction();$('prompt').classList.toggle('sr-only',false);
-  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(current.prompt.replace(/____/g,'…')).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
+  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
   else if(current.kind==='revision'&&current.source?.visual?.type==='circuit')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,answerMarkup:clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='F2')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true})}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='punnett')$('diagram').innerHTML=`<div class="cloze-game punnett-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,fields:current.source.fields,answerMarkup:current.source.id==='G3'||current.source.fields?'':clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
@@ -185,6 +222,7 @@ function render(){
   else if(current.kind==='revision'&&current.source?.id==='G4')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div>Natural selection depends on</div><div class="large-science">survival</div><div>and</div><div class="large-science"><span id="cloze-answer-slot"></span></div></div>`;
   else if(current.kind==='revision'&&current.source?.id==='G1')$('diagram').innerHTML=`<div class="cloze-game">${casinoDiagram({...current.source.visual,answerMarkup:clozeSentence('This section of DNA is a ____','<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&['L2-1','L2-3','L2-11'].includes(current.source?.id))$('diagram').innerHTML=`<div class="cloze-game">${revisionVisual(current)}${clozeSentence({'G1':'This section of DNA is a ____','L2-1':'electrons = ____','L2-3':'formula = ____','L2-11':'v = ____'}[current.source.id],'<span id="cloze-answer-slot"></span>')}</div>`;
+  else if(current.kind==='revision'&&current.source?.visual?.type==='unittable')$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${unitTableMarkup(current.source.visual)}</div>`;
   else if(current.kind==='revision'&&current.source?.phys)$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}${clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.recall)$('diagram').innerHTML=`<div class="cloze-game recall-cloze">${clozeSentence(current.prompt,'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='G2')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div>The genotype</div><div class="large-science">${scienceMarkup(current.source.visual.alleles)}</div><div>is</div><div class="large-science"><span id="cloze-answer-slot"></span></div></div>`;
@@ -199,7 +237,7 @@ function render(){
   else if(simple){$('diagram').innerHTML=statement(current).replace(/<\/div>$/,`<span id="cloze-answer-slot"></span>${circuitType?'<div class="statement-link">circuit</div>':''}</div>`);}
   else $('diagram').innerHTML=`<div class="cloze-game">${['series','parallel','mixed'].includes(current.kind)?circuitAnswerDiagram(diagram(current),clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')):diagram(current)+clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')}</div>`;
   ($('diagram').firstElementChild||$('diagram')).appendChild(reminder);
-  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
+  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1');if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
 }
 
 function questionKey(question){return JSON.stringify([question.prompt,question.unit,diagram(question)]);}
@@ -212,8 +250,11 @@ function freshQuestion(make){
 }
 function next(){if(reviewDeck){currentReview=reviewDeck.next();if(!currentReview){finishDeck();return;}position=reviewDeck.progress.position;questionLevel=currentReview.level;current=currentReview.question;}else{questionLevel=enabled[position];current=freshQuestion(levels[questionLevel].make);}attempts=0;render();}
 function scientificInput(s){return String(s).normalize('NFKC').replace(/−/g,'-').trim();}
+// "1,000" and "12,345,678" are the numbers 1000 and 12345678. Other commas are left for the caller.
+function withoutThousands(s){return String(s).replace(/(^|[^\d.])(\d{1,3}(?:[, ]\d{3})+)(?![\d,])/g,(m,pre,num)=>pre+num.replace(/[, ]/g,''));}
 function normalize(s){return scientificInput(s).toLowerCase().replace(/[.,!?;:'"“”‘’]/g,'').replace(/(?<=[a-z])-(?=[a-z])/g,'').replace(/\s+/g,' ');}
 function expectedAnswerUnit(question){
+  if(question.source?.unitGiven)return '';
   if(question.unit)return question.unit;
   if(question.source?.answerUnit)return question.source.answerUnit;
   if(question.kind!=='revision'||!/^\d+(?:\.\d+)?$/.test(question.answer))return '';
@@ -223,44 +264,92 @@ function expectedAnswerUnit(question){
 function renderAnswerHint(){$('feedback').innerHTML=escapeMarkup(answerHint()).replace(/\s*ENTER/g,'<strong class="enter-key">ENTER</strong>');}
 function answerHint(){return 'type an answer and press ENTER';}
 function matches(value){
+  if(current)current.spellingFix=null;
   if(current.source?.phys&&current.source.numeric)return Physics12.checkNumeric(current.source,value)==='ok';
   if(['positive','negative'].includes(current.answer)){const signs={positive:['positive','+','+ve'],negative:['negative','-','-ve']};if(signs[current.answer].includes(scientificInput(value).toLowerCase()))return true;}
   if(current.source?.fields){const expected=current.answer.split(','),parts=scientificInput(value).split(',').map(x=>x.trim());return parts.length===expected.length&&parts.every((x,i)=>current.caseSensitive?x===expected[i]:normalize(x)===normalize(expected[i]));}
   if(/^\d+(?:,\d+)+$/.test(current.answer)){const input=scientificInput(value);if(!/^[\d\s\p{P}]+$/u.test(input))return false;const parts=input.match(/\d+/g)||[],expected=current.answer.split(',');return parts.length===expected.length&&parts.every((part,i)=>Number(part)===Number(expected[i]));}
   const expectedUnit=expectedAnswerUnit(current);
   if(expectedUnit){
-    const parsed=scientificInput(value).replace(/[.!?;]+$/,'').match(/^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*(.+)$/);if(!parsed)return false;
+    const parsed=scientificInput(value).replace(/[.!?;]+$/,'').match(/^([+-]?(?:\d{1,3}(?:,\d{3})+(?:\.\d*)?|\d+(?:[.,]\d*)?|[.,]\d+))\s*(.+)$/);if(!parsed)return false;
     const aliases={A:['A','amp','amps','ampere','amperes'],V:['V','volt','volts'],'Ω':['Ω','ohm','ohms'],N:['N','newton','newtons'],kg:['kg','kilogram','kilograms'],m:['m','metre','metres','meter','meters'],s:['s','second','seconds'],'m/s':['m/s','m s-1','m s^-1','metres per second','meters per second'],'m/s²':['m/s2','m/s^2','m s-2','m s^-2'],'N/kg':['N/kg'],'%':['%','percent','per cent']};
-    const unit=parsed[2].trim();return (aliases[expectedUnit]||[scientificInput(expectedUnit)]).includes(unit)&&Math.abs(Number(parsed[1].replace(',','.'))-Number(current.answer))<.005;
+    const unit=parsed[2].trim();return (aliases[expectedUnit]||[scientificInput(expectedUnit)]).includes(unit)&&Math.abs(Number(withoutThousands(parsed[1]).replace(',','.'))-Number(current.answer))<.005;
   }
-  if(current.kind==='revision'&&/^\d+(\.\d+)?$/.test(current.answer)){const n=Number(value.trim());return value.trim()!==''&&Number.isFinite(n)&&Math.abs(n-Number(current.answer))<.005;}
-  if(current.caseSensitive)return [current.answer,...(current.aliases||[])].some(a=>scientificInput(a).replace(/\s/g,'')===scientificInput(value).replace(/\s/g,'').replace(/[.,!?;]+$/,''));
-  return [current.answer,...(current.aliases||[])].some(a=>/^[A-Z][A-Za-z]*[0-9₂₃₄]/.test(a)?scientificInput(a)===scientificInput(value).replace(/[.,!?;]+$/,''):normalize(a)===normalize(value));
+  if(current.kind==='revision'&&/^\d+(\.\d+)?$/.test(current.answer)){const typed=withoutThousands(value.trim()),n=Number(typed);return typed!==''&&Number.isFinite(n)&&Math.abs(n-Number(current.answer))<.005;}
+  if(current.caseSensitive)return ([current.answer,...(current.aliases||[])].some(a=>scientificInput(a).replace(/\s/g,'')===scientificInput(value).replace(/\s/g,'').replace(/[.,!?;]+$/,'')))||closeSpelling(value);
+  return [current.answer,...(current.aliases||[])].some(a=>/^[A-Z][A-Za-z]*[0-9₂₃₄]/.test(a)?scientificInput(a)===scientificInput(value).replace(/[.,!?;]+$/,''):normalize(a)===normalize(value))||closeSpelling(value);
+}
+// Typos count: ordinary words within 1 edit (2 for long answers) are accepted, e.g. "colombs" for coulombs.
+function editDistance(a,b){
+  const d=Array.from({length:a.length+1},(_,i)=>[i,...Array(b.length).fill(0)]);for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++){
+    d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+    if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1);
+  }
+  return d[a.length][b.length];
+}
+// Different words one letter apart: a typo here is a different answer, so no leniency.
+const CONFUSABLE_WORDS=[['charge','change'],['current','currents'],['north','south'],['series','serial']];
+// Opposites and neighbours that a typo-tolerant match must never blur: balanced/unbalanced, increase/decrease, sulfate/sulfide.
+function oppositeWords(a,b){
+  const bare=w=>w.replace(/^(un|in|im|de|dis|non|anti|over|under|sub|super)/,'');
+  const ending=w=>(w.match(/(ate|ide|ite|ine|ic|ous)$/)||[''])[0];
+  const wa=a.split(' '),wb=b.split(' ');
+  return wa.length===wb.length&&wa.some((w,i)=>w!==wb[i]&&(bare(w)===bare(wb[i])||(ending(w)&&ending(wb[i])&&ending(w)!==ending(wb[i])&&w.slice(0,-ending(w).length)===wb[i].slice(0,-ending(wb[i]).length))));
+}
+function closeSpelling(value){
+  if(current.source?.choices||current.source?.fields||current.kind!=='revision')return false;
+  const typed=normalize(value);if(!/^[a-z][a-z ]*$/.test(typed))return false;
+  return [current.answer,...(current.aliases||[])].some(a=>{
+    const want=normalize(a);if(!/^[a-z][a-z ]*$/.test(want)||want.length<5)return false;
+    if(CONFUSABLE_WORDS.some(pair=>pair.includes(typed)&&pair.includes(want)&&typed!==want))return false;
+    if(oppositeWords(typed,want))return false;
+    if(editDistance(typed,want)>(want.length>=8?2:1))return false;
+    current.spellingFix=a; // shown on the tick instead of the typo
+    return true;
+  });
 }
 
-function fail(timeout=false){playEffect('wrong');globalThis.CasinoResults?.record(false);stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`,timeout?'Time’s up':'Try again');}
+// Right number, but typed "ms" (milliseconds) where the answer is another unit, e.g. m/s. Says why it is wrong; the answer is still marked wrong.
+function millisecondHint(value){
+  const src=current.source;if(!src?.phys||!src.numeric||!src.answerUnit)return '';
+  const q=Physics12.splitQuantity(value);if(!q||q.unit!=='ms')return '';
+  const want=Number(src.answer),tol=src.tolerance??0.01;if(!(Math.abs(q.value-want)<=Math.max(Math.abs(want)*tol,1e-12)))return '';
+  return src.answerUnit==='m/s'?'ms means milliseconds, not metres per second. For metres per second, write m/s or m s^-1.':`ms means milliseconds, not ${src.answerUnit}.`;
+}
+// Shows the correct answer in symbols a student can type: N·m → N m, m/s² → m/s^2.
+function typeableUnits(s){return String(s).replace(/[·⋅]/g,' ').replace(/²/g,'^2').replace(/³/g,'^3').replace(/⁻¹/g,'^-1').replace(/⁻²/g,'^-2').replace(/⁻³/g,'^-3');}
+function fail(timeout=false,hint=''){playEffect('wrong');stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(`${hint?hint+' ':''}${typeableUnits(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`)}`,timeout?'Time’s up':'Try again');}
 let correctFlashTimer;
+function cashPop(amount){
+  try{ // cosmetic only: never let it interrupt answering
+  const score=$('casino-score');score.classList.remove('cash-pop');void score.offsetWidth;score.classList.add('cash-pop');
+  const gain=document.createElement('span');gain.className='cash-gain';gain.textContent='+$'+amount;gain.setAttribute('aria-hidden','true');
+  $('casino-status').appendChild(gain);setTimeout(()=>gain.remove(),1100);
+  }catch{}
+}
 function flashCorrect(){
-  clearTimeout(correctFlashTimer);$('answer-result').innerHTML=`<span class="submitted-answer">${scienceMarkup($('answer').value)}</span><span class="answer-mark" aria-label="Correct">✓</span>`;renderAnswerHint();
+  cashPop(attempts?5:10);clearTimeout(correctFlashTimer);$('answer-result').innerHTML=`<span class="submitted-answer">${scienceMarkup(current.spellingFix||$('answer').value)}</span><span class="answer-mark" aria-label="Correct">✓</span>`;renderAnswerHint();
   correctFlashTimer=setTimeout(()=>{$('answer-result').innerHTML='';renderAnswerHint();},800);
 }
 
 function completedLevel(completed,advance){if(advance)position++;next();}
+// Roulette opens after a short pause so the tick, cha-ching and count-up are seen first.
+let pendingRoulette=false;const ROULETTE_DELAY_MS=1100;
 $('answer-form').addEventListener('submit',e=>{
-  e.preventDefault();if($('roulette-dialog').open)return;
-  if(current.source?.phys&&current.source.numeric?Physics12.checkNumeric(current.source,$('answer').value)==='nounit':expectedAnswerUnit(current)&&/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)\s*[.!?;]*$/.test(scientificInput($('answer').value))){
+  e.preventDefault();if($('roulette-dialog').open||pendingRoulette)return;
+  if(current.source?.phys&&current.source.numeric?Physics12.checkNumeric(current.source,$('answer').value)==='nounit':expectedAnswerUnit(current)&&/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)\s*[.!?;]*$/.test(withoutThousands(scientificInput($('answer').value)))){
     clearTimeout(correctFlashTimer);renderAnswerHint();
     const reminder=$('unit-reminder');reminder.hidden=false;reminder.classList.remove('unit-missing');void reminder.offsetWidth;reminder.classList.add('unit-missing');focus();return;
   }
   $('unit-reminder').hidden=true;
-  if(!matches($('answer').value)){fail();return;}
-  globalThis.CasinoResults?.record(true);
+  if(!matches($('answer').value)){fail(false,millisecondHint($('answer').value));return;}
   playEffect('correct');flashCorrect();stop();score+=attempts?5:10;correct++;wrong=0;rouletteCorrectCount++;hud();
   if(reviewDeck)reviewDeck.answer(true);
   const levelFinished=!reviewDeck&&correct===(levels[questionLevel].correctTarget||3),completed=questionLevel,advance=position<enabled.length-1;
   if(levelFinished){correct=0;needsLevelCard=false;}
   const proceed=()=>{if(levelFinished)completedLevel(completed,advance);else{next();if(needsLevelCard){needsLevelCard=false;showRule();}}};
-  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0){rouletteTarget=10;hud();openRoulette(proceed);return;}hud();}
+  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0){rouletteTarget=10;hud();pendingRoulette=true;setTimeout(()=>{pendingRoulette=false;openRoulette(proceed);},ROULETTE_DELAY_MS);return;}hud();}
   proceed();
 });
 $('continue').addEventListener('click',()=>{if($('continue').textContent==='Start ↵')playEffect('level');});
@@ -326,7 +415,8 @@ function playEffect(kind,delay=0){
   unlockAudio();if(!audioContext)return;
   const patterns={
     type:[[88,0,.035]],
-    correct:[[72,0,.09],[76,.09,.09],[84,.18,.16]],
+    // "cha-ching": two quick low blips, then a bright ringing bell
+    correct:[[72,0,.05],[79,.06,.05],[91,.16,.09],[96,.16,.4],[103,.25,.35]],
     wrong:[[48,0,.14],[43,.14,.22]],
     menuUp:[[84,0,.045]],menuDown:[[79,0,.045]],
     rouletteBet:[[76,0,.035],[83,.04,.04]],
@@ -482,7 +572,7 @@ if(typeof ResizeObserver!=='undefined')new ResizeObserver(paintAnswer).observe($
 if(document.fonts)document.fonts.ready.then(paintAnswer);
 
 // Fixed, fully labelled examples match the text on each level card.
-function cardPicture(index){if(levels[index].skill)return `<div class="revision-rule">${scienceMarkup(levels[index].rule)}</div>`;
+function cardPicture(index){if(levels[index].cardHtml)return levels[index].cardHtml;if(levels[index].skill)return `<div class="revision-rule">${scienceMarkup(levels[index].rule)}</div>`;
   if(index<introductoryComponents.length){
     const items=introductoryComponents[index].types;
     return referencePicture(items.map((type,i)=>{const x=(i+.5)*600/items.length;return wiredComponent(x,70,type)+`<text x="${x}" y="134">${type}</text>`;}).join(''),'Component symbols with connecting wires');
@@ -572,6 +662,8 @@ function playRouletteResult(win){
 }
 function selectRouletteColour(colour){if(rouletteSpinning||roulettePlayed)return;if(colour!==rouletteSelectedColour)playEffect('rouletteBet');rouletteSelectedColour=colour;for(const c of ['red','black','green'])$('bet-'+c).setAttribute?.('aria-pressed',String(c===colour));}
 for(const colour of ['red','black','green'])$('bet-'+colour).onclick=()=>selectRouletteColour(colour);
+// Down from a colour button moves to Spin (stopPropagation keeps the document-level answer-key handler from reading it).
+$('roulette-colour').addEventListener('keydown',event=>{if(event.key!=='ArrowDown'||$('roulette-spin').disabled)return;event.preventDefault();event.stopPropagation();$('roulette-spin').focus();});
 function paintRoulette(index,total=1,stopAngle=0,target=0){
   const step=360/rouletteWheel.length;
   if(index===0){
@@ -598,14 +690,28 @@ function animateRoulettePoints(from,to){
   let frame=0;
   function count(){
     const progress=frame/30,value=Math.round(from+(to-from)*(1-Math.pow(1-progress,3)));
-    $('roulette-bank').textContent=`BANK: $${value}`;
+    $('roulette-bank').textContent=`$${value}`;
     $('score').textContent=`BANK $${String(value).padStart(6,'0')}`;
     if(frame===30){roulettePointsTimer=undefined;$('roulette-continue').disabled=false;return;}
     frame++;roulettePointsTimer=setTimeout(count,30);
   }
   count();
 }
-function openRoulette(proceed){stop();rouletteProceed=proceed;roulettePlayed=false;rouletteSpinning=false;$('roulette-points-change').textContent='';$('roulette-points-change').setAttribute?.('data-direction','');$('roulette-bank').textContent=`BANK: $${score}`;$('roulette-bet').max=String(score);$('roulette-bet').value=String(Math.min(10,score));updateRouletteBet();$('roulette-result').textContent='Place a bet or skip.';$('roulette-spin').disabled=false;$('roulette-bet').disabled=false;$('roulette-colour').disabled=false;$('roulette-continue').disabled=false;$('roulette-continue').textContent='Skip ↵';paintRoulette(0);$('roulette-dialog').showModal();stopMusic();musicEffectPause=false;rouletteMusicStep=0;startMusic();}
+// The bank balance flies from the bottom-left counter to its place on the roulette table (cosmetic; skipped if animation is unavailable).
+function flyBalanceToRoulette(fromRect,fromFont){
+  try{
+    const bank=$('roulette-bank');if(!fromRect||!bank.animate)return;
+    const to=bank.getBoundingClientRect(),toFont=parseFloat(getComputedStyle(bank).fontSize)||64;
+    const fly=document.createElement('div');fly.className='balance-fly';fly.textContent=bank.textContent;fly.setAttribute('aria-hidden','true');
+    fly.style.cssText=`position:fixed;left:0;top:0;margin:0;font-size:${toFont}px;transform-origin:0 0;z-index:10;pointer-events:none;white-space:nowrap;color:var(--ink);font-variant-numeric:tabular-nums;`;
+    $('roulette-dialog').appendChild(fly);
+    const w=fly.getBoundingClientRect().width,cx=to.left+(to.width-w)/2,scale=(fromFont||toFont)/toFont;
+    const ms=800;
+    bank.animate([{opacity:0},{opacity:0,offset:.9},{opacity:1}],{duration:ms});
+    fly.animate([{transform:`translate(${fromRect.left}px,${fromRect.top}px) scale(${scale})`},{transform:`translate(${cx}px,${to.top}px) scale(1)`}],{duration:ms,easing:'cubic-bezier(.3,.1,.2,1)',fill:'forwards'}).onfinish=()=>fly.remove();
+  }catch{}
+}
+function openRoulette(proceed){const flyFrom=$('casino-score').getBoundingClientRect?.(),flyFont=typeof getComputedStyle==='function'?parseFloat(getComputedStyle($('casino-score')).fontSize):0;stop();rouletteProceed=proceed;roulettePlayed=false;rouletteSpinning=false;$('roulette-points-change').textContent='';$('roulette-points-change').setAttribute?.('data-direction','');$('roulette-bank').textContent=`$${score}`;$('roulette-bet').max=String(score);$('roulette-bet').value=String(Math.min(10,score));updateRouletteBet();$('roulette-result').textContent='Place a bet or skip.';$('roulette-spin').disabled=false;$('roulette-bet').disabled=false;$('roulette-colour').disabled=false;$('roulette-continue').disabled=false;$('roulette-continue').textContent='Skip ↵';paintRoulette(0);$('roulette-dialog').showModal();flyBalanceToRoulette(flyFrom,flyFont);stopMusic();musicEffectPause=false;rouletteMusicStep=0;startMusic();}
 $('roulette-form').addEventListener('submit',e=>{e.preventDefault();if(rouletteSpinning||roulettePlayed||!$('roulette-dialog').open)return;const stake=Number($('roulette-bet').value),colour=rouletteSelectedColour;if(!Number.isInteger(stake)||stake<1||stake>score||!['red','black','green'].includes(colour)){$('roulette-result').textContent=`Bet a whole dollar amount from $1 to $${score}.`;return;}
   const target=Math.floor(Math.random()*37),stopAngle=Math.random()*360,steps=74+target,bankBefore=score;let frame=0;rouletteSpinning=true;roulettePlayed=true;score-=stake;hud();$('roulette-spin').disabled=true;$('roulette-bet').disabled=true;$('roulette-colour').disabled=true;$('roulette-continue').disabled=true;$('roulette-result').textContent='SPINNING…';playEffect('rouletteStart');
   function spin(){paintRoulette(frame,steps,stopAngle,target);if(frame<steps&&(frame%2===0||frame>=steps-15))playEffect('rouletteTick');if(frame===steps){const n=rouletteWheel[target],landed=rouletteColour(n),win=landed===colour,payout=win?stake*(colour==='green'?50:3):0;score+=payout;hud();playRouletteResult(win);rouletteSpinning=false;animateRoulettePoints(bankBefore,score);$('roulette-result').textContent='';$('roulette-continue').textContent='Continue ↵';return;}frame++;setTimeout(spin,frame<steps-15?25:35+(frame-(steps-15))*12);}
@@ -626,10 +732,10 @@ $('skill-rows').addEventListener('click',event=>{const button=event.target.close
 
 // Year 10 units share the original answer, retry, score and roulette loop.
 const circuitLevelCount=levels.length;
-const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit()],typeof DIAGNOSTIC_UNIT==='undefined'?[]:[DIAGNOSTIC_UNIT]);
+const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit()]);
 // Classes: each unit belongs to one. URL: ?class=yr12 (or yr10); ?unit=… still works and implies its class.
 const CLASSES=[{id:'yr10',name:'YEAR 10',defaultUnit:'electricity_magnetism'},{id:'yr12',name:'YEAR 12',defaultUnit:'yr12_physics'}];
-const unitClass=id=>id==='yr12_physics'||id==='yr12_diagnostic'?'yr12':'yr10';
+const unitClass=id=>id==='yr12_physics'?'yr12':'yr10';
 let selectedClass='yr10';const lastUnitForClass={};
 function mixedQuestionPicker(questions){
   // E4 (core comparison) disabled pending a clearer question. Retain its source for revision.
@@ -649,7 +755,7 @@ function mixedQuestionPicker(questions){
 for(const unit of curriculumUnits){
   for(const skill of unit.skills){
     const getItem=unit.mixed?mixedQuestionPicker(skill.questions):()=>pick(skill.questions);
-    const entry={name:skill.name.toUpperCase(),rule:skill.summary,example:unit.mixed?'Read each question carefully. Use working for calculations and units as requested.':skill.questions[0].prompt+' Answer: '+skill.questions[0].answer,reset:unit.mixed?()=>getItem.reset():undefined,correctTarget:skill.correctTarget||3,questions:skill.questions,skill:skill.id,unit:unit.id,
+    const entry={name:skill.name.toUpperCase(),rule:skill.summary,cardHtml:skill.cardHtml,example:skill.example||(unit.mixed?'Read each question carefully. Use working for calculations and units as requested.':skill.questions[0].prompt+' Answer: '+skill.questions[0].answer),reset:unit.mixed?()=>getItem.reset():undefined,correctTarget:skill.correctTarget||3,questions:skill.questions,skill:skill.id,unit:unit.id,
       make:()=>makeRevisionQuestion(getItem(),unit.mixed)};
     levels.push(entry);
   }
@@ -687,6 +793,67 @@ if(curriculumUnits.length){
   chooseUnit(selectedUnit);
 }
 
+// START opens a chooser: all levels, one level, or (Year 12) one skill group, optionally limited to one topic.
+// Each choice becomes a level entry so the usual deck, review and roulette loop runs unchanged.
+const practiceEntries=new Map();let practiceTopic='all';
+const practiceUnit=()=>curriculumUnits.find(u=>u.id===selectedUnit);
+const practiceChoosable=()=>{const unit=practiceUnit();return !!unit&&unit.skills.length>0;};
+function practiceEntry(key,name,questions,mixed=true){
+  if(!practiceEntries.has(key)){
+    const next=mixedQuestionPicker(questions);
+    levels.push({name:name.toUpperCase(),rule:`Practice: ${name}.`,example:'Read each question carefully. Use working for calculations and units as requested.',reset:()=>next.reset(),correctTarget:3,questions,skill:key,unit:'practice',focus:true,make:()=>makeRevisionQuestion(next(),mixed)});
+    practiceEntries.set(key,levels.length-1);
+  }
+  return practiceEntries.get(key);
+}
+const ownLevels=()=>levels.map((l,i)=>i).filter(i=>!levels[i].focus&&levels[i].unit===selectedUnit);
+function levelForTopic(index,topic){
+  if(topic==='all')return index;
+  const questions=levels[index].questions.filter(item=>item.unit===topic);
+  return questions.length?practiceEntry(`${levels[index].skill}|${topic}`,`${levels[index].name} · ${topic}`,questions):null;
+}
+function skillGroups(unit){
+  const groups=new Map();
+  for(const skill of unit.skills)for(const item of skill.questions){const name=String(item.skill||'').split(':')[0].trim();if(!name)continue;if(!groups.has(name))groups.set(name,[]);groups.get(name).push(item);}
+  return groups;
+}
+function renderPractice(){
+  const unit=practiceUnit(),own=ownLevels(),topical=!!unit.physics12;
+  const row=(code,label,note,rank)=>`<button type="button" data-practice="${escapeMarkup(code)}" data-name="${escapeMarkup(label.toLowerCase())}"><span class="skill-rank">${rank}</span><span>${escapeMarkup(label)}</span><span class="skill-selected">${note}</span></button>`;
+  $('practice-topics').hidden=!topical;
+  for(const button of $('practice-topics').querySelectorAll('[data-topic]'))button.setAttribute('aria-pressed',String(button.dataset.topic===practiceTopic));
+  $('practice-rows').innerHTML=row('mixed','Everything mixed together',`${own.reduce((n,index)=>n+levels[index].questions.filter(item=>!topical||practiceTopic==='all'||item.unit===practiceTopic).length,0)} types`,'▶')+own.filter(index=>!topical||practiceTopic==='all'||levels[index].questions.some(item=>item.unit===practiceTopic)).map((index,i)=>row(`level:${index}`,levels[index].name,`${levels[index].questions.filter(item=>!topical||practiceTopic==='all'||item.unit===practiceTopic).length} types`,String(i+1).padStart(2,'0'))).join('');
+  $('practice-find').hidden=!topical;
+  if(topical){
+    const groups=[...skillGroups(unit)].map(([name,items])=>[name,items.filter(item=>practiceTopic==='all'||item.unit===practiceTopic)]).filter(([,items])=>items.length).sort((a,b)=>a[0].localeCompare(b[0]));
+    $('practice-skills').innerHTML=groups.map(([name,items],i)=>row(`skill:${name}`,name,`${items.length} ${items.length===1?'type':'types'}`,String(i+1).padStart(2,'0'))).join('');
+    $('practice-search').value='';
+  }
+}
+function filterPractice(){
+  const text=$('practice-search').value.trim().toLowerCase();
+  for(const button of $('practice-skills').querySelectorAll('[data-practice]'))button.hidden=!!text&&!button.dataset.name.includes(text);
+}
+function beginPractice(code){
+  const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all';
+  let picked;
+  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}`,'Everything mixed together',questions,!!unit.mixed)]:[];}
+  else if(code.startsWith('level:'))picked=[levelForTopic(Number(code.slice(6)),topic)];
+  else{const name=code.slice(6),questions=(skillGroups(unit).get(name)||[]).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`skill|${name}|${topic}`,name,questions)]:[];}
+  picked=picked.filter(index=>index!==null);if(!picked.length)return;
+  enabled=picked;enabled.forEach(index=>levels[index].reset?.());
+  position=0;current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;
+  $('unit-note').textContent=code==='mixed'?(topic==='all'?'Everything mixed together · reviews carry forward':`Everything mixed together · ${topic} only`):`Practising: ${levels[enabled[0]].name.toLowerCase()}`;
+  $('practice-dialog').close();hud();startGame();
+}
+$('practice-dialog').addEventListener('click',event=>{
+  const topic=event.target.closest?.('[data-topic]');
+  if(topic){practiceTopic=topic.dataset.topic;renderPractice();selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).findIndex(c=>c.dataset?.topic===practiceTopic));return;}
+  const button=event.target.closest?.('[data-practice]');if(button)beginPractice(button.dataset.practice);
+});
+$('practice-search').addEventListener('input',filterPractice);
+$('start-game').onclick=()=>{if(activeRun||selectedUnit==='circuit_extension'||!practiceChoosable())return startGame();renderPractice();$('practice-dialog').showModal();};
+
 function syncSettingChoices(){
   for(const button of document.querySelectorAll('[data-setting]'))button.setAttribute('aria-pressed',String($(button.dataset.setting).value===button.dataset.value));
 }
@@ -696,9 +863,12 @@ $('preferences-dialog').addEventListener('click',event=>{
 });
 syncSettingChoices();
 
-var menuPanelIds=['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','skill-dialog'];
-function activeMenuPanel(){return (menuPanelIds||['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','skill-dialog']).map($).find(panel=>panel.open);}
-function panelControls(panel){return [...panel.querySelectorAll('button,input:not([type="hidden"])')].filter(control=>!control.disabled&&!control.hidden&&(!control.getClientRects||control.getClientRects().length));}
+var menuPanelIds=['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','skill-dialog','practice-dialog'];
+function activeMenuPanel(){return (menuPanelIds||['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','skill-dialog','practice-dialog']).map($).find(panel=>panel.open);}
+function panelControls(panel){
+  // After the wheel has spun, the only thing to do is Continue: keep arrow keys on it.
+  if(panel.id==='roulette-dialog'&&roulettePlayed)return [$('roulette-continue')].filter(control=>!control.disabled);
+  return [...panel.querySelectorAll('button,input:not([type="hidden"])')].filter(control=>!control.disabled&&!control.hidden&&(!control.getClientRects||control.getClientRects().length));}
 function selectPanelControl(panel,index){const controls=panelControls(panel);if(!controls.length)return;index=(index+controls.length)%controls.length;controls.forEach((control,i)=>control.classList.toggle('selected',i===index));controls[index].focus();}
 function navigatePanel(panel,event){
   const controls=panelControls(panel);if(!controls.length)return;
@@ -799,3 +969,23 @@ function circuitAnswerDiagram(picture,answerMarkup){
  if(placed)return picture;
  return picture.replace(/viewBox="0 0 (\d+) (\d+)"/,(_,w,h)=>`viewBox="0 0 ${w} ${Number(h)+180}"`).replace('</svg>',`<foreignObject x="30" y="435" width="740" height="160"><div xmlns="http://www.w3.org/1999/xhtml" class="circuit-diagram-prompt">${answerMarkup}</div></foreignObject></svg>`);
 }
+
+// Clickable special characters (student suggestion, 23/10/2026). Inserts at the caret of the last answer field used.
+const SYMBOLS=['Ω','µ','¹','²','³','⁻','⁺','₁','₂','₃','×','÷','Δ','θ','λ','τ','π','Φ','ε','Σ','°','±'];
+let lastAnswerField=$('answer');
+$('game-screen').addEventListener('focusin',event=>{if(event.target.id==='answer'||event.target.classList?.contains('shell-input'))lastAnswerField=event.target;});
+// Formula subscripts (v_f, F_g, E_k…): Unicode has no subscript f or g, so these insert the typed form (_f) that the answer checker expects, labelled as a subscript.
+const SUBSCRIPT_KEYS=['i','f','g','k','p','c','net'];
+$('symbol-pad').innerHTML=SYMBOLS.map(symbol=>`<button type="button" tabindex="-1" data-symbol="${symbol}">${symbol}</button>`).join('')+SUBSCRIPT_KEYS.map(sub=>`<button type="button" tabindex="-1" data-symbol="_${sub}" aria-label="subscript ${sub}"><sub>${sub}</sub></button>`).join('');
+$('symbol-pad').addEventListener('pointerdown',event=>event.preventDefault());
+$('symbol-pad').addEventListener('click',event=>{
+  const symbol=event.target.closest?.('[data-symbol]')?.dataset.symbol;if(!symbol)return;
+  const field=document.contains(lastAnswerField)&&!lastAnswerField.closest('[hidden]')?lastAnswerField:answerFocusTarget();
+  const limit=field.maxLength>0?field.maxLength:Infinity;if(field.value.length>=limit)return;
+  const start=field.selectionStart??field.value.length,end=field.selectionEnd??start;
+  field.value=field.value.slice(0,start)+symbol+field.value.slice(end);
+  field.focus();field.setSelectionRange?.(start+symbol.length,start+symbol.length);
+  field.dispatchEvent(new Event('input',{bubbles:true}));
+  if(field.classList.contains('shell-input'))syncShellAnswer();
+  paintAnswer();
+});

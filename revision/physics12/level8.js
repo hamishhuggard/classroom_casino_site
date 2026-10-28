@@ -187,28 +187,27 @@ function format(level,id,skill,trees,o,checkpoint=false){
     visual:{type:'svg',svg:pair(c1,c2)}};}});
 }
 // ---- warm-ups: count the resistors ----
-// Left: the standard layout, battery on top and the resistors along the bottom. Right: the same kind of circuit
-// (all in series, or all in parallel) with the same number of resistors or one more or one fewer, drawn differently:
+// Each question is all in series or all in parallel, with two or three resistors, at random. Left: the standard layout,
+// battery on top and the resistors along the bottom. Right: the same kind of circuit with the same number of
+// resistors or one more or one fewer, drawn differently:
 // series resistors each on their own edge, parallel groups hanging outside, joined in the middle, as a ladder or with
 // the battery as a branch.
 const uniform=(t,n)=>n===1?R1:{t,c:Array.from({length:n},()=>R1)};
 const standard=(tree,r)=>drawLoop([{block:battery,flip:false},null,{block:series(items(tree).slice(1).map(n=>block(n,r,PLAIN))),flip:false},null]);
-function warmup(id,skill,t,n){
- P.add(8,{id,topic:E,skill,
+function warmup(id){
+ P.add(8,{id,topic:E,skill:'Series or parallel: count the resistors',
   gen(r,h){
-   const t1=uniform(t,n),same=r()<.5,t2=same?t1:uniform(t,n+h.pick(n>1?[-1,1]:[1],r)),o=t==='S'?{...SPREAD,everySide:true}:LADDER;
+   const t=h.pick(['S','P'],r),n=h.int(2,3,r),t1=uniform(t,n),same=r()<.5,t2=same?t1:uniform(t,n+h.pick(n>1?[-1,1]:[1],r)),o=t==='S'?{...SPREAD,everySide:true}:LADDER;
    const c1=standard(t1,r);let c2=draw(t2,r,o);
    for(let i=0;same&&lookalike(c1,c2)&&i<60;i++)c2=draw(t2,r,o);
-   const what=t==='S'?'resistors':'branches';
    return {cloze:'Same circuit or different?\n____',answer:same?'same':'different',choices:['same','different'],fixedChoices:true,noInstruction:true,
-    explanation:same?`Same. Both are ${words(t1)}, just drawn differently.`:`Different. Count the ${what}. Left: ${words(t1)}. Right: ${words(t2)}.`,
+    explanation:same?`Same. Both are ${words(t1)}, just drawn differently.`:`Different. Count the resistors. Left: ${words(t1)}. Right: ${words(t2)}.`,
     visual:{type:'svg',svg:pair(c1,c2)}};}});
 }
 // Played in this order (the level is marked ordered in core.js), easiest first: two resistors, three in series or parallel,
 // then any three, then four, then ladders and near misses (one resistor moved). A practice run cycles round again.
-// Twenty warm-ups first, five of each: two then three in series, two then three in parallel.
-[['S',2,'Two resistors in series'],['S',3,'Three resistors in series'],['P',2,'Two resistors in parallel'],['P',3,'Three resistors in parallel']]
- .flatMap(w=>Array(5).fill(w)).forEach(([t,n,name],i)=>warmup('L8-T'+String(i+1).padStart(2,'0'),name+': count them',t,n));
+// Twenty warm-ups first.
+for(let i=1;i<=20;i++)warmup('L8-T'+String(i).padStart(2,'0'));
 format(8,'L8-E01','Two resistors: battery and resistors swap sides',ALL[2],PLAIN);
 format(8,'L8-E02','Two resistors: longer or shorter wires',ALL[2],STRETCH);
 format(8,'L8-E03','Two resistors: parts moved round the loop',ALL[2],SPREAD);

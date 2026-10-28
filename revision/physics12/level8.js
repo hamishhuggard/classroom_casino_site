@@ -111,7 +111,7 @@ function plainLoop(tree,r,o){
 }
 function randomLoop(tree,r,o){
  const order=H.shuffle(items(tree),r),k=order.length;
- const g=H.int(1,Math.min(4,k),r),sideIds=H.shuffle([0,1,2,3],r).slice(0,g).sort();
+ const g=o.everySide?Math.min(4,k):H.int(1,Math.min(4,k),r),sideIds=H.shuffle([0,1,2,3],r).slice(0,g).sort();
  const cuts=H.shuffle([...Array(k-1).keys()].map(i=>i+1),r).slice(0,g-1).sort((a,b)=>a-b);
  const runs=[0,...cuts,k].slice(1).map((end,i,arr)=>order.slice(i?arr[i-1]:0,end));
  const sides=[null,null,null,null];
@@ -132,9 +132,9 @@ function pair(c1,c2){
  const put=(c,cx)=>`<g transform="translate(${(cx-c.w*s/2).toFixed(1)},${(190-c.h*s/2).toFixed(1)}) scale(${s.toFixed(4)}) translate(${-c.x},${-c.y})">${c.svg}</g>`;
  return H.svgWrap(put(c1,235)+H.line(480,30,480,350,2,'stroke-dasharray="6 10" opacity="0.5"')+put(c2,725),'Two circuit diagrams to compare','0 0 960 380').replace('class="revision-visual"','class="revision-visual circuit-pair"');
 }
-// ---- lookalikes: is one drawing just the other turned round or flipped over? ----
-// Flatten a drawing's SVG to absolute line segments, trace them onto a 3-unit grid (after turning, so the grids line up), and compare them under all
-// eight rotations and reflections. Drawings at the same scale only, so compare before pair() scales them.
+// ---- lookalikes: is one drawing the very same picture as the other? (Turned or flipped copies are fine.) ----
+// Flatten a drawing's SVG to absolute line segments, trace them onto a 3-unit grid and compare.
+// Drawings at the same scale only, so compare before pair() scales them.
 function cells(svg){
  const mul=(a,b)=>[a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];
  const stack=[[1,0,0,1,0,0]],segs=[];
@@ -153,14 +153,13 @@ function cells(svg){
  for(const [a,b] of segs){const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])));for(let i=0;i<=n;i++)out.push([a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n]);}
  return out;
 }
-const SYMS=[[1,0,0,1],[0,-1,1,0],[-1,0,0,-1],[0,1,-1,0],[-1,0,0,1],[1,0,0,-1],[0,1,1,0],[0,-1,-1,0]];
-function grid(pts,[a,b,c,d]){
- const q=pts.map(([x,y])=>[a*x+b*y,c*x+d*y]),x0=Math.min(...q.map(p=>p[0])),y0=Math.min(...q.map(p=>p[1]));
- return new Set(q.map(([x,y])=>Math.round((x-x0)/3)+','+Math.round((y-y0)/3)));
+function grid(pts){
+ const x0=Math.min(...pts.map(p=>p[0])),y0=Math.min(...pts.map(p=>p[1]));
+ return new Set(pts.map(([x,y])=>Math.round((x-x0)/3)+','+Math.round((y-y0)/3)));
 }
 function lookalike(c1,c2){
- const g1=grid(cells(c1.svg),SYMS[0]),p2=cells(c2.svg);
- return SYMS.some(s=>{const g2=grid(p2,s);let n=0;for(const k of g2)if(g1.has(k))n++;return n/Math.max(g1.size,g2.size)>0.9;});
+ const g1=grid(cells(c1.svg)),g2=grid(cells(c2.svg));let n=0;for(const k of g2)if(g1.has(k))n++;
+ return n/Math.max(g1.size,g2.size)>0.97;
 }
 // Keep in step with the level summary in core.js.
 const RULE='Same circuit if every resistor is connected to the same things. Wires can bend, stretch and move. The order of things in series and the order of parallel branches do not matter. All the resistors are identical.';
@@ -181,13 +180,34 @@ function format(level,id,skill,trees,o){
   gen(r,h){
    const t1=h.pick(trees,r),same=r()<.5,t2=same?t1:h.pick(o.near?nearMisses(t1):trees.filter(t=>key(t)!==key(t1)),r);
    const c1=draw(t1,r,o);let c2=draw(t2,r,o);
-   for(let i=0;same&&lookalike(c1,c2)&&i<60;i++)c2=draw(t2,r,o);   // never the same drawing twice, nor one just turned round or flipped
+   for(let i=0;same&&lookalike(c1,c2)&&i<60;i++)c2=draw(t2,r,o);   // never show the same drawing twice
    return {cloze:'Same circuit or different?\n____',answer:same?'same':'different',choices:['same','different'],fixedChoices:true,noInstruction:true,   // SAME always on the left
     explanation:same?`Same. Both are ${words(t1)}, just drawn differently.`:`Different. Left: ${words(t1)}. Right: ${words(t2)}.`,
     visual:{type:'svg',svg:pair(c1,c2)}};}});
 }
+// ---- warm-ups: count the resistors ----
+// Left: the standard layout, battery on top and the resistors along the bottom. Right: the same kind of circuit
+// (all in series, or all in parallel) with the same number of resistors or one more or one fewer, drawn differently:
+// series resistors each on their own edge, parallel groups hanging outside, joined in the middle, as a ladder or with
+// the battery as a branch.
+const uniform=(t,n)=>n===1?R1:{t,c:Array.from({length:n},()=>R1)};
+const standard=(tree,r)=>drawLoop([{block:battery,flip:false},null,{block:series(items(tree).slice(1).map(n=>block(n,r,PLAIN))),flip:false},null]);
+function warmup(id,skill,t,n){
+ P.add(8,{id,topic:E,skill,
+  gen(r,h){
+   const t1=uniform(t,n),same=r()<.5,t2=same?t1:uniform(t,n+h.pick(n>1?[-1,1]:[1],r)),o=t==='S'?{...SPREAD,everySide:true}:LADDER;
+   const c1=standard(t1,r);let c2=draw(t2,r,o);
+   for(let i=0;same&&lookalike(c1,c2)&&i<60;i++)c2=draw(t2,r,o);
+   const what=t==='S'?'resistors':'branches';
+   return {cloze:'Same circuit or different?\n____',answer:same?'same':'different',choices:['same','different'],fixedChoices:true,noInstruction:true,
+    explanation:same?`Same. Both are ${words(t1)}, just drawn differently.`:`Different. Count the ${what}. Left: ${words(t1)}. Right: ${words(t2)}.`,
+    visual:{type:'svg',svg:pair(c1,c2)}};}});
+}
 // Played in this order (the level is marked ordered in core.js), easiest first: two resistors, three in series or parallel,
 // then any three, then four, then ladders and near misses (one resistor moved). A practice run cycles round again.
+// Twenty warm-ups first, five of each: two then three in series, two then three in parallel.
+[['S',2,'Two resistors in series'],['S',3,'Three resistors in series'],['P',2,'Two resistors in parallel'],['P',3,'Three resistors in parallel']]
+ .flatMap(w=>Array(5).fill(w)).forEach(([t,n,name],i)=>warmup('L8-T'+String(i+1).padStart(2,'0'),name+': count them',t,n));
 format(8,'L8-E01','Two resistors: battery and resistors swap sides',ALL[2],PLAIN);
 format(8,'L8-E02','Two resistors: longer or shorter wires',ALL[2],STRETCH);
 format(8,'L8-E03','Two resistors: parts moved round the loop',ALL[2],SPREAD);

@@ -2,6 +2,7 @@
    Level files (level1.js … level5.js) call Physics12.add(level, definition). */
 const Physics12=(()=>{
  // ordered: play the level's questions in order (easiest first) instead of shuffled.
+ // jumpAfter: in an ordered level, that many right in a row skips ahead to the next question marked checkpoint.
  const LEVELS=[
   {id:'yr12_physics-mech-units',name:'Mechanics units & symbols',summary:'Learn the quantity, symbol, unit and unit symbol for each mechanics quantity. Fill in the missing cell. Unit symbols are case-sensitive: N, not n.'},
   {id:'yr12_physics-em-units',name:'Electromagnetism units & symbols',summary:'Learn the quantity, symbol, unit and unit symbol for each electricity and magnetism quantity. Fill in the missing cell. Unit symbols are case-sensitive.'},
@@ -10,7 +11,7 @@ const Physics12=(()=>{
   {id:'yr12_physics-given',name:'Calculate — equation given',summary:'The equation and the givens are shown. Substitute, rearrange if needed, and include the correct unit.'},
   {id:'yr12_physics-recall',name:'Calculate — choose the equation',summary:'Only the givens are shown. Decide which equation applies, then calculate and include the correct unit.'},
   {id:'yr12_physics-word',name:'Word problems',summary:'Short exam-style situations. Pick out the givens, choose the equation, and calculate with units.'},
-  {id:'yr12_physics-same-circuit',name:'Same or different circuit?',ordered:true,summary:'Same circuit if every resistor is connected to the same things. Wires can bend, stretch and move. The order of things in series and the order of parallel branches do not matter. All the resistors are identical.'}
+  {id:'yr12_physics-same-circuit',name:'Same or different circuit?',ordered:true,jumpAfter:5,summary:'Same circuit if every resistor is connected to the same things. Wires can bend, stretch and move. The order of things in series and the order of parallel branches do not matter. All the resistors are identical.'}
  ];
  // Title-card content per level (an HTML table etc.), set by the level files with setCard().
  const CARDS={};
@@ -189,7 +190,7 @@ const Physics12=(()=>{
   // an id not yet in it gets the next free number (run scripts/assign_numbers.cjs to record it).
   const known=NUMBERS_OF();let n=Math.max(100,...Object.values(known));
   return {id:'yr12_physics',name:'Year 12 Physics — Mechanics & Electromagnetism',status:'ready',mixed:true,physics12:true,source:'NCEA Level 2 Physics (AS 91171 mechanics, AS 91173 electricity & electromagnetism)',
-   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,ordered:lv.ordered,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].map(def=>({...def,unit:def.topic,umbrella:umbrella(def)||'',questionNumber:known[def.id]||++n}))}))};
+   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,ordered:lv.ordered,jumpAfter:lv.jumpAfter,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].map(def=>({...def,unit:def.topic,umbrella:umbrella(def)||'',questionNumber:known[def.id]||++n}))}))};
  }
  return {LEVELS,TOPICS,UMBRELLA_ORDER,umbrella,DIRS,bank,add,setCard,generate,unit,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
 })();

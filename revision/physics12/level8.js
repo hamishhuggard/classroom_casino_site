@@ -175,8 +175,9 @@ const PLAIN={},STRETCH={stretch:true},SPREAD={stretch:true,spread:true},MID={str
  TRICKS={stretch:true,spread:true,flip:true,mid:true},ALLTRICKS={stretch:true,spread:true,flip:true,mid:true,rails:true};
 const LADDER={...ALLTRICKS,ladder:true},NEAR={...LADDER,near:true};
 const ENDS=ALL[3].filter(t=>t.c.every(c=>c.t==='R'));   // three in series, three in parallel
-function format(level,id,skill,trees,o){
- P.add(level,{id,topic:E,skill,
+const MIXED3=ALL[3].filter(t=>!ENDS.includes(t));   // a series part and a parallel part
+function format(level,id,skill,trees,o,checkpoint=false){
+ P.add(level,{id,topic:E,skill,checkpoint,
   gen(r,h){
    const t1=h.pick(trees,r),same=r()<.5,t2=same?t1:h.pick(o.near?nearMisses(t1):trees.filter(t=>key(t)!==key(t1)),r);
    const c1=draw(t1,r,o);let c2=draw(t2,r,o);
@@ -219,10 +220,11 @@ format(8,'L8-E08','Three resistors in series or parallel: longer or shorter wire
 format(8,'L8-E09','Three resistors in series or parallel: parts moved',ENDS,SPREAD);
 format(8,'L8-E10','Three resistors in series or parallel: branches moved',ENDS,TRICKS);
 format(8,'L8-E11','Three resistors in series or parallel: battery drawn as a branch',ENDS,ALLTRICKS);
-format(8,'L8-E12','Three resistors',ALL[3],PLAIN);
-format(8,'L8-E13','Three resistors: parts moved',ALL[3],SPREAD);
-format(8,'L8-E14','Three resistors: branches moved',ALL[3],TRICKS);
-format(8,'L8-E15','Three resistors: battery drawn as a branch',ALL[3],ALLTRICKS);
+// Checkpoint: five right in a row (jumpAfter in core.js) skips straight here, to series-and-parallel circuits.
+format(8,'L8-E12','Three resistors: series and parallel',MIXED3,PLAIN,true);
+format(8,'L8-E13','Three resistors: series and parallel, parts moved',MIXED3,SPREAD);
+format(8,'L8-E14','Three resistors: series and parallel, branches moved',MIXED3,TRICKS);
+format(8,'L8-E15','Three resistors: series and parallel, battery drawn as a branch',MIXED3,ALLTRICKS);
 format(8,'L8-E16','Four resistors',ALL[4],PLAIN);
 format(8,'L8-E17','Four resistors: parts moved',ALL[4],SPREAD);
 format(8,'L8-E18','Four resistors: branches moved',ALL[4],TRICKS);

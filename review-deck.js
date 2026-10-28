@@ -1,14 +1,15 @@
 /* One pass through each level; missed cards travel across levels for three reviews.
-   Cards are shuffled unless the level is marked ordered (easiest first). */
+   Cards are shuffled unless the level is marked ordered (easiest first). An ordered level may set jumpAfter and
+   checkpoints (card indexes): after that many right in a row, its unseen cards before the next checkpoint are skipped. */
 (function(root){
   class ReviewDeck {
     constructor(levels,random=Math.random){
       this.levels=levels.map(level=>{
-        const cards=level.cards.map(question=>({question,level:level.index,seen:false,done:false,stage:0,due:null,order:0}));
+        const cards=level.cards.map((question,i)=>({question,level:level.index,seen:false,done:false,stage:0,due:null,order:0,checkpoint:!!level.checkpoints?.includes(i)}));
         if(!level.ordered)for(let i=cards.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
         return {...level,cards};
       });
-      this.cards=this.levels.flatMap(level=>level.cards);this.position=0;this.answers=0;this.sequence=0;this.current=null;this.previous=null;
+      this.cards=this.levels.flatMap(level=>level.cards);this.position=0;this.answers=0;this.sequence=0;this.current=null;this.previous=null;this.streak=0;
     }
     next(){
       if(this.current)throw Error('Answer the current card before drawing another.');
@@ -28,6 +29,12 @@
       else if(!card.seen){card.seen=true;card.done=true;}
       else{card.stage++;if(card.stage===3){card.done=true;card.due=null;}else{card.due=this.answers+[3,10,20][card.stage];card.order=this.sequence++;}}
       this.previous=card;this.current=null;
+      this.streak=correct?this.streak+1:0;
+      const level=this.levels[this.position];
+      if(level?.jumpAfter&&this.streak>=level.jumpAfter){
+        const to=level.cards.findIndex(card=>card.checkpoint&&!card.seen),skip=to<0?[]:level.cards.slice(0,to).filter(card=>!card.seen);
+        if(skip.length){for(const card of skip){card.seen=true;card.done=true;}this.streak=0;}
+      }
     }
     get progress(){
       const position=Math.min(this.position,this.levels.length-1),level=this.levels[position];

@@ -79,10 +79,10 @@ function showScore(){
   const step=()=>{if(token!==countToken)return;const k=Math.min(1,(Date.now()-start)/duration);shownScore=Math.round(from+(to-from)*k);el.textContent=`$${shownScore}`;if(k<1)requestAnimationFrame(step);};
   step();
 }
-function hud(){showScore();renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEVEL ${position+1}${showNumber&&questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
+function hud(){showScore();renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEARNING UNIT ${position+1}${showNumber&&questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
 function renderDeckProgress(){const box=$('deck-progress');box.hidden=true; // progress line hidden at Hamish's request; label text still maintained
-  if(!reviewDeck)return;const progress=reviewDeck.progress;$('deck-progress-label').textContent=`LEVEL ${progress.position+1} · ${progress.seen}/${progress.total} new questions attempted · ${progress.pending} awaiting review${currentReview?.review?' · REVIEW '+(currentReview.stage+1)+'/3 (LEVEL '+(enabled.indexOf(questionLevel)+1)+')':''}`;}
-function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new ReviewDeck(enabled.map(index=>({index,cards:levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4').map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))})));}
+  if(!reviewDeck)return;const progress=reviewDeck.progress;$('deck-progress-label').textContent=`LEARNING UNIT ${progress.position+1} · ${progress.seen}/${progress.total} new questions attempted · ${progress.pending} awaiting review${currentReview?.review?' · REVIEW '+(currentReview.stage+1)+'/3 (LEARNING UNIT '+(enabled.indexOf(questionLevel)+1)+')':''}`;}
+function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new ReviewDeck(enabled.map(index=>({index,ordered:levels[index].ordered,cards:levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4').map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))})));}
 function makeRevisionQuestion(base,mixed){const item=typeof base.gen==='function'?Physics12.generate(base):mixed&&typeof CasinoPractice!=='undefined'?CasinoPractice.generate(base):base;return q(item.cloze||item.prompt,item.answer,{kind:'revision',aliases:item.aliases||[],caseSensitive:!!item.caseSensitive||/chemical symbol|formula|base pairs|neutral formula|genotype =/.test(item.prompt),worked:item.explanation,source:item});}
 function finishDeck(){stop();currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
 function stop(){clearInterval(timer);clearTimeout(beepTimer);$('clock').textContent='';}
@@ -142,7 +142,7 @@ function showRule(solution='',title='New step'){
   $('rule-dialog').classList.toggle('statement-card',!!preview||correction);
   $('rule-dialog').classList.toggle('correction-card',correction);
   $('rule-dialog').classList.toggle('table-card',!!l.cardHtml&&!correction);
-  $('card-title').textContent=correction?`${title}${questionNumber()?' · QUESTION '+questionNumber():''}`:`LEVEL ${enabled.indexOf(questionLevel)+1}`;
+  $('card-title').textContent=correction?`${title}${questionNumber()?' · QUESTION '+questionNumber():''}`:`LEARNING UNIT ${enabled.indexOf(questionLevel)+1}`;
   $('card-level').textContent=l.name;$('card-level').hidden=!!preview||correction;
   const explanation=levelExplanation(questionLevel);
   $('example').hidden=!!preview||correction||!explanation;$('example').innerHTML=scienceMarkup(explanation);
@@ -159,7 +159,7 @@ function quantityReference(index){
   if(index<2)return '';
   const quantities=[['Current','I','ampere','A',2],['Voltage','V','volt','V',2],['Resistance','R','ohm','Ω',4]];
   const cell=(value,introduced)=>index<introduced
-    ? '<td class="rule-locked" aria-label="Symbol revealed in a later level"></td>'
+    ? '<td class="rule-locked" aria-label="Symbol revealed in a later learning unit"></td>'
     : `<td${index===introduced?' class="rule-new"':''}>${value}</td>`;
   const rows=quantities.filter(([, , , ,introduced])=>index>=introduced).map(([name,symbol,unit,unitSymbol,introduced])=>`<tr><th scope="row">${name}</th>${cell(symbol,6)}${cell(unit,introduced)}${cell(unitSymbol,introduced+1)}</tr>`).join('');
   return `<table class="circuit-rules-table quantity-reference-table"><caption>Symbols &amp; units</caption><thead><tr><th scope="col">Name</th><th scope="col">Symbol</th><th scope="col">Unit</th><th scope="col">Unit symbol</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -171,7 +171,7 @@ function circuitRules(index){
   if(index>=2&&index<=5)return '';
   const circuit=kind=>`<th scope="row">${kind==='series'?'Series':'Parallel'}</th><td class="rule-circuit">${diagram(q('',kind,{kind,resistor:index>=1,supply:' ',labels:[' ',' ']}))}</td><td>${kind==='series'?'Single':'Multiple'}</td>`;
   const cell=(introduced,equation,description)=>index<introduced
-    ? '<td class="rule-locked" aria-label="Rule revealed in a later level"></td>'
+    ? '<td class="rule-locked" aria-label="Rule revealed in a later learning unit"></td>'
     : `<td${index===introduced?' class="rule-new"':''}><span class="rule-equation">${equation}</span><span class="rule-description">${description}</span></td>`;
   return `<table class="circuit-rules-table circuit-comparison-table"><caption>Series &amp; parallel rules</caption><thead><tr><th scope="col">Name</th><th scope="col">Diagram</th><th scope="col">Branches</th><th scope="col">Current</th><th scope="col">Voltage</th></tr></thead><tbody><tr>${circuit('series')}${cell(9,'I<sub>T</sub> = I<sub>1</sub> = I<sub>2</sub>','Same everywhere')}${cell(17,'V<sub>T</sub> = V<sub>1</sub> + V<sub>2</sub>','Voltage drops add')}</tr><tr>${circuit('parallel')}${cell(14,'I<sub>T</sub> = I<sub>1</sub> + I<sub>2</sub>','Branch currents add')}${cell(16,'V<sub>T</sub> = V<sub>1</sub> = V<sub>2</sub>','Same across each branch')}</tr></tbody></table>${index>=9?'<p class="rule-key">T = total / supply; 1 and 2 label the components or branches.</p>':''}`;
 }
@@ -202,6 +202,7 @@ function unitTableMarkup(visual){
   return `<table class="phys-table"><tbody>${visual.rows.map(row=>`<tr><th scope="row">${scienceMarkup(row.label)}</th><td${row.blank?' class="blank"':''}>${body(row)}</td></tr>`).join('')}</tbody></table>`;
 }
 function questionInstruction(){
+  if(current.source?.noInstruction)return '';
   const type=current.source?.visual?.type;
   const instructions={punnett:current.source?.fields?'Fill in the Punnett square:':current.source?.id==='G3'?'Fill in the missing genotype in the Punnett square:':'Use the Punnett square to complete the statement:',graph:'Use the distance–time graph to find the speed:',weight:'Calculate the weight:',journey:'Calculate the average speed:',forces:'Use the forces shown to complete the statement:',reaction:'Complete the reaction:',circuit:'Find the missing current or voltage:',atom:'Use the isotope cell to complete the statement:',unittable:'Fill in the missing cell:',shells:'Complete the electron arrangement:',particle:'State the particle’s charge:'};
   return `${showNumber?(questionNumber()||questionLevel+1)+') ':''}${instructions[type]||'Complete the statement:'}`;
@@ -212,8 +213,8 @@ function render(){
   const entry=$('entry-wrap');$('answer-form').querySelector('.answer-row').prepend(entry);
   $('game-screen').classList.toggle('large-circuit-question',current.source?.visual?.type==='circuit');
   $('answer-suffix').hidden=true;$('game-screen').classList.toggle('statement-question',simple);$('game-screen').classList.toggle('cloze-question',true);
-  $('prompt').textContent=questionInstruction();$('prompt').classList.toggle('sr-only',false);
-  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
+  $('prompt').textContent=questionInstruction();$('prompt').classList.toggle('sr-only',false);$('prompt').hidden=!$('prompt').textContent;
+  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder||current.source.fixedChoices?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
   else if(current.kind==='revision'&&current.source?.visual?.type==='circuit')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,answerMarkup:clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='F2')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true})}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='punnett')$('diagram').innerHTML=`<div class="cloze-game punnett-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,fields:current.source.fields,answerMarkup:current.source.id==='G3'||current.source.fields?'':clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
@@ -237,7 +238,7 @@ function render(){
   else if(simple){$('diagram').innerHTML=statement(current).replace(/<\/div>$/,`<span id="cloze-answer-slot"></span>${circuitType?'<div class="statement-link">circuit</div>':''}</div>`);}
   else $('diagram').innerHTML=`<div class="cloze-game">${['series','parallel','mixed'].includes(current.kind)?circuitAnswerDiagram(diagram(current),clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')):diagram(current)+clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')}</div>`;
   ($('diagram').firstElementChild||$('diagram')).appendChild(reminder);
-  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1');if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
+  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1'||current.source?.flag);if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
 }
 
 function questionKey(question){return JSON.stringify([question.prompt,question.unit,diagram(question)]);}
@@ -248,7 +249,10 @@ function freshQuestion(make){
   try{while(true){let cursor=0;const sizes=[];forcedChoice=size=>{sizes[cursor]=size;return choices[cursor++]||0;};const candidate=make();if(questionKey(candidate)!==lastQuestionKey)return candidate;let index=sizes.length-1;while(index>=0&&(choices[index]||0)+1>=sizes[index])index--;if(index<0)throw new Error('A level needs more than one distinct question.');choices[index]=(choices[index]||0)+1;choices.length=index+1;}}
   finally{forcedChoice=undefined;}
 }
-function next(){if(reviewDeck){currentReview=reviewDeck.next();if(!currentReview){finishDeck();return;}position=reviewDeck.progress.position;questionLevel=currentReview.level;current=currentReview.question;}else{questionLevel=enabled[position];current=freshQuestion(levels[questionLevel].make);}attempts=0;render();}
+function next(){if(reviewDeck){currentReview=reviewDeck.next();
+  // One level or skill selected: start its questions again with fresh values instead of finishing.
+  if(!currentReview&&enabled.length===1){resetReviewDeck();currentReview=reviewDeck?.next();}
+  if(!currentReview){finishDeck();return;}position=reviewDeck.progress.position;questionLevel=currentReview.level;current=currentReview.question;}else{questionLevel=enabled[position];current=freshQuestion(levels[questionLevel].make);}attempts=0;render();}
 function scientificInput(s){return String(s).normalize('NFKC').replace(/−/g,'-').trim();}
 // "1,000" and "12,345,678" are the numbers 1000 and 12345678. Other commas are left for the caller.
 function withoutThousands(s){return String(s).replace(/(^|[^\d.])(\d{1,3}(?:[, ]\d{3})+)(?![\d,])/g,(m,pre,num)=>pre+num.replace(/[, ]/g,''));}
@@ -300,6 +304,7 @@ function oppositeWords(a,b){
 function closeSpelling(value){
   if(current.source?.choices||current.source?.fields||current.kind!=='revision')return false;
   const typed=normalize(value);if(!/^[a-z][a-z ]*$/.test(typed))return false;
+  if(typeof FUZZY_BLOCK!=='undefined'&&FUZZY_BLOCK.has(typed))return false;   // typed another real answer (e.g. a different country)
   return [current.answer,...(current.aliases||[])].some(a=>{
     const want=normalize(a);if(!/^[a-z][a-z ]*$/.test(want)||want.length<5)return false;
     if(CONFUSABLE_WORDS.some(pair=>pair.includes(typed)&&pair.includes(want)&&typed!==want))return false;
@@ -335,7 +340,7 @@ function flashCorrect(){
 
 function completedLevel(completed,advance){if(advance)position++;next();}
 // Roulette opens after a short pause so the tick, cha-ching and count-up are seen first.
-let pendingRoulette=false;const ROULETTE_DELAY_MS=1100;
+let pendingRoulette=false,rouletteSpinTimer,rouletteFinishSpin;const ROULETTE_DELAY_MS=1100;
 $('answer-form').addEventListener('submit',e=>{
   e.preventDefault();if($('roulette-dialog').open||pendingRoulette)return;
   if(current.source?.phys&&current.source.numeric?Physics12.checkNumeric(current.source,$('answer').value)==='nounit':expectedAnswerUnit(current)&&/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)\s*[.!?;]*$/.test(withoutThousands(scientificInput($('answer').value)))){
@@ -354,7 +359,7 @@ $('answer-form').addEventListener('submit',e=>{
 });
 $('continue').addEventListener('click',()=>{if($('continue').textContent==='Start ↵')playEffect('level');});
 $('rule-dialog').addEventListener('close',()=>{if(screen!=='game')return;if(advanceAfterCorrection){advanceAfterCorrection=false;next();return;}if(wrong>=3){wrong=0;if(position>0){position--;needsLevelCard=true;}}render();});
-$('chapter-dialog').addEventListener('close',()=>{if(screen==='game')showRule('','Level up');});
+$('chapter-dialog').addEventListener('close',()=>{if(screen==='game')showRule('','Next learning unit');});
 $('learn').onclick=()=>showRule('','Rule');$('timed').onchange=()=>{if($('timed').checked)unlockAudio();if(!$('rule-dialog').open&&!$('settings-dialog').open)startTimer();};
 $('settings').onclick=()=>{returnToPreferences=true;$('preferences-dialog').close();stop();$('level-options').innerHTML=levels.map((l,i)=>({l,i})).filter(({l,i})=>curriculumUnits.length?(selectedUnit==='circuit_extension'?i<circuitLevelCount:l.unit===selectedUnit):true).map(({l,i})=>`<label><input type="checkbox" value="${i}" ${enabled.includes(i)?'checked':''}>${i+1}. ${l.name}</label>`).join('');$('settings-dialog').showModal();};
 $('all').onclick=()=>document.querySelectorAll('#level-options input').forEach(el=>el.checked=true);
@@ -362,8 +367,8 @@ $('calculations').onclick=()=>document.querySelectorAll('#level-options input').
 $('save-settings').onclick=()=>{const selection=[...document.querySelectorAll('#level-options input:checked')].map(el=>Number(el.value));if(!selection.length){$('save-settings').textContent='Choose at least one step';return;}saveRun();needsLevelCard=false;enabled=selection;position=0;correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;highestLevel=enabled[0]+1;current=levels[enabled[0]].make();returnToPreferences=false;$('settings-dialog').close();if(screen==='game'){activeRun=true;resetReviewDeck();next();showRule();}else{hud();showMenu();}};
 $('settings-dialog').addEventListener('close',()=>{if(returnToPreferences){returnToPreferences=false;$('preferences-dialog').showModal();stop();return;}if(screen==='game'&&!$('rule-dialog').open){startTimer();focus();}else if(screen==='menu'){selectMenu(menuIndex);}});
 function applyTheme(theme){document.documentElement.dataset.theme=theme;}
-const themes=['paper','terminal','amber','ice','mono'];
-try{const saved=localStorage.getItem('circuit-blaster-theme');$('theme').value=themes.includes(saved)?saved:'terminal';}catch{$('theme').value='terminal';}
+const themes=['paper','terminal','amber','ice','mono','apple2'];
+try{const saved=localStorage.getItem('circuit-blaster-theme');$('theme').value=themes.includes(saved)?saved:'amber';}catch{$('theme').value='amber';}
 applyTheme($('theme').value);
 $('theme').onchange=()=>{applyTheme($('theme').value);try{localStorage.setItem('circuit-blaster-theme',$('theme').value);}catch{}focus();};
 
@@ -402,6 +407,12 @@ $('leaderboard-dialog').addEventListener('close',()=>selectMenu(menuIndex));
 menuIds.forEach((id,index)=>{ $(id).addEventListener('pointerenter',()=>{if(!$(id).hidden)selectMenu(index,index>menuIndex?'menuDown':'menuUp');}); });
 document.addEventListener('keydown',event=>{
   const panel=activeMenuPanel();
+  // S on the roulette table: skip the spin while it runs, otherwise skip or continue.
+  // R / B / G on the roulette table pick red, black or green; Space spins.
+  const betKey={r:'red',b:'black',g:'green'}[event.key.toLowerCase?.()];
+  if(panel?.id==='roulette-dialog'&&betKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();selectRouletteColour(betKey);return;}
+  if(panel?.id==='roulette-dialog'&&event.key===' '&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();if(!$('roulette-spin').disabled)$('roulette-form').requestSubmit();return;}
+  if(panel?.id==='roulette-dialog'&&event.key.toLowerCase?.()==='s'&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();if(rouletteSpinning)rouletteFinishSpin?.();else $('roulette-continue').onclick();return;}
   if(panel){navigatePanel(panel,event);return;}
   if(screen==='game'){if(event.key==='Escape'){event.preventDefault();showMenu();}else routeAnswerKey(event);return;}
   if(['ArrowDown','ArrowRight','ArrowUp','ArrowLeft'].includes(event.key)){event.preventDefault();const down=['ArrowDown','ArrowRight'].includes(event.key);selectMenu(menuIndex+(down?1:-1),down?'menuDown':'menuUp');}
@@ -437,6 +448,16 @@ function playEffect(kind,delay=0){
     level:[[69,0,.08],[76,.08,.08],[81,.16,.1],[88,.26,.22]]
   };
   const notes=patterns[kind]||patterns.type;
+  if(appleSpeaker()){
+    try{
+      // Two voices at most: a chord keeps its lowest and highest notes.
+      const chords=new Map();
+      for(const [note,offset,duration] of notes){if(!chords.has(offset))chords.set(offset,{notes:[],duration});const chord=chords.get(offset);chord.notes.push(note);chord.duration=Math.min(chord.duration,duration);}
+      const volume=kind==='type'||kind==='rouletteTick'?.01:.016;
+      for(const [offset,chord] of chords)for(const note of new Set([Math.min(...chord.notes),Math.max(...chord.notes)]))speakerTone(note,delay+offset,chord.duration,{volume,music:false});
+    }catch{}
+    return;
+  }
   try{for(const [note,offset,duration] of notes){
     const now=audioContext.currentTime+delay+offset,osc=audioContext.createOscillator(),gain=audioContext.createGain();
     osc.type=kind==='rouletteTick'?'triangle':'square';osc.frequency.value=440*Math.pow(2,(note-69)/12);
@@ -464,6 +485,48 @@ function chipNote(note,type,volume,duration,offset=0,slide=0){
   osc.onended=()=>{musicVoices.delete(osc);osc.disconnect();gain.disconnect();};
   osc.start(now);osc.stop(now+duration+.01);
 }
+// Apple II speaker: square waves through a small-speaker filter, at most two voices
+// (lead and bass, as Electric Duet-style software managed). No fades: the build-up comes
+// from the bass line underneath, not from extra high notes.
+let speakerInput;
+function appleSpeaker(){return $('music-sound').value!=='chip';}
+function speakerOut(){
+  if(!speakerInput){
+    if(audioContext.createBiquadFilter){
+      const low=audioContext.createBiquadFilter(),high=audioContext.createBiquadFilter();
+      low.type='highpass';low.frequency.value=110;high.type='lowpass';high.frequency.value=3200;
+      low.connect(high);high.connect(audioContext.destination);speakerInput=low;
+    }else speakerInput=audioContext.destination;
+  }
+  return speakerInput;
+}
+function speakerTone(note,start,duration,{volume=.013,slide=0,music=true}={}){
+  if(!note)return;
+  const now=audioContext.currentTime+start,osc=audioContext.createOscillator(),gain=audioContext.createGain();
+  osc.type='square';osc.frequency.value=440*Math.pow(2,(note-69)/12);
+  if(slide){osc.frequency.setValueAtTime(osc.frequency.value,now);osc.frequency.exponentialRampToValueAtTime(slide,now+duration);}
+  // 2 ms edges keep the on/off character without a click on every note.
+  gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(volume,now+.002);
+  gain.gain.setValueAtTime(volume,now+duration-.002);gain.gain.linearRampToValueAtTime(0,now+duration);
+  osc.connect(gain);gain.connect(speakerOut());if(music)musicVoices.add(osc);
+  osc.onended=()=>{musicVoices.delete(osc);osc.disconnect();gain.disconnect();};
+  osc.start(now);osc.stop(now+duration+.005);
+}
+// Bass by energy: none, then held roots, octave bounce, a walking chord line, then drum clicks.
+function speakerBass(length,beat,chord,energy){
+  if(energy<1)return;
+  const root=chord[0],fifth=chord[2]<root+12?chord[2]:chord[2]-12;
+  if(energy===1){if(beat%2===0)speakerTone(root,0,length*1.9,{volume:.016});return;}
+  let start=0;
+  if(energy>=3&&(beat===0||beat===4)){speakerTone(36,0,.03,{volume:.02,slide:40});start=.03;}
+  if(energy>=4&&(beat===2||beat===6)){speakerTone(67,0,.025,{volume:.012,slide:180});start=.025;}
+  const line=energy===2?[root,root+12]:[root,fifth,root+12,fifth];
+  speakerTone(line[beat%line.length],start,length*.85-start,{volume:.016});
+}
+function speakerStep(length,beat,chord,lead,energy){
+  if(lead)speakerTone(lead,0,length*.9);
+  speakerBass(length,beat,chord,energy);
+}
 function playMusicStep(step){
   const bar=Math.floor(step/8),beat=step%8,phrase=bar%8;
   const sectionIndex=Math.floor(bar/8);
@@ -476,6 +539,7 @@ function playMusicStep(step){
   const chord=chipChords[section.chords[phrase]],lead=melody[phrase][beat];
   // Ease away at the end so the return to the opening feels deliberate.
   const energy=section.outro&&phrase>=6?1:section.energy;
+  if(appleSpeaker()){speakerStep(.25,beat,chord,lead,energy);return;}
   chipNote(lead,'square',.011,.19);
   if(beat%2===0)chipNote(chord[0]+(beat===4?12:0),'triangle',.032,energy>=2?.22:.36);
   if(energy>=1){
@@ -514,6 +578,7 @@ const rouletteMelody=[
 function playRouletteMusicStep(step){
   const bar=Math.floor(step/8)%16,beat=step%8,chord=rouletteChords[bar%8];
   const lead=rouletteMelody[bar%8][beat],second=bar>=8;
+  if(appleSpeaker()){speakerStep(.2,beat,chord,lead,second?4:3);return;}
   chipNote(lead,'square',.01,.14);
   if(beat%2===0)chipNote(chord[beat===4?2:0]-(beat===4?0:12),'triangle',.026,.18);
   if(beat%2===1)chipNote(chord[1]+12,'triangle',.009,.1);
@@ -546,6 +611,11 @@ $('music').onchange=()=>{
   if($('music').checked){unlockAudio();startMusic();}else stopMusic();
 };
 try{$('music-mode').value=localStorage.getItem('circuit-blaster-music-mode')==='original'?'original':'endless';}catch{$('music-mode').value='endless';}
+try{$('music-sound').value=localStorage.getItem('circuit-blaster-music-sound')==='chip'?'chip':'apple';}catch{$('music-sound').value='apple';}
+$('music-sound').onchange=()=>{
+  try{localStorage.setItem('circuit-blaster-music-sound',$('music-sound').value);}catch{}
+  stopMusic();unlockAudio();startMusic();playEffect('menuUp');
+};
 $('music-mode').onchange=()=>{
   try{localStorage.setItem('circuit-blaster-music-mode',$('music-mode').value);}catch{}
   stopMusic();musicStep=0;composedSection=undefined;musicComposer.reset();unlockAudio();startMusic();
@@ -660,25 +730,30 @@ function playRouletteResult(win){
   }
   playEffect('rouletteSettle');playEffect(win?'rouletteWin':'rouletteLose',.16);
 }
-function selectRouletteColour(colour){if(rouletteSpinning||roulettePlayed)return;if(colour!==rouletteSelectedColour)playEffect('rouletteBet');rouletteSelectedColour=colour;for(const c of ['red','black','green'])$('bet-'+c).setAttribute?.('aria-pressed',String(c===colour));}
+function selectRouletteColour(colour){if(rouletteSpinning||roulettePlayed)return;if(colour!==rouletteSelectedColour)playEffect('rouletteBet');rouletteSelectedColour=colour;for(const c of ['red','black','green'])$('bet-'+c).setAttribute?.('aria-pressed',String(c===colour));if($('roulette-dialog').querySelector?.('.bet-colour.selected'))selectPanelControl($('roulette-dialog'),panelControls($('roulette-dialog')).indexOf($('bet-'+colour)));} // the keyboard cursor follows R/B/G
 for(const colour of ['red','black','green'])$('bet-'+colour).onclick=()=>selectRouletteColour(colour);
 // Down from a colour button moves to Spin (stopPropagation keeps the document-level answer-key handler from reading it).
-$('roulette-colour').addEventListener('keydown',event=>{if(event.key!=='ArrowDown'||$('roulette-spin').disabled)return;event.preventDefault();event.stopPropagation();$('roulette-spin').focus();});
+// The pixel roulette wheel (also shown on the main menu).
+function rouletteWheelSvg(){
+  const step=360/rouletteWheel.length;
+  // Draw on a four-unit grid so curved edges have deliberate pixel steps.
+  const pixelDisc=(radius,inner=0)=>{let path='';for(let y=10;y<410;y+=4)for(let x=10;x<410;x+=4){const r=Math.hypot(x+2-210,y+2-210);if(r<=radius&&r>=inner)path+=`M${x} ${y}h4v4h-4z`;}return path;};
+  const cells=rouletteWheel.map(()=>[]);
+  for(let y=26;y<394;y+=4)for(let x=26;x<394;x+=4){const dx=x+2-210,dy=y+2-210,r=Math.hypot(dx,dy);if(r<122||r>184)continue;const angle=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;const pocket=Math.round(angle/step)%37;cells[pocket].push(`M${x} ${y}h4v4h-4z`);}
+  const pockets=rouletteWheel.map((n,i)=>`<g class="pocket-${rouletteColour(n)}"><path class="wheel-sector" d="${cells[i].join('')}"/><text class="wheel-number" x="210" y="54" text-anchor="middle" dominant-baseline="middle" transform="rotate(${i*step} 210 210)">${n}</text></g>`).join('');
+  return `<svg class="roulette-disc" viewBox="0 0 420 420"><path class="wheel-rim" d="${pixelDisc(198)}"/><g id="roulette-rotor">${pockets}<path class="wheel-inner" d="${pixelDisc(120)}"/><path class="wheel-inner-ring" d="${pixelDisc(106,102)}"/><path class="wheel-spoke" d="M206 110h8v200h-8z M110 206h200v8H110z"/><path class="wheel-hub" d="${pixelDisc(30)}"/></g><g id="roulette-ball-orbit"><path class="wheel-ball" d="M206 30h8v4h4v8h-4v4h-8v-4h-4v-8h4z"/><path class="wheel-ball-shade" d="M214 38h4v4h-4z M210 42h4v4h-4z"/></g></svg>`;
+}
 function paintRoulette(index,total=1,stopAngle=0,target=0){
   const step=360/rouletteWheel.length;
-  if(index===0){
-    // Draw on a four-unit grid so curved edges have deliberate pixel steps.
-    const pixelDisc=(radius,inner=0)=>{let path='';for(let y=10;y<410;y+=4)for(let x=10;x<410;x+=4){const r=Math.hypot(x+2-210,y+2-210);if(r<=radius&&r>=inner)path+=`M${x} ${y}h4v4h-4z`;}return path;};
-    const cells=rouletteWheel.map(()=>[]);
-    for(let y=26;y<394;y+=4)for(let x=26;x<394;x+=4){const dx=x+2-210,dy=y+2-210,r=Math.hypot(dx,dy);if(r<122||r>184)continue;const angle=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;const pocket=Math.round(angle/step)%37;cells[pocket].push(`M${x} ${y}h4v4h-4z`);}
-    const pockets=rouletteWheel.map((n,i)=>`<g class="pocket-${rouletteColour(n)}"><path class="wheel-sector" d="${cells[i].join('')}"/><text class="wheel-number" x="210" y="54" text-anchor="middle" dominant-baseline="middle" transform="rotate(${i*step} 210 210)">${n}</text></g>`).join('');
-    $('roulette-wheel').innerHTML=`<svg class="roulette-disc" viewBox="0 0 420 420"><path class="wheel-rim" d="${pixelDisc(198)}"/><g id="roulette-rotor">${pockets}<path class="wheel-inner" d="${pixelDisc(120)}"/><path class="wheel-inner-ring" d="${pixelDisc(106,102)}"/><path class="wheel-spoke" d="M206 110h8v200h-8z M110 206h200v8H110z"/><path class="wheel-hub" d="${pixelDisc(30)}"/></g><g id="roulette-ball-orbit"><path class="wheel-ball" d="M206 30h8v4h4v8h-4v4h-8v-4h-4v-8h4z"/></g></svg>`;
-  }
+  if(index===0)$('roulette-wheel').innerHTML=rouletteWheelSvg();
   const progress=Math.min(1,index/total),ease=1-Math.pow(1-progress,2);
   const wheelAngle=(stopAngle-720-target*step)*ease,ballAngle=(1080+stopAngle)*ease;
   $('roulette-rotor').setAttribute?.('style',`transform:rotate(${wheelAngle}deg)`);
-  $('roulette-ball-orbit').setAttribute?.('style',`transform:rotate(${ballAngle}deg)`);
+  // The ball stays upright and snaps to the wheel's 4-unit pixel grid as it travels round (no rotated pixels).
+  const rad=ballAngle*Math.PI/180,snap=v=>Math.round(v/4)*4;
+  $('roulette-ball-orbit').setAttribute?.('style',`transform:translate(${snap(172*Math.sin(rad))}px,${snap(172-172*Math.cos(rad))}px)`);$('roulette-ball-orbit').setAttribute?.('data-angle',String(ballAngle));
 }
+$('menu-wheel').innerHTML=rouletteWheelSvg().replace(/<g id="roulette-ball-orbit">.*?<\/g>/,'').replace(' id="roulette-rotor"','');   // no ball on the menu
 function updateRouletteBet(){$('roulette-bet-value').textContent=`$${$('roulette-bet').value}`;}
 $('roulette-bet').addEventListener('input',updateRouletteBet);
 let roulettePointsTimer;
@@ -711,14 +786,18 @@ function flyBalanceToRoulette(fromRect,fromFont){
     fly.animate([{transform:`translate(${fromRect.left}px,${fromRect.top}px) scale(${scale})`},{transform:`translate(${cx}px,${to.top}px) scale(1)`}],{duration:ms,easing:'cubic-bezier(.3,.1,.2,1)',fill:'forwards'}).onfinish=()=>fly.remove();
   }catch{}
 }
-function openRoulette(proceed){const flyFrom=$('casino-score').getBoundingClientRect?.(),flyFont=typeof getComputedStyle==='function'?parseFloat(getComputedStyle($('casino-score')).fontSize):0;stop();rouletteProceed=proceed;roulettePlayed=false;rouletteSpinning=false;$('roulette-points-change').textContent='';$('roulette-points-change').setAttribute?.('data-direction','');$('roulette-bank').textContent=`$${score}`;$('roulette-bet').max=String(score);$('roulette-bet').value=String(Math.min(10,score));updateRouletteBet();$('roulette-result').textContent='Place a bet or skip.';$('roulette-spin').disabled=false;$('roulette-bet').disabled=false;$('roulette-colour').disabled=false;$('roulette-continue').disabled=false;$('roulette-continue').textContent='Skip ↵';paintRoulette(0);$('roulette-dialog').showModal();flyBalanceToRoulette(flyFrom,flyFont);stopMusic();musicEffectPause=false;rouletteMusicStep=0;startMusic();}
+function openRoulette(proceed){const flyFrom=$('casino-score').getBoundingClientRect?.(),flyFont=typeof getComputedStyle==='function'?parseFloat(getComputedStyle($('casino-score')).fontSize):0;stop();rouletteProceed=proceed;roulettePlayed=false;rouletteSpinning=false;$('roulette-points-change').textContent='';$('roulette-points-change').setAttribute?.('data-direction','');$('roulette-bank').textContent=`$${score}`;$('roulette-bet').max=String(score);$('roulette-bet').value=String(Math.min(10,score));updateRouletteBet();$('roulette-result').textContent='Place a bet or skip.';$('roulette-spin').disabled=false;$('roulette-bet').disabled=false;$('roulette-colour').disabled=false;$('roulette-continue').disabled=false;$('roulette-continue').textContent='Skip (S) ↵';paintRoulette(0);$('roulette-dialog').showModal();flyBalanceToRoulette(flyFrom,flyFont);stopMusic();musicEffectPause=false;rouletteMusicStep=0;startMusic();}
 $('roulette-form').addEventListener('submit',e=>{e.preventDefault();if(rouletteSpinning||roulettePlayed||!$('roulette-dialog').open)return;const stake=Number($('roulette-bet').value),colour=rouletteSelectedColour;if(!Number.isInteger(stake)||stake<1||stake>score||!['red','black','green'].includes(colour)){$('roulette-result').textContent=`Bet a whole dollar amount from $1 to $${score}.`;return;}
   const target=Math.floor(Math.random()*37),stopAngle=Math.random()*360,steps=74+target,bankBefore=score;let frame=0;rouletteSpinning=true;roulettePlayed=true;score-=stake;hud();$('roulette-spin').disabled=true;$('roulette-bet').disabled=true;$('roulette-colour').disabled=true;$('roulette-continue').disabled=true;$('roulette-result').textContent='SPINNING…';playEffect('rouletteStart');
-  function spin(){paintRoulette(frame,steps,stopAngle,target);if(frame<steps&&(frame%2===0||frame>=steps-15))playEffect('rouletteTick');if(frame===steps){const n=rouletteWheel[target],landed=rouletteColour(n),win=landed===colour,payout=win?stake*(colour==='green'?50:3):0;score+=payout;hud();playRouletteResult(win);rouletteSpinning=false;animateRoulettePoints(bankBefore,score);$('roulette-result').textContent='';$('roulette-continue').textContent='Continue ↵';return;}frame++;setTimeout(spin,frame<steps-15?25:35+(frame-(steps-15))*12);}
+  function spin(){paintRoulette(frame,steps,stopAngle,target);if(frame<steps&&(frame%2===0||frame>=steps-15))playEffect('rouletteTick');if(frame===steps){const n=rouletteWheel[target],landed=rouletteColour(n),win=landed===colour,payout=win?stake*(colour==='green'?50:3):0;score+=payout;hud();playRouletteResult(win);rouletteSpinning=false;animateRoulettePoints(bankBefore,score);$('roulette-result').textContent='';$('roulette-continue').textContent='Continue (S) ↵';$('roulette-fast').hidden=true;rouletteFinishSpin=undefined;return;}frame++;rouletteSpinTimer=setTimeout(spin,frame<steps-15?25:35+(frame-(steps-15))*12);}
+  // Skip spin: jump straight to the last frame, which settles the bet as usual.
+  rouletteFinishSpin=()=>{clearTimeout(rouletteSpinTimer);frame=steps;spin();};
+  $('roulette-fast').hidden=false;$('roulette-fast').focus();
   spin();
 });
+$('roulette-fast').onclick=()=>rouletteFinishSpin?.();
 $('roulette-continue').onclick=()=>{if(!rouletteSpinning&&!$('roulette-continue').disabled)$('roulette-dialog').close();};
-$('roulette-dialog').addEventListener('cancel',e=>{if(rouletteSpinning)e.preventDefault();});
+$('roulette-dialog').addEventListener('cancel',e=>{if(rouletteSpinning){e.preventDefault();rouletteFinishSpin?.();}});
 $('roulette-dialog').addEventListener('close',()=>{clearTimeout(roulettePointsTimer);roulettePointsTimer=undefined;hud();stopMusic();musicEffectPause=false;startMusic();const proceed=rouletteProceed;rouletteProceed=undefined;if(proceed)proceed();});
 try{$('roulette-enabled').checked=localStorage.getItem('circuit-blaster-roulette')!=='off';}catch{}
 $('roulette-enabled').onchange=()=>{renderCasinoProgress();try{localStorage.setItem('circuit-blaster-roulette',$('roulette-enabled').checked?'on':'off');}catch{}};
@@ -732,16 +811,17 @@ $('skill-rows').addEventListener('click',event=>{const button=event.target.close
 
 // Year 10 units share the original answer, retry, score and roulette loop.
 const circuitLevelCount=levels.length;
-const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit()]);
-// Classes: each unit belongs to one. URL: ?class=yr12 (or yr10); ?unit=… still works and implies its class.
-const CLASSES=[{id:'yr10',name:'YEAR 10',defaultUnit:'electricity_magnetism'},{id:'yr12',name:'YEAR 12',defaultUnit:'yr12_physics'}];
-const unitClass=id=>id==='yr12_physics'?'yr12':'yr10';
+const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit()],typeof EXTRA_UNITS==='undefined'?[]:EXTRA_UNITS);
+// Classes: each unit belongs to one. URL: ?class=yr12 (or yr10, flags, dutch); ?unit=… still works and implies its class.
+// Extra units (revision/flags, revision/dutch) push themselves onto EXTRA_UNITS with their own `class`; a class with no units is hidden.
+const CLASSES=[{id:'yr10',name:'YEAR 10',defaultUnit:'electricity_magnetism'},{id:'yr12',name:'YEAR 12',defaultUnit:'yr12_physics'},{id:'flags',name:'FLAGS',defaultUnit:'flags'},{id:'dutch',name:'DUTCH',defaultUnit:'dutch'}].filter(c=>c.id==='yr10'||curriculumUnits.some(u=>u.id===c.defaultUnit));
+const unitClass=id=>id==='yr12_physics'?'yr12':curriculumUnits.find(u=>u.id===id)?.class||'yr10';
 let selectedClass='yr10';const lastUnitForClass={};
-function mixedQuestionPicker(questions){
+function mixedQuestionPicker(questions,ordered=false){
   // E4 (core comparison) disabled pending a clearer question. Retain its source for revision.
   questions=questions.filter(item=>item.id!=='E4');
   let deck=[],previous='';
-  const shuffled=items=>{const pool=[...items],out=[];while(pool.length){const chosen=pick(pool);out.push(chosen);pool.splice(pool.indexOf(chosen),1);}return out;};
+  const shuffled=items=>{if(ordered)return [...items];const pool=[...items],out=[];while(pool.length){const chosen=pick(pool);out.push(chosen);pool.splice(pool.indexOf(chosen),1);}return out;};
   const nextItem=()=>{
     if(!deck.length){
       const groups=[...new Set(questions.map(item=>item.unit))].map(unit=>shuffled(questions.filter(item=>item.unit===unit)));
@@ -754,8 +834,8 @@ function mixedQuestionPicker(questions){
 }
 for(const unit of curriculumUnits){
   for(const skill of unit.skills){
-    const getItem=unit.mixed?mixedQuestionPicker(skill.questions):()=>pick(skill.questions);
-    const entry={name:skill.name.toUpperCase(),rule:skill.summary,cardHtml:skill.cardHtml,example:skill.example||(unit.mixed?'Read each question carefully. Use working for calculations and units as requested.':skill.questions[0].prompt+' Answer: '+skill.questions[0].answer),reset:unit.mixed?()=>getItem.reset():undefined,correctTarget:skill.correctTarget||3,questions:skill.questions,skill:skill.id,unit:unit.id,
+    const getItem=unit.mixed?mixedQuestionPicker(skill.questions,skill.ordered):()=>pick(skill.questions);
+    const entry={name:skill.name.toUpperCase(),rule:skill.summary,cardHtml:skill.cardHtml,example:skill.example||(unit.mixed?'Read each question carefully. Use working for calculations and units as requested.':skill.questions[0].prompt+' Answer: '+skill.questions[0].answer),reset:unit.mixed?()=>getItem.reset():undefined,correctTarget:skill.correctTarget||3,ordered:skill.ordered,questions:skill.questions,skill:skill.id,unit:unit.id,
       make:()=>makeRevisionQuestion(getItem(),unit.mixed)};
     levels.push(entry);
   }
@@ -771,7 +851,7 @@ function chooseUnit(id){
   $('calculations').hidden=!!unit?.mixed;
   enabled=levels.map((l,i)=>({l,i})).filter(({l,i})=>id==='circuit_extension'?i<circuitLevelCount:l.unit===id).map(({i})=>i);
   $('start-game').disabled=!enabled.length;$('settings').disabled=!enabled.length;
-  $('unit-note').textContent=unit?.mixed?`${unit.skills.length} levels · attempt all new questions · reviews carry forward`:unit?.status==='cross-unit'?'No separate unit plan available; investigation skills are woven into the other units.':unit?.status==='unconfirmed'?'Optional unit — confirm with your teacher.':id==='circuit_extension'?'Original circuit ladder, including extension calculations.':unit?`${unit.skills.length} skills · attempt every new question to move up · reviews carry forward` :'';
+  $('unit-note').textContent=unit?.status==='cross-unit'?'No separate unit plan available; investigation skills are woven into the other units.':unit?.status==='unconfirmed'?'Optional unit — confirm with your teacher.':id==='circuit_extension'?'Original circuit ladder, including extension calculations.':'';
   if(enabled.length){current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;}
   hud();showMenu();
 }
@@ -782,10 +862,12 @@ function syncClassUi(){
 }
 function chooseClass(id){if(id===selectedClass||!CLASSES.some(c=>c.id===id))return;chooseUnit(lastUnitForClass[id]||CLASSES.find(c=>c.id===id).defaultUnit);}
 $('class').onchange=()=>chooseClass($('class').value);
+for(const button of document.querySelectorAll('[data-setting="class"]'))button.hidden=!CLASSES.some(c=>c.id===button.dataset.value);
 $('menu-class').onclick=()=>{chooseClass(CLASSES[(CLASSES.findIndex(c=>c.id===selectedClass)+1)%CLASSES.length].id);selectMenu(menuIds.indexOf('menu-class'));};
 if(curriculumUnits.length){
-  const params=new URLSearchParams(location.search),requestedUnit=params.get('unit'),requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12'})[String(params.get('class')||'').toLowerCase()];
+  const params=new URLSearchParams(location.search),requestedUnit=params.get('unit');let requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12',flags:'flags',flag:'flags',dutch:'dutch',nl:'dutch'})[String(params.get('class')||'').toLowerCase()];
   const validUnit=curriculumUnits.some(u=>u.id===requestedUnit)||requestedUnit==='circuit_extension';
+  if(requestedClass&&!CLASSES.some(c=>c.id===requestedClass))requestedClass=undefined;
   if(requestedClass)selectedClass=requestedClass;
   if(validUnit&&(!requestedClass||unitClass(requestedUnit)===requestedClass))selectedUnit=requestedUnit;
   else if(requestedClass)selectedUnit=CLASSES.find(c=>c.id===requestedClass).defaultUnit;
@@ -808,51 +890,135 @@ function practiceEntry(key,name,questions,mixed=true){
 }
 const ownLevels=()=>levels.map((l,i)=>i).filter(i=>!levels[i].focus&&levels[i].unit===selectedUnit);
 function levelForTopic(index,topic){
-  if(topic==='all')return index;
   const questions=levels[index].questions.filter(item=>item.unit===topic);
+  if(topic==='all'||questions.length===levels[index].questions.length)return index;   // nothing filtered out: keep the real level (its card and order)
   return questions.length?practiceEntry(`${levels[index].skill}|${topic}`,`${levels[index].name} · ${topic}`,questions):null;
 }
 function skillGroups(unit){
   const groups=new Map();
-  for(const skill of unit.skills)for(const item of skill.questions){const name=String(item.skill||'').split(':')[0].trim();if(!name)continue;if(!groups.has(name))groups.set(name,[]);groups.get(name).push(item);}
+  // Year 12 groups by umbrella skill (questions keep their fine-grained skill); units and prefixes have none and stay as levels.
+  for(const skill of unit.skills)for(const item of skill.questions){const name=unit.physics12?item.umbrella:String(item.skill||'').split(':')[0].trim();if(!name)continue;if(!groups.has(name))groups.set(name,[]);groups.get(name).push(item);}
   return groups;
 }
+// 16×16 pixel icons for the practice tiles, picked by keywords in the level name (first match wins; star otherwise).
+// Each icon is 16 rows of 4 hex digits (one bit per pixel, left = high bit). Redraw them with scripts/pixel_icons.py.
+const PIXEL_ICONS={atom:'01800ff01818203467f64c324812c993c99348124c3267e6200418180ff00000',balls:'000003c0066004200420042006603ffc418241824182418241823e7c00000000',bars:'40004000401c401c401c41dc41dc41dc41dc5ddc5ddc5ddc5ddc5ddc5ddc7fff',bb:'00000000000078606c606c6078786c6c6c6c787800000000ffff000000000000',bolt:'007800f001e003c007800ff801f003e007c00f001c0030004000000000000000',breed:'700e88118a518991718e22442004218403c004200420042003c0018001800180',bulb:'07e008101008124812481188099005a003c003c003c001800000000000000000',car:'00000000f80000003bf00408088410827ffe80018001f3e712240c1800000000',charged:'000000000000000000387c440092feba00927c44003800000000000000000000',circuit:'0000020002407e7e42424202400240024002400247e27c3e07e0000000000000',collide:'0000000000001c383e7c3e7c3e7c1c3800002004f00f20040000000000000000',conical:'000007e002400240024002400240042004200e1010101ff8200420047ffe0000',directions:'0000020007000a800200020002000208020403fe040448085000600078000000',dna:'20043ffc10080c3003c00c3010083ffc200410080c3003c00c3010083ffc2004',dom:'0000000000000000f030da30d930f0bcd936da36f03c00000000000000000000',electromagnet:'00000000000000001e781248124a1249f24f1249124a124813c8000000000000',element:'7ffe400258024402480250025c024002520252e25ea252e25282527240027ffe',eq_choose:'00000000003c00660006e00c8e18c0188e008018001800000000000000000000',eq_given:'000000000000ffff0000a0ecae4aa04cae4a40ea0000ffff0000000000000000',equation:'0000000040c0a4a0eec0a4a0a0c00000000600887fc800880006000000000000',flag:'000040007f1c7ffe7ffe7ffe7ffe7ffe61fe401c4000400040004000e0000000',flask:'00000ff0042004200620046004200820091010101ff83fbc3bfc7ffc7ffe0000',force:'0000000000000000000007e004244422fc3f442207e400000000000000000000',graph:'4000400040024004400840104020402040404640498048005000600040007fff',indicator:'00001fe008400844084e085f085f085f0fce0fc00fc00fc00fc007c007800000',magnet:'000007e0181827e42814500a500a500a500a500a700e500a700e000000000000',meter:'0000000007e01818100821042284e387e287228420041008181807e000000000',mixed:'0000007f0041005100410045ffc180ffa08080808880808082808080ff800000',motor:'01000380054001000100e7c7e827eaa7e927eaa7e827e7c70000000000000000',mutation:'40087ff8201018600780186020107ff840080008001c00bf001c000800000008',orbit:'000001801818200400000002400741ff40070002000020041818018000000000',pack:'07e0081008103ffc4002400240027ffe43c2424243c2400240027ffe00000000',page:'00003fe020302028203c200420042ff420042ff420042ff420042f8420043ffc',plant:'03800440044003800100610c911289224544393801000100010007c000000000',plates:'0000ffff000021082108210821082108739c21080000ffff0000000000000000',prefix:'0000000000070001000700010007017003505150215051700000000000000000',projectile:'000000000540101020080000400400008002000080020001c000c00100000000',punnett:'0e3800003fff2081ae81ae81ae8120813fff2081a081a081a081208120813fff',quake:'000000000200020002800a800a801ae0fdff05c0054005000500010001000000',ramp:'000038007c007c0038008000e0009800860081808060801880068001ffff0000',resistor:'00000000000000000000111011102aa8eaab0aaa044404440000000000000000',seesaw:'0000000000000000000760076007ffff018003c007e00ff00000000000000000',spring:'3ffc018007e0081007e0081007e0081007e001800ff00810081008100ff00000',star:'0180018003c003c007e0ffff7ffe1ff80ff00ff01e781c38381c300c40020000',states:'00000000000800140014002200220041fe518249b222821c82008200fe000000',stopwatch:'000003c0018203c40c301008210421242144218420042004200410080c3003c0',table:'0000e007a005e007b81fe815bfeeeaaabfeeeaaabfeeeaaa7fee00003ff03ff0',tip:'000003c0044004200820081009901188124810042004210420047ffe0000ffff',vectors:'003c000c00140024004400840104020404040804100420044004fffe00000000',wave:'000001e00618080210e02100210040c040008000830c4cdb30200000ffff0000',weight:'03c0024003c00ff00810100814081508263426542534406240027ffe00000000',xx:'00006363363636361c1c1c1c3636363636366363636300000000000000000000'};
+// Extra frames for a few icons, shown in turn while the tile is highlighted (2, 4 or 8 frames in all, counting the still icon); the rest bob. Edit with scripts/pixel_icons.py.
+const PIXEL_FRAMES={orbit:['0000018018182004000000004002410241020100010021041b9807c003800000','000001801818200400004000e002ff82e0024000000020041818018000000000','038007c01b982104010001004102410240020000000020041818018000000000'],projectile:['0000000005401010200800004004c000c0020000800200010000000100000000','0000000005403010300800004004000080020000800200010000000100000000','0000060007401010200800004004000080020000800200010000000100000000','0000006005601010200800004004000080020000800200010000000100000000','000000000540101c200c00004004000080020000800200010000000100000000','0000000005401010200800004004000380030000800200010000000100000000','0000000005401010200800004004000080020000800200010003000300000000'],seesaw:['00000000000060006000c0073c0703c701bc03c307e00ff00000000000000000','0000000000000000000760076007ffff018003c007e00ff00000000000000000','000000000007000700070003603c63c03d80c3c007e00ff00000000000000000'],spring:['3ffc018007e0081007e0081007e001800ff00810081008100ff0000000000000'],stopwatch:['000003c0018203c40c301008210421042104218420442024200410080c3003c0','000003c0018203c40c301008210421042104230424042804200410080c3003c0','000003c0018203c40c301008210429042504230420042004200410080c3003c0']};
+const DOODLES=[
+  [/mixed|^all (mechanics|electromagnetism)$/,'mixed'],
+  [/^(world|oceania|asia|europe|africa|north america|south america)$/,'flag'],
+  // Year 12 umbrella skills
+  [/hooke/,'spring'],[/torque and moments/,'seesaw'],[/momentum and impulse/,'collide'],[/circular motion/,'orbit'],[/^projectiles/,'projectile'],[/^vectors/,'vectors'],
+  [/motion graphs/,'graph'],[/work, energy and power/,'ramp'],[/forces and newton/,'force'],[/speed and acceleration/,'stopwatch'],
+  [/electromagnetic induction/,'electromagnet'],[/^magnetic force/,'motor'],[/magnets and magnetic/,'magnet'],[/^electric fields/,'plates'],
+  [/ohm’s law and/,'resistor'],[/series and parallel circuits/,'circuit'],[/electrical power and/,'bulb'],[/current, charge and/,'bolt'],
+  [/same or different|series rules|parallel rules|circuits and/,'circuit'],
+  [/prefix|conversion/,'prefix'],
+  [/electromagnet(?!ism)/,'electromagnet'],
+  [/magnet|electromagnetism units/,'magnet'],
+  [/mechanics units|mass and weight/,'weight'],
+  [/multiple choice|directions/,'directions'],
+  [/equation given/,'eq_given'],
+  [/choose the equation/,'eq_choose'],
+  [/word problem|word equation/,'page'],
+  [/symbol equation|reaction pattern|formula/,'equation'],
+  [/indicator/,'indicator'],
+  [/\bph\b|acid|\bbases and|alkali|neutral|salt|carbonate/,'flask'],
+  [/electron arrangement|shells|subatomic|ions/,'atom'],
+  [/element symbol|atomic and mass|common ion/,'element'],
+  [/group|period|metals and non/,'table'],
+  [/states|chemical change/,'states'],
+  [/charged particle/,'charged'],
+  [/mass|bonding|particle/,'balls'],
+  [/net force|types of force/,'force'],
+  [/acceleration|newton/,'car'],
+  [/speed|calculate/,'stopwatch'],
+  [/data/,'bars'],
+  [/graph/,'graph'],
+  [/stability|centre of gravity/,'tip'],
+  [/charge|static/,'bolt'],
+  [/quantities|meters/,'meter'],
+  [/resistance|energy/,'resistor'],
+  [/variable|fair test/,'conical'],
+  [/punnett|probability/,'punnett'],
+  [/xx|chromosome/,'xx'],
+  [/allele|genotype/,'bb'],
+  [/dominant|recessive/,'dom'],
+  [/pure breeding|selective breeding/,'breed'],
+  [/mutation/,'mutation'],
+  [/dna|gene|inheritance/,'dna'],
+  [/trait|variation|natural selection|heredity/,'plant'],
+  [/earthquake|plate|monitoring/,'quake'],
+  [/tsunami|response/,'wave'],
+  [/survival|equipment/,'pack']
+];
+function levelDoodle(name){
+  const key=String(name).toLowerCase(),icon=(DOODLES.find(([pattern])=>pattern.test(key))||[0,'star'])[1],frames=[PIXEL_ICONS[icon],...(PIXEL_FRAMES[icon]||[])];
+  const path=bits=>{let d='';for(let y=0;y<16;y++){const row=parseInt(bits.slice(y*4,y*4+4),16);for(let x=0;x<16;x++)if(row&(0x8000>>x))d+=`M${x} ${y}h1v1h-1z`;}return `<path d="${d}"/>`;};
+  return `<svg class="practice-doodle${frames.length>1?' px-frames px-f'+frames.length:''}" viewBox="0 0 16 16" aria-hidden="true">${frames.map(path).join('')}</svg>`;
+}
+const PRACTICE_PAGE=15,PRACTICE_COLS=5;let practicePage=0,practicePages=1,practiceSearch='';
+// Year 12 levels that belong to one topic's section of the chooser (the rest go under All physics).
+const PRACTICE_SECTION_OF={'yr12_physics-mech-units':'Mechanics','yr12_physics-em-units':'Electromagnetism','yr12_physics-same-circuit':'Electromagnetism'};
 function renderPractice(){
   const unit=practiceUnit(),own=ownLevels(),topical=!!unit.physics12;
-  const row=(code,label,note,rank)=>`<button type="button" data-practice="${escapeMarkup(code)}" data-name="${escapeMarkup(label.toLowerCase())}"><span class="skill-rank">${rank}</span><span>${escapeMarkup(label)}</span><span class="skill-selected">${note}</span></button>`;
-  $('practice-topics').hidden=!topical;
-  for(const button of $('practice-topics').querySelectorAll('[data-topic]'))button.setAttribute('aria-pressed',String(button.dataset.topic===practiceTopic));
-  $('practice-rows').innerHTML=row('mixed','Everything mixed together',`${own.reduce((n,index)=>n+levels[index].questions.filter(item=>!topical||practiceTopic==='all'||item.unit===practiceTopic).length,0)} types`,'▶')+own.filter(index=>!topical||practiceTopic==='all'||levels[index].questions.some(item=>item.unit===practiceTopic)).map((index,i)=>row(`level:${index}`,levels[index].name,`${levels[index].questions.filter(item=>!topical||practiceTopic==='all'||item.unit===practiceTopic).length} types`,String(i+1).padStart(2,'0'))).join('');
-  $('practice-find').hidden=!topical;
+  const tile=(code,label,note,rank,also='')=>({name:(label+' '+also).toLowerCase(),html:`<button type="button" class="practice-tile" data-practice="${escapeMarkup(code)}" data-name="${escapeMarkup(label.toLowerCase())}"><span class="skill-rank">${rank}</span>${levelDoodle(label)}<span class="practice-name">${escapeMarkup(label)}</span><span class="skill-selected">${note}</span></button>`});
+  const levelTiles=own.filter(index=>!topical||practiceTopic==='all'||levels[index].questions.some(item=>item.unit===practiceTopic));
+  let n=0;const rank=()=>String(++n).padStart(2,'0');
+  let sections;
   if(topical){
-    const groups=[...skillGroups(unit)].map(([name,items])=>[name,items.filter(item=>practiceTopic==='all'||item.unit===practiceTopic)]).filter(([,items])=>items.length).sort((a,b)=>a[0].localeCompare(b[0]));
-    $('practice-skills').innerHTML=groups.map(([name,items],i)=>row(`skill:${name}`,name,`${items.length} ${items.length===1?'type':'types'}`,String(i+1).padStart(2,'0'))).join('');
-    $('practice-search').value='';
+    // Year 12: All physics, then Mechanics, then Electromagnetism. Each section starts a new page; the tabs above the grid name them.
+    const order=typeof Physics12==='undefined'?[]:Physics12.UMBRELLA_ORDER,place=name=>order.includes(name)?order.indexOf(name):order.length;
+    const groups=[...skillGroups(unit)].map(([name,items])=>[name,items.filter(item=>practiceTopic==='all'||item.unit===practiceTopic)]).filter(([,items])=>items.length).sort((a,b)=>place(a[0])-place(b[0])||a[0].localeCompare(b[0]));
+    const sectionOf=index=>PRACTICE_SECTION_OF[levels[index].skill]||'All physics';
+    sections=['All physics','Mechanics','Electromagnetism'].map(title=>({title,tiles:[
+      title==='All physics'?tile('mixed',unit.mixedName||'Everything mixed together','','ALL'):tile(`topic:${title}`,`All ${title.toLowerCase()}`,'','ALL'),
+      ...levelTiles.filter(index=>sectionOf(index)===title).map(index=>tile(`level:${index}`,levels[index].name,'',rank())),
+      // Search also matches the fine-grained skills inside each umbrella (e.g. "hooke").
+      ...groups.filter(([,items])=>items[0].unit===title).map(([name,items])=>tile(`skill:${name}`,name,'',rank(),[...new Set(items.map(item=>item.skill))].join(' ')))]}));
+  }else sections=[{title:'',tiles:[tile('mixed',unit.mixedName||'Everything mixed together','','ALL'),...levelTiles.map(index=>tile(`level:${index}`,levels[index].name,'',rank()))]}];
+  if(practiceSearch)sections.forEach(section=>section.tiles=section.tiles.filter(item=>item.name.includes(practiceSearch)));
+  sections=sections.filter(section=>section.tiles.length);
+  // Pages hold 3 rows of 5 cells. A section moves to the next page whole when it doesn't fit; a section longer than a page is split.
+  const pages=[[]],names=[[]];let rowsUsed=0;
+  for(const section of sections){
+    const cells=section.tiles.map(item=>item.html);
+    const rows=Math.ceil(cells.length/PRACTICE_COLS);
+    if(rowsUsed&&rowsUsed+rows>PRACTICE_PAGE/PRACTICE_COLS){pages.push([]);names.push([]);rowsUsed=0;}
+    for(let i=0;i<cells.length;i+=PRACTICE_PAGE){if(i){pages.push([]);names.push([]);rowsUsed=0;}if(section.title)names[names.length-1].push(section.title);pages[pages.length-1].push(...cells.slice(i,i+PRACTICE_PAGE));rowsUsed+=Math.ceil(Math.min(PRACTICE_PAGE,cells.length-i)/PRACTICE_COLS);}
   }
+  practicePages=pages.length;practicePage=Math.min(practicePage,pages.length-1);
+  $('practice-rows').innerHTML=pages[practicePage].join('')||'<p>No skills match.</p>';
+  $('practice-pager').hidden=practicePages<2;
+  // Visual cue only: < and > beside the grid when there is another page that way (the arrow keys get there).
+  $('practice-more-left').hidden=practicePage===0;$('practice-more-right').hidden=practicePage>=practicePages-1;
+  // Tabs along the top, one per page, named after its sections (or numbered); the current page is highlighted.
+  const labels=names.map((list,i)=>[...new Set(list)].join(' · ')||`Page ${i+1}`).map((label,i,all)=>all.indexOf(label)<i?`${label} ${all.slice(0,i+1).filter(x=>x===label).length}`:label);
+  $('practice-pager').innerHTML=labels.map((label,i)=>`<button type="button" role="tab" data-tab="${i}" aria-selected="${i===practicePage}">${escapeMarkup(label)}</button>`).join('');
+  $('practice-find').hidden=!topical;
 }
-function filterPractice(){
-  const text=$('practice-search').value.trim().toLowerCase();
-  for(const button of $('practice-skills').querySelectorAll('[data-practice]'))button.hidden=!!text&&!button.dataset.name.includes(text);
-}
+function filterPractice(){practiceSearch=$('practice-search').value.trim().toLowerCase();practicePage=0;renderPractice();}
 function beginPractice(code){
   const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all';
   let picked;
-  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}`,'Everything mixed together',questions,!!unit.mixed)]:[];}
+  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}`,unit.mixedName||'Everything mixed together',questions,!!unit.mixed)]:[];}
+  else if(code.startsWith('topic:')){const name=code.slice(6),questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>item.unit===name);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${name}`,`All ${name.toLowerCase()}`,questions,!!unit.mixed)]:[];}
   else if(code.startsWith('level:'))picked=[levelForTopic(Number(code.slice(6)),topic)];
   else{const name=code.slice(6),questions=(skillGroups(unit).get(name)||[]).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`skill|${name}|${topic}`,name,questions)]:[];}
   picked=picked.filter(index=>index!==null);if(!picked.length)return;
   enabled=picked;enabled.forEach(index=>levels[index].reset?.());
   position=0;current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;
-  $('unit-note').textContent=code==='mixed'?(topic==='all'?'Everything mixed together · reviews carry forward':`Everything mixed together · ${topic} only`):`Practising: ${levels[enabled[0]].name.toLowerCase()}`;
+  $('unit-note').textContent='';
   $('practice-dialog').close();hud();startGame();
 }
 $('practice-dialog').addEventListener('click',event=>{
-  const topic=event.target.closest?.('[data-topic]');
-  if(topic){practiceTopic=topic.dataset.topic;renderPractice();selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).findIndex(c=>c.dataset?.topic===practiceTopic));return;}
+  const pager=event.target.closest?.('[data-tab]');
+  if(pager){practicePage=Number(pager.dataset.tab);renderPractice();selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf($('practice-pager').querySelector(`[data-tab="${practicePage}"]`)));return;}
   const button=event.target.closest?.('[data-practice]');if(button)beginPractice(button.dataset.practice);
 });
 $('practice-search').addEventListener('input',filterPractice);
-$('start-game').onclick=()=>{if(activeRun||selectedUnit==='circuit_extension'||!practiceChoosable())return startGame();renderPractice();$('practice-dialog').showModal();};
+$('start-game').onclick=()=>{if(activeRun||selectedUnit==='circuit_extension'||!practiceChoosable())return startGame();practicePage=0;practiceSearch='';$('practice-search').value='';renderPractice();$('practice-dialog').showModal();selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf($('practice-rows').querySelector('.practice-tile')));};
 
 function syncSettingChoices(){
   for(const button of document.querySelectorAll('[data-setting]'))button.setAttribute('aria-pressed',String($(button.dataset.setting).value===button.dataset.value));
@@ -870,12 +1036,59 @@ function panelControls(panel){
   if(panel.id==='roulette-dialog'&&roulettePlayed)return [$('roulette-continue')].filter(control=>!control.disabled);
   return [...panel.querySelectorAll('button,input:not([type="hidden"])')].filter(control=>!control.disabled&&!control.hidden&&(!control.getClientRects||control.getClientRects().length));}
 function selectPanelControl(panel,index){const controls=panelControls(panel);if(!controls.length)return;index=(index+controls.length)%controls.length;controls.forEach((control,i)=>control.classList.toggle('selected',i===index));controls[index].focus();}
+var spatialPanelIds=['practice-dialog','preferences-dialog','roulette-dialog'];
 function navigatePanel(panel,event){
   const controls=panelControls(panel);if(!controls.length)return;
   let index=controls.indexOf(document.activeElement);if(index<0)index=controls.findIndex(control=>control.classList.contains('selected'));if(index<0)index=0;
   if(['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(event.key)){
     if(controls[index].type==='range'&&['ArrowLeft','ArrowRight'].includes(event.key))return;
-    event.preventDefault();selectPanelControl(panel,index+(['ArrowDown','ArrowRight'].includes(event.key)?1:-1));
+    event.preventDefault();
+    // Practice, Settings and the roulette table: arrows follow the on-screen layout (styleguide: left/right stay in the row, up/down change rows and wrap).
+    // On the practice screen, past the end of a row of tiles, left/right turn the page; elsewhere the end of a row is a stop.
+    if(spatialPanelIds.includes(panel.id)){
+      const horizontal=['ArrowLeft','ArrowRight'].includes(event.key),forward=['ArrowRight','ArrowDown'].includes(event.key);
+      const boxes=controls.map((control,i)=>({i,box:control.getBoundingClientRect()})),here=boxes[index].box,cx=here.left+here.width/2,cy=here.top+here.height/2;
+      const centre=({box})=>[box.left+box.width/2,box.top+box.height/2];
+      const sameRow=boxes.filter(item=>item.i!==index&&Math.abs(centre(item)[1]-cy)<here.height/2);
+      // Left/right along the page tabs turn the page as they go.
+      if(horizontal&&controls[index].dataset.tab!==undefined){
+        const next=practicePage+(forward?1:-1);if(next<0||next>=practicePages)return;
+        practicePage=next;renderPractice();return selectPanelControl(panel,panelControls(panel).indexOf($('practice-pager').querySelector(`[data-tab="${next}"]`)));
+      }
+      if(horizontal){
+        const ahead=sameRow.filter(item=>forward?centre(item)[0]>cx:centre(item)[0]<cx).sort((a,b)=>Math.abs(centre(a)[0]-cx)-Math.abs(centre(b)[0]-cx));
+        if(ahead.length)return selectPanelControl(panel,ahead[0].i);
+        const next=practicePage+(forward?1:-1);
+        // Off the side of the page: the next page in that direction, on the same row (or its last row if it has fewer), at the near end.
+        if(controls[index].classList.contains('practice-tile')&&next>=0&&next<practicePages){
+          const rowTops=()=>[...new Set([...$('practice-rows').querySelectorAll('.practice-tile')].map(tile=>Math.round(tile.getBoundingClientRect().top)))].sort((a,b)=>a-b);
+          const row=rowTops().findIndex(top=>Math.abs(top-here.top)<4);
+          practicePage=next;renderPractice();
+          const tops=rowTops(),top=tops[Math.min(Math.max(row,0),tops.length-1)];
+          const inRow=[...$('practice-rows').querySelectorAll('.practice-tile')].filter(tile=>Math.abs(tile.getBoundingClientRect().top-top)<4).sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left);
+          return selectPanelControl(panel,panelControls(panel).indexOf(forward?inRow[0]:inRow[inRow.length-1]));}
+        return;
+      }
+      // Down from the bottom row of tiles turns to the next page; up from the top row goes to the current page's tab.
+      if(controls[index].classList.contains('practice-tile')){
+        const tileBoxes=boxes.filter(item=>controls[item.i].classList.contains('practice-tile')),beyond=tileBoxes.some(item=>forward?item.box.top>=here.bottom-1:item.box.bottom<=here.top+1),next=practicePage+(forward?1:-1);
+        const tab=$('practice-pager').hidden?null:$('practice-pager').querySelector(`[data-tab="${practicePage}"]`);
+        if(!beyond&&!forward&&tab)return selectPanelControl(panel,controls.indexOf(tab));
+        if(!beyond&&next>=0&&next<practicePages){
+          practicePage=next;renderPractice();
+          const tiles=[...$('practice-rows').querySelectorAll('.practice-tile')],edge=forward?tiles[0].getBoundingClientRect().top:tiles[tiles.length-1].getBoundingClientRect().top;
+          const row=tiles.filter(tile=>Math.abs(tile.getBoundingClientRect().top-edge)<4).sort((a,b)=>Math.abs(a.getBoundingClientRect().left+a.offsetWidth/2-cx)-Math.abs(b.getBoundingClientRect().left+b.offsetWidth/2-cx));
+          return selectPanelControl(panel,panelControls(panel).indexOf(row[0]));}
+      }
+      let rows=boxes.filter(item=>forward?item.box.top>=here.bottom-1:item.box.bottom<=here.top+1);
+      if(!rows.length)rows=boxes.filter(item=>!sameRow.includes(item)&&item.i!==index);
+      if(!rows.length)return;
+      // Down takes the highest row below (wrapping: the first row); up takes the lowest row above (wrapping: the bottom row).
+      const near=forward?Math.min(...rows.map(r=>r.box.top)):Math.max(...rows.map(r=>r.box.bottom));
+      const row=rows.filter(({box})=>Math.abs((forward?box.top:box.bottom)-near)<4).sort((a,b)=>Math.abs(centre(a)[0]-cx)-Math.abs(centre(b)[0]-cx));
+      return selectPanelControl(panel,row[0].i);
+    }
+    selectPanelControl(panel,index+(['ArrowDown','ArrowRight'].includes(event.key)?1:-1));
   }else if(event.key==='Enter'){event.preventDefault();controls[index].click();}
 }
 for(const id of menuPanelIds){const panel=$(id),open=panel.showModal.bind(panel);panel.showModal=()=>{open();const controls=panelControls(panel);const chosen=controls.findIndex(control=>control.getAttribute('aria-pressed')==='true');selectPanelControl(panel,chosen>=0?chosen:0);};panel.addEventListener('focusin',event=>{const controls=panelControls(panel),index=controls.indexOf(event.target);if(index>=0)controls.forEach((control,i)=>control.classList.toggle('selected',i===index));});}
@@ -884,7 +1097,7 @@ function selectConnection(value){$('answer').value=value;document.querySelectorA
 function routeAnswerKey(event){
   if(!activeRun||event.ctrlKey||event.metaKey||event.altKey||event.isComposing)return;
   if(current.source?.choices||current.source?.id==='E1'){
-    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();const choices=current.choiceOrder||['series','parallel'];const index=choices.indexOf($('answer').value);const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1;selectConnection(choices[(index+direction+choices.length)%choices.length]);}
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();const choices=current.choiceOrder||['series','parallel'];const index=choices.indexOf($('answer').value);const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1;selectConnection(choices[Math.min(choices.length-1,Math.max(0,index+direction))]);} // stop at the ends, no wrapping
     else if(event.key==='Enter'){event.preventDefault();$('answer-form').requestSubmit();}return;
   }
   const input=answerFocusTarget();if(event.target===input)return;
@@ -976,7 +1189,7 @@ let lastAnswerField=$('answer');
 $('game-screen').addEventListener('focusin',event=>{if(event.target.id==='answer'||event.target.classList?.contains('shell-input'))lastAnswerField=event.target;});
 // Formula subscripts (v_f, F_g, E_k…): Unicode has no subscript f or g, so these insert the typed form (_f) that the answer checker expects, labelled as a subscript.
 const SUBSCRIPT_KEYS=['i','f','g','k','p','c','net'];
-$('symbol-pad').innerHTML=SYMBOLS.map(symbol=>`<button type="button" tabindex="-1" data-symbol="${symbol}">${symbol}</button>`).join('')+SUBSCRIPT_KEYS.map(sub=>`<button type="button" tabindex="-1" data-symbol="_${sub}" aria-label="subscript ${sub}"><sub>${sub}</sub></button>`).join('');
+$('symbol-pad').innerHTML=SYMBOLS.map(symbol=>`<button type="button" tabindex="-1" data-symbol="${symbol}">${symbol}</button>`).join('')+SUBSCRIPT_KEYS.map(sub=>`<button type="button" tabindex="-1" data-symbol="_${sub}" data-sub="${sub}" aria-label="subscript ${sub}"><sub>${sub}</sub></button>`).join('');
 $('symbol-pad').addEventListener('pointerdown',event=>event.preventDefault());
 $('symbol-pad').addEventListener('click',event=>{
   const symbol=event.target.closest?.('[data-symbol]')?.dataset.symbol;if(!symbol)return;

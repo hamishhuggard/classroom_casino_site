@@ -1,6 +1,7 @@
 /* Year 12 Physics (NCEA Level 2): question contract, helpers and answer checking.
    Level files (level1.js … level5.js) call Physics12.add(level, definition). */
 const Physics12=(()=>{
+ // ordered: play the level's questions in order (easiest first) instead of shuffled.
  const LEVELS=[
   {id:'yr12_physics-mech-units',name:'Mechanics units & symbols',summary:'Learn the quantity, symbol, unit and unit symbol for each mechanics quantity. Fill in the missing cell. Unit symbols are case-sensitive: N, not n.'},
   {id:'yr12_physics-em-units',name:'Electromagnetism units & symbols',summary:'Learn the quantity, symbol, unit and unit symbol for each electricity and magnetism quantity. Fill in the missing cell. Unit symbols are case-sensitive.'},
@@ -8,13 +9,48 @@ const Physics12=(()=>{
   {id:'yr12_physics-multichoice',name:'Directions & concepts — Multiple choice',summary:'Pick the right answer: left- and right-hand rules, vector directions in circular motion, and key ideas in mechanics and electromagnetism.'},
   {id:'yr12_physics-given',name:'Calculate — equation given',summary:'The equation and the givens are shown. Substitute, rearrange if needed, and include the correct unit.'},
   {id:'yr12_physics-recall',name:'Calculate — choose the equation',summary:'Only the givens are shown. Decide which equation applies, then calculate and include the correct unit.'},
-  {id:'yr12_physics-word',name:'Word problems',summary:'Short exam-style situations. Pick out the givens, choose the equation, and calculate with units.'}
+  {id:'yr12_physics-word',name:'Word problems',summary:'Short exam-style situations. Pick out the givens, choose the equation, and calculate with units.'},
+  {id:'yr12_physics-same-circuit',name:'Same or different circuit?',ordered:true,summary:'Same circuit if every resistor is connected to the same things. Wires can bend, stretch and move. The order of things in series and the order of parallel branches do not matter. All the resistors are identical.'}
  ];
  // Title-card content per level (an HTML table etc.), set by the level files with setCard().
  const CARDS={};
  const setCard=(level,card)=>{CARDS[level]=card;};
  const bank=LEVELS.map(()=>[]);
  const TOPICS=['Mechanics','Electromagnetism'];
+ // Umbrella skills for the practice chooser. Each question keeps its own fine-grained `skill`; the umbrella is worked out
+ // from that name (first match in its topic wins). Units and SI prefixes have no umbrella: they stay as their own levels.
+ const UMBRELLAS={
+  Mechanics:[
+   ['Springs and Hooke’s law',/hooke|elastic/],
+   ['Torque and moments',/torque|moments?\b|see-?saw|beam/],
+   ['Momentum and impulse',/momentum|impulse|collision|recoil|force from (a )?change/],
+   ['Circular motion',/circular|centripetal|frequency|period|vertical circle|tension as|friction as/],
+   ['Projectiles',/projectile/],
+   ['Vectors',/perpendicular|resultant/],
+   ['Motion graphs',/graph|d–t|v–t/],
+   ['Work, energy and power',/energy|efficiency|work|power|kinetic/],
+   ['Forces and Newton’s laws',/force|newton|weight|friction|lift|balanced/],
+   ['Speed and acceleration',/speed|velocity|acceleration|distance|kinematics|braking|free fall|throw|stop|^v_f|^d =|^a =/]
+  ],
+  Electromagnetism:[
+   ['Electromagnetic induction',/induc|faraday|lenz|flux|emf|transformer|v = bvl|right hand rule|speed of a rod/],
+   ['Magnets and magnetic fields',/bar magnet|compass|pole|right hand grip/],
+   ['Series and parallel circuits',/^(two|three|four) resistors/],   // same-or-different circuit levels (names mention wires)
+   ['Magnetic force',/f = bil|f = bqv|left hand|motor|wire|magnetic force|moving charge|speed from force on a charge|magnetic field strength/],
+   ['Electric fields',/field|plates|droplet|charged|e = v\/d|f = eq|δep|ek = |energy gained|distance moved|test charge|electron force/],
+   ['Ohm’s law and resistance',/ohm|resistance of|heater element/],
+   ['Series and parallel circuits',/series|parallel|resistors|ammeter|what is the same|whole-circuit|total resistance/],
+   ['Electrical power and energy',/power|p = |lamps|same v and i|energy = power|energy from power|energy from v/],
+   ['Current, charge and voltage',/current|charge|potential difference/]
+  ]
+ };
+ const NO_UMBRELLA=/^(units table|equation symbols|symbols for|initial and final|meaning of δ|si prefix|base unit|prefix|time (and mass )?conversions|km\/h|m\/s to)/;
+ const UMBRELLA_ORDER=[...new Set(Object.values(UMBRELLAS).flat().map(([name])=>name))];
+ function umbrella(def){
+  const name=String(def.skill||'').toLowerCase();
+  if(NO_UMBRELLA.test(name)||/^L8-/.test(def.id))return '';   // same-or-different circuits stay one ordered learning unit
+  return ((UMBRELLAS[def.topic]||[]).find(([,pattern])=>pattern.test(name))||[])[0]||null;   // null = unmapped (tests flag it)
+ }
  const DIRS=['up the page','down the page','left','right','into the page','out of the page'];
  // ---- random helpers ----
  const pick=(xs,r)=>xs[Math.floor(r()*xs.length)];
@@ -153,8 +189,8 @@ const Physics12=(()=>{
   // an id not yet in it gets the next free number (run scripts/assign_numbers.cjs to record it).
   const known=NUMBERS_OF();let n=Math.max(100,...Object.values(known));
   return {id:'yr12_physics',name:'Year 12 Physics — Mechanics & Electromagnetism',status:'ready',mixed:true,physics12:true,source:'NCEA Level 2 Physics (AS 91171 mechanics, AS 91173 electricity & electromagnetism)',
-   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].map(def=>({...def,unit:def.topic,questionNumber:known[def.id]||++n}))}))};
+   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,ordered:lv.ordered,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].map(def=>({...def,unit:def.topic,umbrella:umbrella(def)||'',questionNumber:known[def.id]||++n}))}))};
  }
- return {LEVELS,TOPICS,DIRS,bank,add,setCard,generate,unit,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
+ return {LEVELS,TOPICS,UMBRELLA_ORDER,umbrella,DIRS,bank,add,setCard,generate,unit,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
 })();
 if(typeof module!=='undefined')module.exports=Physics12;

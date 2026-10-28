@@ -214,29 +214,30 @@ form#answer-form .question-heading h1{font-size:clamp(25px,3vw,32px);letter-spac
 #roulette-form label{display:grid;gap:8px;text-align:center}
 #roulette-form input,#roulette-form select{width:120px;padding:8px;font-size:24px;border:1px solid var(--ink);background:var(--paper);color:var(--ink)}
 #roulette-form button{margin:0}
-#roulette-colour{display:flex;justify-content:center;gap:12px;margin:0;padding:8px 0;border:0}
+#roulette-colour{display:flex;flex-direction:column;gap:6px;margin:0;padding:8px 0;border:0}
 #roulette-colour legend{text-align:center;margin:auto;padding:0}
-#roulette-form .bet-colour{width:64px;height:64px;padding:0;border:2px solid var(--line);font-size:22px}
+#roulette-form .bet-colour{width:100%;padding:8px 10px;border:2px solid var(--line);font-size:16px;text-transform:none}
 #roulette-colour .bet-red{color:#b62132}
 #roulette-colour .bet-green{color:#16833b}
-#roulette-colour .bet-colour[aria-pressed="true"]{border-color:var(--ink);outline:2px solid var(--ink);outline-offset:3px;background:var(--hover);box-shadow:inset 0 -5px 0 currentColor}
+#roulette-form #roulette-colour .bet-colour[aria-pressed="true"]{border-color:currentColor;outline:2px solid currentColor;outline-offset:2px;background:var(--hover)}
 #roulette-continue{width:100%}
 #roulette-wheel{margin:12px 0;background:var(--paper)}
-#roulette-wheel .roulette-disc{display:block;width:min(100%,360px);height:auto;max-height:none;margin:auto;overflow:visible}
+:is(#roulette-wheel,#menu-wheel) .roulette-disc{display:block;width:min(100%,360px);height:auto;max-height:none;margin:auto;overflow:visible}
 #roulette-rotor,#roulette-ball-orbit{transform-origin:210px 210px;transition:transform 35ms linear}
-#roulette-wheel .roulette-disc{shape-rendering:crispEdges}
-#roulette-wheel .wheel-rim{fill:var(--ink);stroke:var(--line);stroke-width:4}
-#roulette-wheel .wheel-sector{stroke:none}
-#roulette-wheel .pocket-red .wheel-sector{fill:#b62132}
-#roulette-wheel .pocket-black .wheel-sector{fill:#171717}
-#roulette-wheel .pocket-green .wheel-sector{fill:#05632b}
-#roulette-wheel .wheel-number{fill:#fff;stroke:none;font-size:19px}
-#roulette-wheel .wheel-inner{fill:var(--paper);stroke:var(--ink);stroke-width:3}
-#roulette-wheel .wheel-inner-ring{fill:var(--line);stroke:none}
-#roulette-wheel .wheel-spoke{fill:var(--ink);stroke:none}
-#roulette-wheel .wheel-hub{fill:var(--ink);stroke:var(--line);stroke-width:3}
-#roulette-wheel .wheel-pointer{fill:var(--ink);stroke:var(--paper);stroke-width:1}
-#roulette-wheel .wheel-ball{fill:#fff;stroke:#171717;stroke-width:1.5}
+:is(#roulette-wheel,#menu-wheel) .roulette-disc{shape-rendering:crispEdges}
+:is(#roulette-wheel,#menu-wheel) .wheel-rim{fill:var(--ink);stroke:var(--line);stroke-width:4}
+:is(#roulette-wheel,#menu-wheel) .wheel-sector{stroke:none}
+:is(#roulette-wheel,#menu-wheel) .pocket-red .wheel-sector{fill:#b62132}
+:is(#roulette-wheel,#menu-wheel) .pocket-black .wheel-sector{fill:#171717}
+:is(#roulette-wheel,#menu-wheel) .pocket-green .wheel-sector{fill:#05632b}
+:is(#roulette-wheel,#menu-wheel) .wheel-number{fill:#fff;stroke:none;font-size:19px}
+:is(#roulette-wheel,#menu-wheel) .wheel-inner{fill:var(--paper);stroke:var(--ink);stroke-width:3}
+:is(#roulette-wheel,#menu-wheel) .wheel-inner-ring{fill:var(--line);stroke:none}
+:is(#roulette-wheel,#menu-wheel) .wheel-spoke{fill:var(--ink);stroke:none}
+:is(#roulette-wheel,#menu-wheel) .wheel-hub{fill:var(--ink);stroke:var(--line);stroke-width:3}
+:is(#roulette-wheel,#menu-wheel) .wheel-pointer{fill:var(--ink);stroke:var(--paper);stroke-width:1}
+:is(#roulette-wheel,#menu-wheel) .wheel-ball{fill:#fff;stroke:none}:is(#roulette-wheel,#menu-wheel) .wheel-ball-shade{fill:#9a9a9a;stroke:none}
+#roulette-ball-orbit{transition:none}
 #roulette-form #roulette-bet{width:100%;padding:0;accent-color:var(--ink);cursor:pointer}
 #roulette-bet-value{font-size:30px;color:var(--ink)}
 @media(prefers-reduced-motion:reduce){#roulette-rotor,#roulette-ball-orbit{transition:none}}
@@ -342,7 +343,6 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 
 #casino-progress{width:min(100%,420px);margin:0 auto 12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:14px;text-align:center;}#casino-progress label{display:block;margin-bottom:6px;}#casino-progress-bar{display:block;width:100%;height:14px;accent-color:var(--ink);background:var(--paper);border:1px solid var(--ink);}#casino-progress-bar::-webkit-progress-bar{background:var(--paper);}#casino-progress-bar::-webkit-progress-value{background:var(--ink);}#casino-progress-bar::-moz-progress-bar{background:var(--ink);}
 
-.roulette-payouts{list-style:none;padding-left:0;line-height:1.6;color:var(--muted);}
 
 .roulette-wheel-column{min-width:0;}
 
@@ -390,7 +390,7 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 #entry-wrap #answer-slots{justify-content:flex-start;width:auto}
 
 /* Roulette balance: just the amount, large. */
-#roulette-bank{font-size:clamp(56px,9vw,104px);font-weight:700;line-height:1.05;margin:0 0 8px}
+#roulette-bank{font-size:clamp(56px,9vw,104px);font-weight:700;line-height:1.05;margin:0 auto 8px}
 
 /* Unit / prefix tables: question column and title-card tables. */
 .phys-table{margin:10px auto;border-collapse:collapse;font-size:clamp(22px,2.8vw,34px)}
@@ -399,7 +399,6 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 .phys-table td{min-width:9ch;text-align:center}.phys-table td.blank{padding:.15em .35em;text-align:left}
 .phys-table .cloze-line,.phys-table #cloze-answer-slot{display:inline-flex;vertical-align:middle;width:auto;margin:0}
 .row-table th{text-align:center}
-#rule-dialog.table-card{width:min(96vw,1180px)}
 .phys-card{display:flex;flex-direction:column;gap:14px;align-items:center;max-width:100%;overflow-x:auto}
 .phys-card-table{border-collapse:collapse;font-size:clamp(13px,1.45vw,19px)}
 .phys-card-table th,.phys-card-table td{border:2px solid var(--ink);padding:.3em .55em;text-align:center}
@@ -423,3 +422,101 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 .phys-table td.blank{text-align:center}
 .phys-table td.blank #entry-wrap{justify-content:center}
 .phys-table td.blank #entry-wrap #answer-slots{justify-content:center;width:100%}
+.phys-choice .revision-visual.circuit-pair{height:min(46vh,400px)}
+#menu-wheel{margin:-14px auto 22px;width:min(42vh,220px)}#menu-wheel .roulette-disc{display:block;width:100%;height:auto}
+@media(max-height:600px){#menu-wheel{width:110px;margin:-6px auto 10px}}
+#unit-note:empty{display:none}
+/* Practice chooser: levels as a grid of tiles, each with a 16×16 pixel icon. */
+#practice-rows{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}#practice-rows button.practice-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-align:center;padding:18px 10px 14px;border:1px solid var(--line);border-radius:6px;min-height:170px}
+#practice-rows .practice-tile .skill-rank{position:absolute;top:8px;left:10px}#practice-rows .practice-tile .skill-selected{color:var(--muted)}#practice-rows .practice-tile:hover .skill-selected,#practice-rows .practice-tile:focus-visible .skill-selected{color:inherit}
+.practice-name{line-height:1.25}
+@media(max-width:500px){#practice-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#practice-rows button.practice-tile{min-height:150px;padding:16px 6px 10px;font-size:.9em}}
+#roulette-fast{width:100%;margin-bottom:8px}
+.practice-doodle{width:64px;height:64px;flex:none;color:inherit;fill:currentColor;shape-rendering:crispEdges}
+dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font-size:.7em}
+/* Apple II look for the practice tiles: square corners and a chunky stepped pixel border (4px "pixels"). */
+#practice-rows button.practice-tile{border:0;border-radius:0;margin:4px;box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
+#practice-rows button.practice-tile:focus-visible{outline-offset:8px}
+#practice-rows{gap:8px}@media(max-width:500px){#practice-rows{gap:4px}}
+#practice-pager{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:8px;margin:12px 0 0;font-weight:700}#practice-pager[hidden]{display:none}
+/* Learning units use the same tiles as the practice selection. */
+#skill-rows{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}#skill-rows button.practice-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-align:center;padding:18px 10px 14px;min-height:170px;border:0;border-radius:0;margin:4px;box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
+#skill-rows .practice-tile .skill-rank{position:absolute;top:8px;left:10px}#skill-rows .practice-tile .skill-selected{color:var(--muted)}#skill-rows .practice-tile:hover .skill-selected,#skill-rows .practice-tile:focus-visible .skill-selected{color:inherit}
+@media(max-width:500px){#skill-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}#skill-rows button.practice-tile{min-height:150px;padding:16px 6px 10px;font-size:.9em}}
+/* Practice grid: 5 columns x 3 rows per page, every tile the same height. */
+#practice-rows{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}#practice-rows button.practice-tile{height:180px;min-height:0;overflow:hidden}#practice-rows .practice-name{font-size:.9em;overflow-wrap:anywhere}
+@media(max-width:800px){#practice-rows{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:500px){#practice-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}#practice-rows button.practice-tile{height:160px}}
+/* Practice screen: exactly the viewport, no scrolling; the 3 tile rows share the free height. */
+#practice-dialog[open]{display:flex;flex-direction:column;overflow:hidden;width:100vw;height:100svh}#practice-dialog[open]>*{width:100%;flex:none}
+#practice-dialog[open]>#practice-rows{flex:1 1 0;min-height:0;grid-template-rows:repeat(3,minmax(0,1fr));margin:12px auto}#practice-rows button.practice-tile{height:auto}
+@media(max-width:800px){#practice-dialog[open]{overflow:auto}#practice-dialog[open]>#practice-rows{flex:none;grid-template-rows:none;grid-auto-rows:150px}}
+/* Roulette bet slider: blocky Apple II bar with ten notches and a square thumb. */
+#roulette-form #roulette-bet{-webkit-appearance:none;appearance:none;height:32px;margin:12px 0;background:transparent;border-radius:0}
+#roulette-bet::-webkit-slider-runnable-track{height:16px;border-radius:0;background:repeating-linear-gradient(90deg,var(--line) 0 calc(10% - 4px),var(--paper) calc(10% - 4px) 10%);box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
+#roulette-bet::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:32px;margin-top:-8px;border:0;border-radius:0;background:var(--ink);box-shadow:0 0 0 4px var(--paper)}
+#roulette-bet::-moz-range-track{height:16px;border-radius:0;background:repeating-linear-gradient(90deg,var(--line) 0 calc(10% - 4px),var(--paper) calc(10% - 4px) 10%);box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
+#roulette-bet::-moz-range-thumb{width:20px;height:32px;border:0;border-radius:0;background:var(--ink);box-shadow:0 0 0 4px var(--paper)}
+#roulette-bet:focus-visible{outline:none}#roulette-bet:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--paper),0 0 0 8px var(--ink)}
+.practice-head{display:flex;align-items:center;justify-content:flex-start;gap:16px}.practice-head .eyebrow{margin:0}#practice-find{flex:0 1 360px}#practice-find #practice-search{margin:0}
+.practice-head form{flex:none}#practice-dialog .practice-head form button{width:auto}#practice-find{margin-left:auto}
+/* Practice header: search box and back button share one height and the tiles' chunky border, so their edges line up with the grid. */
+.practice-head{align-items:stretch}#practice-find{display:flex}.practice-head form{display:flex}
+#practice-find #practice-search,#practice-dialog .practice-head form button{box-sizing:border-box;height:44px;margin:4px;border:0;border-radius:0;padding:0 14px;box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}#practice-find #practice-search{width:100%;background:var(--paper);color:var(--ink)}
+.practice-head .eyebrow{align-self:center}
+/* BACK inverts when selected, like the tiles, without the ▶ marker or outline (so it keeps its size). */
+#practice-dialog .practice-head form button.selected,#practice-dialog .practice-head form button:hover{background:var(--ink);color:var(--paper);outline:none}#practice-dialog .practice-head form button.selected::before{content:none}
+/* Symbol pad magnifier: hovering a key pops a 2.25× inverse-video copy of its glyph out over its neighbours (grows upward from its base; the end keys grow inward). The copy ignores the pointer, so every key stays clickable and nothing shifts. */
+@media (hover:hover){#symbol-pad button{position:relative}#symbol-pad button::after{content:attr(data-symbol);position:absolute;inset:-1px;display:none;place-items:center;background:var(--ink);color:var(--paper);border:1px solid var(--ink);outline:2px solid var(--paper);transform:scale(2.25);transform-origin:50% 100%;pointer-events:none}#symbol-pad button[data-sub]::after{content:attr(data-sub);font-size:.75em;padding-top:.6em}#symbol-pad button:first-child::after{transform-origin:0 100%}#symbol-pad button:last-child::after{transform-origin:100% 100%}#symbol-pad button:hover{z-index:5}#symbol-pad button:hover::after{display:grid}}
+/* Tile icon animation: the highlighted tile's icon bobs up one icon pixel and back, or steps through its PIXEL_FRAMES (spring, orbit, stopwatch and seesaw: 2 or 4 frames; the projectile: 8 frames, 0.2 s each). Whole-pixel jumps via steps(1), no tweening; still under reduced motion. */
+.practice-doodle.px-frames path+path{visibility:hidden}
+@media (prefers-reduced-motion:no-preference){
+.practice-tile:is(.selected,:hover,:focus-visible) .practice-doodle:not(.px-frames){animation:px-bob .8s steps(1,end) infinite}
+.practice-tile:is(.selected,:hover,:focus-visible) .px-f2 path{animation:px-f2 .8s steps(1,end) infinite}.practice-tile:is(.selected,:hover,:focus-visible) .px-f2 path:nth-child(2){animation-delay:-.4s}
+.practice-tile:is(.selected,:hover,:focus-visible) .px-f4 path{animation:px-f4 1.6s steps(1,end) infinite}.practice-tile:is(.selected,:hover,:focus-visible) .px-f4 path:nth-child(2){animation-delay:-1.2s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f4 path:nth-child(3){animation-delay:-.8s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f4 path:nth-child(4){animation-delay:-.4s}
+.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path{animation:px-f8 1.6s steps(1,end) infinite}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(2){animation-delay:-1.4s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(3){animation-delay:-1.2s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(4){animation-delay:-1.0s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(5){animation-delay:-0.8s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(6){animation-delay:-0.6s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(7){animation-delay:-0.4s}.practice-tile:is(.selected,:hover,:focus-visible) .px-f8 path:nth-child(8){animation-delay:-0.2s}
+}
+@keyframes px-bob{0%{transform:translateY(0)}50%,100%{transform:translateY(-6.25%)}}
+@keyframes px-f2{0%{visibility:visible}50%,100%{visibility:hidden}}
+@keyframes px-f4{0%{visibility:visible}25%,100%{visibility:hidden}}
+@keyframes px-f8{0%{visibility:visible}12.5%,100%{visibility:hidden}}
+
+/* Flags class: the flag is the question; real colours in every theme. */
+.revision-visual.flag-visual{width:auto;height:min(34vh,300px);max-width:min(100%,400px);object-fit:contain;border:2px solid var(--ink);image-rendering:auto}
+.flag-card{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;max-height:52vh;overflow:auto;margin:8px 0}
+.flag-card figure{margin:0;text-align:center}.flag-card-image{width:72px;height:54px;border:1px solid var(--ink)}.flag-card figcaption{font-size:14px;line-height:1.1}
+
+/* Title cards (rule text or a table): centred on the screen, horizontally and vertically. Correction cards keep their own layout. */
+#rule-dialog:not(.statement-card)[open]>form{min-height:100%;display:flex;flex-direction:column;justify-content:center;text-align:center}
+#rule-dialog:not(.statement-card) #card-picture>*{margin-left:auto;margin-right:auto}
+#rule-dialog:not(.statement-card) #continue{align-self:center;width:min(100%,720px)}
+.flag-card{grid-template-columns:repeat(auto-fill,96px);justify-content:center}
+/* Practice chooser: < and > beside the grid when more pages lie that way (a cue, not a button). */
+#practice-dialog[open]>.practice-more{position:absolute;top:50%;width:auto;transform:translateY(-50%);font-size:2.4em;line-height:1;color:var(--ink);pointer-events:none}
+#practice-more-left{left:clamp(4px,2vw,40px)}#practice-more-right{right:clamp(4px,2vw,40px)}
+.practice-more[hidden]{display:none}
+@media(prefers-reduced-motion:no-preference){.practice-more{animation:a2-flash 1.2s steps(1,end) infinite}}
+@media(max-width:800px){#practice-dialog[open]>.practice-more{position:fixed;font-size:1.6em}}
+/* Practice page tabs (top row): the current page is in inverse video. */
+#practice-pager button{padding:6px 14px;border:2px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font:inherit;text-transform:uppercase;cursor:pointer}
+#practice-pager button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+/* Same-or-different card (Level 8): two circuit pairs share whatever height the text leaves, so the card fits one screen. */
+#rule-dialog:not(.statement-card)[open]:has(.circuit-pair){overflow:hidden}
+#rule-dialog:not(.statement-card):has(.circuit-pair)>form{height:100%}
+#rule-dialog:has(.circuit-pair) #card-picture{flex:1 1 0;min-height:0;display:flex;margin:8px 0}
+.phys-card:has(.circuit-pair){flex:1;min-height:0;gap:4px;overflow:hidden;width:100%}
+.phys-card .circuit-pair{flex:1 1 0;min-height:0;height:auto;margin:0}
+.phys-card:has(.circuit-pair) p{margin:0}
+/* Roulette balance: the whole screen centred vertically; the wheel and the controls sit side by side as one centred group of equal weight. */
+#roulette-dialog[open]{display:flex;flex-direction:column;justify-content:center}
+#roulette-dialog h2{margin:0 auto 8px}
+#roulette-dialog .roulette-layout{grid-template-columns:auto 300px;justify-content:center;gap:clamp(32px,6vw,96px)}
+#roulette-wheel{margin:0}
+#roulette-wheel .roulette-disc{width:min(46vh,420px,42vw)}
+#roulette-form{gap:14px}
+#roulette-form label{gap:4px;font-size:20px}
+#roulette-form .bet-colour{font-size:18px;padding:10px 12px}
+#roulette-colour legend{font-size:20px;margin-bottom:6px}
+#roulette-result{margin:12px 0 0}
+@media(max-width:640px){#roulette-dialog .roulette-layout{grid-template-columns:1fr}#roulette-wheel .roulette-disc{width:min(70vw,300px)}}
+:root:not([data-theme="paper"]) #roulette-colour .bet-red{color:#ff4d5e}:root:not([data-theme="paper"]) #roulette-colour .bet-green{color:#3ddc6e}

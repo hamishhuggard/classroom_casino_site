@@ -1,10 +1,11 @@
-/* One pass through each level; missed cards travel across levels for three reviews. */
+/* One pass through each level; missed cards travel across levels for three reviews.
+   Cards are shuffled unless the level is marked ordered (easiest first). */
 (function(root){
   class ReviewDeck {
     constructor(levels,random=Math.random){
       this.levels=levels.map(level=>{
         const cards=level.cards.map(question=>({question,level:level.index,seen:false,done:false,stage:0,due:null,order:0}));
-        for(let i=cards.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
+        if(!level.ordered)for(let i=cards.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
         return {...level,cards};
       });
       this.cards=this.levels.flatMap(level=>level.cards);this.position=0;this.answers=0;this.sequence=0;this.current=null;this.previous=null;

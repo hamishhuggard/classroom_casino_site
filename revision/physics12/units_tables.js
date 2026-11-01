@@ -76,7 +76,8 @@ PREFIXES.forEach(([word,symbol,power,symAl],i)=>{
 // ---- title cards ----
 const cell=v=>`<td>${esc(v).replace(/\b([A-Za-z])_([a-z]{1,2})\b/g,'$1<sub>$2</sub>')}</td>`;
 const colTable=list=>`<table class="phys-card-table"><tbody>${[['Quantity','q'],['Symbol','s'],['Unit','u'],['Unit symbol','us']].map(([label,k])=>`<tr><th scope="row">${label}</th>${list.map(r=>cell(r[k])).join('')}</tr>`).join('')}</tbody></table>`;
-P.setCard(1,{example:'Each question shows one column. Fill in the missing cell.',html:`<div class="phys-card">${colTable(MECH.slice(0,8))}${colTable(MECH.slice(8))}</div>`});
+const MECH12=MECH.filter(r=>!/^(frequency|period)$/.test(r.q));   // frequency/period (L1-T13/T14) are Year 13 only: f = 1/T is not on the mechanics sheet
+P.setCard(1,{example:'Each question shows one column. Fill in the missing cell.',html:`<div class="phys-card">${colTable(MECH12.slice(0,8))}${colTable(MECH12.slice(8))}</div>`});
 P.setCard(2,{example:'Each question shows one column. Fill in the missing cell.',html:`<div class="phys-card">${colTable(ELEC)}</div>`});
 P.setCard(3,{example:'Each question shows one row. Fill in the missing cell, then convert between prefixed units.',html:`<div class="phys-card"><table class="phys-card-table prefix-table"><thead><tr><th>Word</th><th>Symbol</th><th>10<sup>x</sup></th></tr></thead><tbody>${PREFIXES.map(([w,s,p])=>`<tr><td>${w}</td><td>${s}</td><td>10${sup(p)}</td></tr>`).join('')}</tbody></table></div>`});
 })();

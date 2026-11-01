@@ -266,19 +266,18 @@ button:disabled{opacity:.5;cursor:default}
 }
 /* Curriculum menu and text questions use the same terminal theme. */
 #unit-select{display:block;margin:12px auto;padding:10px;max-width:100%;font:inherit;color:inherit;background:var(--paper,white);border:2px solid currentColor}
-#unit-note,#progress-status{font-size:16px;max-width:650px;margin:12px auto}
+#progress-status{font-size:16px;max-width:650px;margin:12px auto}
 .menu-cabinet a{color:inherit}
 .revision-question,.revision-rule{font:inherit;text-align:center;max-width:800px;line-height:1.4;padding:24px;font-size:clamp(22px,3vw,36px)}
 #menu-screen{height:auto;min-height:calc(100svh - 140px);padding:20px}
 
-#skill-dialog{width:min(92vw,800px)}#skill-rows{display:grid;margin:18px 0}#skill-rows button{display:grid;grid-template-columns:2.5em 1fr auto;gap:12px;align-items:center;text-align:left;padding:16px 8px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font:inherit}#skill-rows button:hover,#skill-rows button:focus-visible,#skill-rows button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}.skill-rank,.skill-selected{font-size:.7em}#skill-dialog form button{width:100%}@media(max-width:500px){#skill-rows button{grid-template-columns:2em 1fr}.skill-selected{grid-column:2}}
 #practice-dialog{width:min(92vw,800px)}#practice-rows,#practice-skills{display:grid;margin:18px 0}#practice-rows button,#practice-skills button{display:grid;grid-template-columns:2.5em 1fr auto;gap:12px;align-items:center;text-align:left;padding:16px 8px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font:inherit}#practice-rows button:hover,#practice-rows button:focus-visible,#practice-skills button:hover,#practice-skills button:focus-visible{background:var(--ink);color:var(--paper)}.skill-rank,.skill-selected{font-size:.7em}#practice-dialog form button{width:100%}@media(max-width:500px){#practice-rows button,#practice-skills button{grid-template-columns:2em 1fr}.skill-selected{grid-column:2}}
 #practice-dialog h3{font-size:20px;margin:18px 0 0}#practice-dialog .practice-heading{font-size:.8em;margin:18px 0 0;color:var(--muted)}#practice-search{width:100%;box-sizing:border-box;margin:8px 0;padding:12px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line)}
 
 /* All menus replace the previous screen; see styleguide.md. */
-:is(#preferences-dialog,#settings-dialog,#skill-dialog,#practice-dialog,#leaderboard-dialog,#rule-dialog,#chapter-dialog,#roulette-dialog)[open]{position:fixed;inset:0;margin:0;width:100vw;max-width:none;height:100svh;max-height:none;border:0;border-radius:0;background:var(--paper);opacity:1;overflow:auto;padding:clamp(24px,5vh,56px) clamp(20px,5vw,80px);box-shadow:none;backdrop-filter:none}
-:is(#preferences-dialog,#settings-dialog,#skill-dialog,#practice-dialog,#leaderboard-dialog,#rule-dialog,#chapter-dialog,#roulette-dialog)::backdrop{background:var(--paper);backdrop-filter:none}
-:is(#preferences-dialog,#settings-dialog,#skill-dialog,#practice-dialog,#leaderboard-dialog,#rule-dialog,#chapter-dialog,#roulette-dialog)>*{max-width:1100px;margin-left:auto;margin-right:auto}
+:is(#preferences-dialog,#settings-dialog,#practice-dialog,#leaderboard-dialog,#rule-dialog,#chapter-dialog,#roulette-dialog)[open]{position:fixed;inset:0;margin:0;width:100vw;max-width:none;height:100svh;max-height:none;border:0;border-radius:0;background:var(--paper);opacity:1;overflow:auto;padding:clamp(24px,5vh,56px) clamp(20px,5vw,80px);box-shadow:none;backdrop-filter:none}
+:is(#preferences-dialog,#settings-dialog,#practice-dialog,#leaderboard-dialog,#rule-dialog,#chapter-dialog,#roulette-dialog)::backdrop{background:var(--paper);backdrop-filter:none}
+:is(#preferences-dialog,#settings-dialog,#practice-dialog,#leaderboard-dialog,#rule-dialog,#chapter-dialog,#roulette-dialog)>*{max-width:1100px;margin-left:auto;margin-right:auto}
 .choice-group{padding:0 0 12px;border-bottom:1px solid var(--line)}.choice-group h3{font-size:20px;margin:0 0 8px}.choice-group button{margin:6px 10px 0 0}.choice-group button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 
 :root[data-screen="menu"] .arcade-hud{display:none}
@@ -423,9 +422,13 @@ dialog button.selected,dialog input.selected{outline:3px solid var(--ink);outlin
 .phys-table td.blank #entry-wrap{justify-content:center}
 .phys-table td.blank #entry-wrap #answer-slots{justify-content:center;width:100%}
 .phys-choice .revision-visual.circuit-pair{height:min(46vh,400px)}
-#menu-wheel{margin:-14px auto 22px;width:min(42vh,220px)}#menu-wheel .roulette-disc{display:block;width:100%;height:auto}
-@media(max-height:600px){#menu-wheel{width:110px;margin:-6px auto 10px}}
-#unit-note:empty{display:none}
+#menu-wheel{margin:-14px auto 22px;width:min(55vh,380px,86vw)}#menu-wheel .roulette-disc{display:block;width:100%;height:auto}
+@media(max-height:600px){#menu-wheel{width:min(40vh,200px);margin:-6px auto 10px}}
+/* Main-menu wheel turns slowly (rotor only; the rim stays put). */
+#menu-wheel .roulette-disc>g{transform-box:view-box;transform-origin:210px 210px;animation:menu-wheel-spin 48s linear infinite}
+@keyframes menu-wheel-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#menu-wheel .roulette-disc>g{animation:none}}
+
 /* Practice chooser: levels as a grid of tiles, each with a 16×16 pixel icon. */
 #practice-rows{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}#practice-rows button.practice-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-align:center;padding:18px 10px 14px;border:1px solid var(--line);border-radius:6px;min-height:170px}
 #practice-rows .practice-tile .skill-rank{position:absolute;top:8px;left:10px}#practice-rows .practice-tile .skill-selected{color:var(--muted)}#practice-rows .practice-tile:hover .skill-selected,#practice-rows .practice-tile:focus-visible .skill-selected{color:inherit}
@@ -438,11 +441,8 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 #practice-rows button.practice-tile{border:0;border-radius:0;margin:4px;box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
 #practice-rows button.practice-tile:focus-visible{outline-offset:8px}
 #practice-rows{gap:8px}@media(max-width:500px){#practice-rows{gap:4px}}
-#practice-pager{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:8px;margin:12px 0 0;font-weight:700}#practice-pager[hidden]{display:none}
+#practice-units,#practice-pager{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:8px;margin:12px 0 0;font-weight:700}#practice-units[hidden],#practice-pager[hidden]{display:none}#practice-pager{margin-top:8px}#practice-units{margin-top:12px;gap:6px}#practice-units button{padding:6px 10px;font-size:.8em}
 /* Learning units use the same tiles as the practice selection. */
-#skill-rows{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}#skill-rows button.practice-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-align:center;padding:18px 10px 14px;min-height:170px;border:0;border-radius:0;margin:4px;box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
-#skill-rows .practice-tile .skill-rank{position:absolute;top:8px;left:10px}#skill-rows .practice-tile .skill-selected{color:var(--muted)}#skill-rows .practice-tile:hover .skill-selected,#skill-rows .practice-tile:focus-visible .skill-selected{color:inherit}
-@media(max-width:500px){#skill-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}#skill-rows button.practice-tile{min-height:150px;padding:16px 6px 10px;font-size:.9em}}
 /* Practice grid: 5 columns x 3 rows per page, every tile the same height. */
 #practice-rows{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}#practice-rows button.practice-tile{height:180px;min-height:0;overflow:hidden}#practice-rows .practice-name{font-size:.9em;overflow-wrap:anywhere}
 @media(max-width:800px){#practice-rows{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -498,8 +498,8 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 @media(prefers-reduced-motion:no-preference){.practice-more{animation:a2-flash 1.2s steps(1,end) infinite}}
 @media(max-width:800px){#practice-dialog[open]>.practice-more{position:fixed;font-size:1.6em}}
 /* Practice page tabs (top row): the current page is in inverse video. */
-#practice-pager button{padding:6px 14px;border:2px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font:inherit;text-transform:uppercase;cursor:pointer}
-#practice-pager button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+#practice-units button,#practice-pager button{padding:6px 14px;border:2px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font:inherit;text-transform:uppercase;cursor:pointer}
+#practice-units button[aria-selected="true"],#practice-pager button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
 /* Same-or-different card (Level 8): two circuit pairs share whatever height the text leaves, so the card fits one screen. */
 #rule-dialog:not(.statement-card)[open]:has(.circuit-pair){overflow:hidden}
 #rule-dialog:not(.statement-card):has(.circuit-pair)>form{height:100%}
@@ -520,3 +520,35 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 #roulette-result{margin:12px 0 0}
 @media(max-width:640px){#roulette-dialog .roulette-layout{grid-template-columns:1fr}#roulette-wheel .roulette-disc{width:min(70vw,300px)}}
 :root:not([data-theme="paper"]) #roulette-colour .bet-red{color:#ff4d5e}:root:not([data-theme="paper"]) #roulette-colour .bet-green{color:#3ddc6e}
+/* Diagnostic end card: one practise-next choice per row, with the reason underneath. */
+#diagnostic-actions{display:grid;gap:10px;margin-top:14px}#diagnostic-actions button{width:100%;text-align:left}.diagnostic-why{display:block;font-size:.7em;opacity:.8;margin-top:4px}
+/* NCEA exam mode (exam.js): self-marked explain parts. */
+.connection-choices[hidden],.exam-points[hidden],.exam-reveal[hidden]{display:none}
+.exam-self-mark{display:flex;flex-direction:column;gap:10px;width:min(100%,900px);margin:0 auto 12px;text-align:left}
+.exam-written{font:inherit;font-size:clamp(16px,1.8vw,24px);line-height:1.4;padding:10px;border:3px solid var(--ink);background:var(--paper);color:var(--ink);resize:vertical;width:100%;box-sizing:border-box}
+.exam-reveal{align-self:center;font-size:clamp(15px,1.7vw,24px);padding:8px 14px;border:3px solid var(--ink);background:var(--paper);color:var(--ink)}
+.exam-reveal:focus-visible{background:var(--ink);color:var(--paper);outline:none}
+.exam-points{font-size:clamp(15px,1.7vw,22px);line-height:1.4}.exam-points p{margin:4px 0}.exam-points ul{margin:4px 0 4px 1.2em;padding:0}
+
+/* Stacked choices (the physics-type quiz): one option per row, like an open dropdown; ▸ marks the selected one. */
+.connection-choices.stacked-choices{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px;width:min(760px,100%);margin:0 auto}
+.phys-choice .connection-choices.stacked-choices button{text-align:left;padding:10px 16px 10px 40px;position:relative}
+.connection-choices.stacked-choices button.selected::before{content:'▸';position:absolute;left:14px}
+
+/* Settings: one page, always inside 100vw x 100svh (31 Oct 2026) */
+#preferences-dialog[open]{display:flex;flex-direction:column;overflow:hidden;padding:clamp(10px,3vh,40px) clamp(14px,4vw,80px)}
+#preferences-dialog[open]>*{width:100%;flex:none}
+#preferences-dialog h2{margin:0 auto clamp(6px,1.5vh,14px);font-size:clamp(22px,4vh,34px)}
+#preferences-dialog[open]>.preferences-controls{flex:1 1 0;min-height:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:clamp(6px,1.6vh,16px) clamp(16px,3vw,48px);align-content:start;overflow:hidden}
+#preferences-dialog .prefs-col{display:grid;gap:clamp(6px,1.4vh,14px);align-content:start}
+#preferences-dialog .prefs-toggles{display:flex;flex-wrap:wrap;gap:clamp(4px,.8vh,8px) 22px}
+#preferences-dialog .prefs-toggles label{font-size:16px;letter-spacing:0}#preferences-dialog .prefs-toggles label:last-child{flex-basis:100%}
+#preferences-dialog .prefs-actions{display:flex;flex-wrap:wrap;gap:8px}
+#preferences-dialog .choice-group{padding-bottom:clamp(4px,1vh,10px)}
+#preferences-dialog .choice-group h3{font-size:clamp(15px,2.6vh,20px);margin:0 0 2px}
+#preferences-dialog .choice-group button{margin:4px 8px 0 0;padding:clamp(4px,1vh,10px) 14px}
+#preferences-dialog .prefs-actions button{padding:clamp(5px,1.2vh,10px) 14px}
+#preferences-dialog[open]>form{margin-top:8px}#preferences-dialog>form button{padding:clamp(6px,1.4vh,10px) 14px}
+
+/* Unit tabs on the practice chooser: tabs wrap to more lines rather than scroll, and shrink on small screens. */
+@media(max-width:800px){#practice-units,#practice-pager{gap:4px;margin-top:6px}#practice-units button,#practice-pager button{padding:3px 8px;font-size:.8em}#practice-units button{font-size:.7em}}

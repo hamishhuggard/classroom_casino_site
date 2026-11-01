@@ -185,13 +185,18 @@ const Physics12=(()=>{
  }
  // Build the unit object the app expects. Question ids are level-prefixed, numbered from 101 so they never clash with Year 10.
  const NUMBERS_OF=()=>(typeof Physics12!=='undefined'&&Physics12.NUMBERS)||{};
- function unit(){
+ // Year 13 only: outside the two Year 12 exams (AS 91171 mechanics, AS 91173 electricity & electromagnetism); see DEV_LOG 29 Oct 2026.
+ const YEAR13=new Set(('L1-T13 L1-T14 L5-M29 L5-M30 L6-M39 L6-M40 L7-M33 L7-M34 L4-M09 L4-E16 L4-E17 L4-E18 L4-E19 L4-E20 L4-E36 L5-E45 L5-E46 L5-E47 L7-E25 L7-E26 L7-E27 L7-E28 L4-E24 L4-E25 L4-E26').split(' '));
+ function build(yr13){
   // Numbers come from the permanent registry in numbers.js so deleting a question never renumbers the others;
   // an id not yet in it gets the next free number (run scripts/assign_numbers.cjs to record it).
   const known=NUMBERS_OF();let n=Math.max(100,...Object.values(known));
-  return {id:'yr12_physics',name:'Year 12 Physics — Mechanics & Electromagnetism',status:'ready',mixed:true,physics12:true,source:'NCEA Level 2 Physics (AS 91171 mechanics, AS 91173 electricity & electromagnetism)',
-   skills:LEVELS.map((lv,i)=>({id:lv.id,name:lv.name,summary:lv.summary,ordered:lv.ordered,jumpAfter:lv.jumpAfter,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].map(def=>({...def,unit:def.topic,umbrella:umbrella(def)||'',questionNumber:known[def.id]||++n}))}))};
+  const head=yr13?{id:'yr13_physics',class:'yr13',name:'Year 13 Physics — beyond the Level 2 exams',source:'Physics questions outside AS 91171 and AS 91173 (waves, induction, point charges, vertical circles)'}:{id:'yr12_physics',name:'Year 12 Physics — Mechanics & Electromagnetism',source:'NCEA Level 2 Physics (AS 91171 mechanics, AS 91173 electricity & electromagnetism)'};
+  const pre=yr13?'yr13_physics-':'yr12_physics-';
+  return {...head,status:'ready',mixed:true,physics12:true,
+   skills:LEVELS.map((lv,i)=>({id:yr13?lv.id.replace('yr12_physics-',pre):lv.id,name:lv.name,summary:lv.summary,ordered:lv.ordered,jumpAfter:lv.jumpAfter,cardHtml:CARDS[i+1]?.html,example:CARDS[i+1]?.example,questions:bank[i].filter(def=>YEAR13.has(def.id)===yr13).map(def=>({...def,unit:def.topic,umbrella:umbrella(def)||'',questionNumber:known[def.id]||++n}))})).filter(sk=>sk.questions.length)};
  }
- return {LEVELS,TOPICS,UMBRELLA_ORDER,umbrella,DIRS,bank,add,setCard,generate,unit,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
+ const unit=()=>build(false),unit13=()=>build(true);
+ return {LEVELS,TOPICS,UMBRELLA_ORDER,umbrella,DIRS,bank,add,setCard,generate,unit,unit13,YEAR13,helpers,parseNumber,splitQuantity,unitKey,unitsEqual,checkNumeric,isNumericAnswer};
 })();
 if(typeof module!=='undefined')module.exports=Physics12;

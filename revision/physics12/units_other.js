@@ -31,7 +31,7 @@ const ACC=['m s-2','m s⁻²','m/s2','m/s^2','m·s⁻²'];
 const UNITS={
  [M]:[['force','N'],['energy','J'],['work','J'],['kinetic energy','J'],['gravitational potential energy','J'],['power','W'],
   ['momentum','kg m/s',[...MOM,'N s','Ns']],['impulse','N s',['Ns','N·s','kg m/s',...MOM]],['torque','N m',['Nm','N·m','N.m']],
-  ['frequency','Hz'],['period','s'],['time','s'],['mass','kg'],['distance','m'],['displacement','m'],['velocity','m/s',MS],['speed','m/s',MS],
+  ['time','s'],['mass','kg'],['distance','m'],['displacement','m'],['velocity','m/s',MS],['speed','m/s',MS],
   ['acceleration','m/s²',ACC],['spring constant','N/m',['N m-1','N m⁻¹','N·m⁻¹']],['gravitational field strength','N/kg',['m/s²','N kg-1','N kg⁻¹',...ACC]]],
  [E]:[['charge','C'],['current','A'],['potential difference','V'],['resistance','Ω'],['electric field strength','N/C',['V/m','N C-1','N C⁻¹','V m-1','V m⁻¹']],
   ['magnetic field strength','T'],['magnetic flux density','T'],['power','W'],['energy','J'],['time','s'],['force','N'],['length','m']]
@@ -70,7 +70,7 @@ both('Unit name to symbol',topic=>(r,h)=>{
 // 5. unit -> quantity
 const QU={
  [M]:[['N','force'],['J','energy',['work','work done','energy transferred','heat']],['W','power'],['kg m/s','momentum',['impulse']],['N s','impulse',['momentum','change in momentum']],
-  ['N m','torque',['moment','moment of a force','turning effect']],['Hz','frequency'],['N/m','spring constant',['force constant','stiffness']],['m/s²','acceleration'],
+  ['N m','torque',['moment','moment of a force','turning effect']],['N/m','spring constant',['force constant','stiffness']],['m/s²','acceleration'],
   ['m/s','velocity',['speed']],['kg','mass'],['N/kg','gravitational field strength',['gravity','field strength','gravitational field','g']],['s','time',['period','time interval','duration']]],
  [E]:[['C','charge'],['A','current'],['V','potential difference',['voltage','pd','PD','p.d.','emf','potential']],['Ω','resistance'],
   ['N/C','electric field strength',['electric field','electric field intensity']],['V/m','electric field strength',['electric field','electric field intensity']],
@@ -84,7 +84,7 @@ both('Quantity from a unit',topic=>(r,h)=>{
 
 // 6. quantity -> symbol
 const QS={
- [M]:[['momentum','p'],['torque','τ',['tau']],['frequency','f'],['period','T'],['force','F'],['mass','m'],['acceleration','a'],['time','t'],['spring constant','k'],
+ [M]:[['momentum','p'],['torque','τ',['tau']],['force','F'],['mass','m'],['acceleration','a'],['time','t'],['spring constant','k'],
   ['power','P'],['work','W'],['kinetic energy','Eₖ',['Ek','E_k','KE']],['gravitational potential energy','Eₚ',['Ep','E_p','PE','GPE']],['radius','r'],['distance','d'],
   ['velocity','v'],['gravitational field strength','g'],['extension of a spring','x']],
  [E]:[['charge','q',['Q']],['current','I'],['potential difference','V'],['resistance','R'],['magnetic field strength','B'],['electric field strength','E'],
@@ -117,7 +117,6 @@ const EQ={
   ['τ = Fd','τ','torque',['moment','moment of a force'],'N m',['Nm','N·m','N.m']],
   ['τ = Fd','d','perpendicular distance',['distance','distance from the pivot','distance from pivot','perpendicular distance from the pivot'],'m'],
   ['a_c = v² / r','r','radius',['radius of the circle','radius of circle'],'m'],
-  ['v = 2πr / T','T','period',['time for one revolution','time for one lap','time for one orbit'],'s'],
   ['FΔt = Δp','Δp','change in momentum',['momentum change','impulse'],'kg m/s',[...MOM,'N s','Ns']]
  ],
  [E]:[
@@ -172,7 +171,7 @@ reg(M,'Symbols for quantities',(r,h)=>{
 // ---- prefixes ----
 const PF=[['k','kilo',3],['M','mega',6],['G','giga',9],['m','milli',-3],['µ','micro',-6],['n','nano',-9],['c','centi',-2],['p','pico',-12]];
 const PFBY=Object.fromEntries(PF.map(p=>[p[0],p]));
-const AL={[M]:{N:['k','M','m'],m:['k','m','c','µ','n'],g:['k','m'],J:['k','M','G'],W:['k','M','G','m'],Hz:['k','M','G'],s:['m','µ','n']},
+const AL={[M]:{N:['k','M','m'],m:['k','m','c','µ','n'],g:['k','m'],J:['k','M','G'],W:['k','M','G','m'],s:['m','µ','n']},
  [E]:{V:['k','M','m','µ'],A:['m','µ','k'],'Ω':['k','M','m'],C:['m','µ','n','p'],T:['m','µ'],W:['k','M','G','m']}};
 const UN={N:'newton',m:'metre',g:'gram',J:'joule',W:'watt',Hz:'hertz',s:'second',V:'volt',A:'ampere','Ω':'ohm',C:'coulomb',T:'tesla'};
 const pickPU=(topic,r,h)=>{const u=h.pick(Object.keys(AL[topic]),r);return [h.pick(AL[topic][u],r),u];};
@@ -220,7 +219,7 @@ const SETS={
  '-6':[100,250,350,470,500,850,2500,4700]
 };
 const TOBASE={
- [M]:[['mm','m',-3],['cm','m',-2],['km','m',3],['mN','N',-3],['kN','N',3],['kJ','J',3],['MJ','J',6],['kW','W',3],['MW','W',6],['GW','W',9],['ms','s',-3],['µs','s',-6],['kHz','Hz',3],['MHz','Hz',6],['g','kg',-3],['mg','kg',-6]],
+ [M]:[['mm','m',-3],['cm','m',-2],['km','m',3],['mN','N',-3],['kN','N',3],['kJ','J',3],['MJ','J',6],['kW','W',3],['MW','W',6],['GW','W',9],['ms','s',-3],['µs','s',-6],['g','kg',-3],['mg','kg',-6]],
  [E]:[['mV','V',-3],['kV','V',3],['µC','C',-6],['mC','C',-3],['mA','A',-3],['µA','A',-6],['kΩ','Ω',3],['MΩ','Ω',6],['mT','T',-3],['µT','T',-6],['kW','W',3],['mW','W',-3],['GW','W',9]]
 };
 both('Prefixed unit to base unit',topic=>(r,h)=>{
@@ -278,7 +277,6 @@ const ID={
  [M]:[['N','kg m/s²',['kg m s-2','kg m s⁻²','kg·m/s²','kg·m·s⁻²','kg m/s2','kg m/s^2','kg m s^-2'],false,'force','mass × acceleration, in base units'],
   ['J','N m',['Nm','N·m','N.m'],false,'energy','force × distance'],
   ['W','J/s',['J s-1','J s⁻¹','N m/s','N m s-1'],false,'power','energy ÷ time'],
-  ['Hz','s⁻¹',['1/s','/s','s-1','per second','1 s-1','1 s⁻¹'],false,'frequency','1 ÷ time'],
   ['N s','kg m/s',['kg m s-1','kg m s⁻¹','kg·m/s','kg·m·s⁻¹'],false,'impulse','mass × velocity, in base units'],
   ['N/kg','m/s²',['m s-2','m s⁻²','m/s2','m/s^2'],true,'gravitational field strength','acceleration, in base units']],
  [E]:[['V','J/C',['J C-1','J C⁻¹'],false,'voltage','energy ÷ charge'],

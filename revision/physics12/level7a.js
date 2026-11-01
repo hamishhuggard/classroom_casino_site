@@ -9,35 +9,35 @@
  const R=n=>Number(Number(n).toPrecision(6));
  const an_=n=>an(n).toLowerCase();
 
- A('L7-M01','Uniform acceleration from rest (v = at)',(r,h)=>{
+ A('L7-M01','Uniform acceleration from rest (v_f = v_i + at)',(r,h)=>{
   const [who,verb]=h.pick([['A car','accelerates uniformly from rest'],['A cyclist','speeds up uniformly from rest'],['A sprinter','accelerates uniformly from rest'],['A train','pulls away from a station, accelerating uniformly from rest']],r);
   const slow=who==='A cyclist'||who==='A sprinter',a=slow?h.pick([1,1.5,2,2.5],r):h.pick([1.5,2,2.5,3,4,5],r),t=slow?h.int(3,5,r):h.int(3,12,r),v=R(a*t);
   return {cloze:`${who} ${verb}\nat ${a} m/s² for ${t} s.\nFind its final speed: ____ m/s`,answer:h.fmt(v),answerUnit:'m/s',
-   explanation:`Givens: u = 0, a = ${a} m/s², t = ${t} s. v = u + at = 0 + ${a} × ${t} = ${h.fmt(v)} m/s.`};});
+   explanation:`Givens: v_i = 0, a = ${a} m/s², t = ${t} s. v_f = v_i + at = 0 + ${a} × ${t} = ${h.fmt(v)} m/s.`};});
 
- A('L7-M02','Stopping distance (v² = u² + 2as)',(r,h)=>{
+ A('L7-M02','Stopping distance (v_f² = v_i² + 2ad)',(r,h)=>{
   const {v,a,d}=tries(()=>{const v=h.pick([10,12,15,16,20,24,25,30],r),a=h.pick([2,2.5,4,5,6,8],r);return {v,a,d:R(v*v/(2*a))};},o=>ok3(o.d));
   const what=h.pick(['A car','A truck','A cyclist','A van'],r);
   return {cloze:`${what} is travelling at ${v} m/s when the driver brakes.\nThe deceleration is a constant ${a} m/s² until it comes to a stop.\nFind its stopping distance: ____ m`,answer:h.fmt(d),answerUnit:'m',
-   explanation:`Givens: u = ${v} m/s, v = 0, a = −${a} m/s². v² = u² + 2as, so s = (0 − ${v}²) ÷ (2 × −${a}) = ${h.fmt(d)} m.`};});
+   explanation:`Givens: v_i = ${v} m/s, v_f = 0, a = −${a} m/s². v_f² = v_i² + 2ad, so d = (0 − ${v}²) ÷ (2 × −${a}) = ${h.fmt(d)} m.`};});
 
- A('L7-M03','Time to stop (s = ½(u+v)t)',(r,h)=>{
+ A('L7-M03','Time to stop (d = ½(v_i + v_f)t)',(r,h)=>{
   const u=h.pick([8,10,12,15,20,25],r),t=h.pick([2,3,4,5,6,8],r),d=R(u*t/2);
   const who=u>12?h.pick(['A car','A van'],r):h.pick(['A car','A van','A trolley','A skater'],r);
   return {cloze:`${who} moving at ${u} m/s slows uniformly\nand comes to a stop after travelling ${h.fmt(d)} m.\nFind the time it takes to stop: ____ s`,answer:h.fmt(t),answerUnit:'s',
-   explanation:`Givens: u = ${u} m/s, v = 0, s = ${h.fmt(d)} m. s = ½(u + v)t, so t = 2s ÷ (u + v) = ${h.fmt(2*d)} ÷ ${u} = ${t} s.`};});
+   explanation:`Givens: v_i = ${u} m/s, v_f = 0, d = ${h.fmt(d)} m. d = ½(v_i + v_f)t, so t = 2d ÷ (v_i + v_f) = ${h.fmt(2*d)} ÷ ${u} = ${t} s.`};});
 
- A('L7-M04','Deceleration from distance (v² = u² + 2as)',(r,h)=>{
+ A('L7-M04','Deceleration from distance (v_f² = v_i² + 2ad)',(r,h)=>{
   const {u,a,d}=tries(()=>{const u=h.pick([10,12,15,16,20,24,25,30],r),a=h.pick([2,2.5,4,5,6,8],r);return {u,a,d:R(u*u/(2*a))};},o=>ok3(o.d)&&o.d>=5);
   const who=h.pick(['A car','A motorbike','A truck'],r);
   return {cloze:`${who} travelling at ${u} m/s brakes\nuniformly and stops in ${h.fmt(d)} m.\nFind the size of its deceleration: ____ m/s²`,answer:h.fmt(a),answerUnit:'m/s²',
-   explanation:`Givens: u = ${u} m/s, v = 0, s = ${h.fmt(d)} m. v² = u² + 2as, so a = (0 − ${u}²) ÷ (2 × ${h.fmt(d)}) = −${a} m/s². Size = ${a} m/s².`};});
+   explanation:`Givens: v_i = ${u} m/s, v_f = 0, d = ${h.fmt(d)} m. v_f² = v_i² + 2ad, so a = (0 − ${u}²) ÷ (2 × ${h.fmt(d)}) = −${a} m/s². Size = ${a} m/s².`};});
 
- A('L7-M05','Distance while accelerating (s = ut + ½at²)',(r,h)=>{
+ A('L7-M05','Distance while accelerating (d = v_i t + ½at²)',(r,h)=>{
   const u=h.int(2,10,r),a=h.pick([1,2,3,4],r),t=h.int(3,8,r),s=R(u*t+0.5*a*t*t);
   const who=h.pick(['A cyclist','A car','A runner','A trolley'],r);
   return {cloze:`${who} is moving at ${u} m/s when it starts\nto accelerate uniformly at ${a} m/s² for ${t} s.\nFind the distance it travels in that time: ____ m`,answer:h.fmt(s),answerUnit:'m',
-   explanation:`Givens: u = ${u} m/s, a = ${a} m/s², t = ${t} s. s = ut + ½at² = ${u}×${t} + ½×${a}×${t}² = ${h.fmt(s)} m.`};});
+   explanation:`Givens: v_i = ${u} m/s, a = ${a} m/s², t = ${t} s. d = v_i t + ½at² = ${u}×${t} + ½×${a}×${t}² = ${h.fmt(s)} m.`};});
 
  A('L7-M06','Speed and distance (d = vt)',(r,h)=>{
   const pair=h.pick([['A runner','jogs',[1.5,2,3,4,5]],['A model car','drives',[1.5,2,3,4,5,8]],['A cyclist','rides',[3,4,5,8,10,12]],['A ferry','travels',[4,5,8,10,12,15]]],r);
@@ -51,21 +51,21 @@
   const obj=h.pick(['stone','ball','coin','pebble'],r);
   const m=h.int(0,2,r);
   const head=`A ${obj} is dropped from rest. Ignore air resistance. g = 10 m/s².`;
-  if(m===0)return {cloze:`${head}\nIt falls for ${t} s before it lands.\nFind the height it was dropped from: ____ m`,answer:String(height),answerUnit:'m',explanation:`u = 0, a = 10 m/s², t = ${t} s. s = ut + ½at² = ½ × 10 × ${t}² = ${height} m.`};
-  if(m===1)return {cloze:`${head}\nIt falls for ${t} s before it lands.\nFind its speed just before it lands: ____ m/s`,answer:String(v),answerUnit:'m/s',explanation:`u = 0, a = 10 m/s², t = ${t} s. v = u + at = 10 × ${t} = ${v} m/s.`};
-  return {cloze:`${head}\nIt is dropped from a height of ${height} m.\nFind the time it takes to land: ____ s`,answer:String(t),answerUnit:'s',explanation:`u = 0, a = 10 m/s², s = ${height} m. s = ½at², so t = √(2s ÷ a) = √(${2*height} ÷ 10) = ${t} s.`};});
+  if(m===0)return {cloze:`${head}\nIt falls for ${t} s before it lands.\nFind the height it was dropped from: ____ m`,answer:String(height),answerUnit:'m',explanation:`v_i = 0, a = 10 m/s², t = ${t} s. d = v_i t + ½at² = ½ × 10 × ${t}² = ${height} m.`};
+  if(m===1)return {cloze:`${head}\nIt falls for ${t} s before it lands.\nFind its speed just before it lands: ____ m/s`,answer:String(v),answerUnit:'m/s',explanation:`v_i = 0, a = 10 m/s², t = ${t} s. v_f = v_i + at = 10 × ${t} = ${v} m/s.`};
+  return {cloze:`${head}\nIt is dropped from a height of ${height} m.\nFind the time it takes to land: ____ s`,answer:String(t),answerUnit:'s',explanation:`v_i = 0, a = 10 m/s², d = ${height} m. d = ½at², so t = √(2d ÷ a) = √(${2*height} ÷ 10) = ${t} s.`};});
 
  A('L7-M08','Vertical throw upward',(r,h)=>{
   const u=h.pick([10,15,20,25,30],r),m=h.int(0,1,r),obj=h.pick(['ball','stone','rugby ball'],r);
   const head=`A ${obj} is thrown straight up at ${u} m/s.\nIgnore air resistance. g = 10 m/s².`;
-  if(m===0){const hh=R(u*u/20);return {cloze:`${head}\nFind its maximum height above the thrower's hand: ____ m`,answer:h.fmt(hh),answerUnit:'m',explanation:`u = ${u} m/s, v = 0 at the top, a = −10 m/s². v² = u² + 2as, so s = ${u}² ÷ (2 × 10) = ${h.fmt(hh)} m.`};}
-  const t=R(u/10);return {cloze:`${head}\nFind the time it takes to reach its highest point: ____ s`,answer:h.fmt(t),answerUnit:'s',explanation:`u = ${u} m/s, v = 0 at the top, a = −10 m/s². v = u + at, so t = ${u} ÷ 10 = ${h.fmt(t)} s.`};});
+  if(m===0){const hh=R(u*u/20);return {cloze:`${head}\nFind its maximum height above the thrower's hand: ____ m`,answer:h.fmt(hh),answerUnit:'m',explanation:`v_i = ${u} m/s, v_f = 0 at the top, a = −10 m/s². v_f² = v_i² + 2ad, so d = ${u}² ÷ (2 × 10) = ${h.fmt(hh)} m.`};}
+  const t=R(u/10);return {cloze:`${head}\nFind the time it takes to reach its highest point: ____ s`,answer:h.fmt(t),answerUnit:'s',explanation:`v_i = ${u} m/s, v_f = 0 at the top, a = −10 m/s². v_f = v_i + at, so t = ${u} ÷ 10 = ${h.fmt(t)} s.`};});
 
  A('L7-M09','Projectile launched horizontally',(r,h)=>{
   const t=h.int(1,4,r),height=5*t*t,v=h.pick([2,3,4,5,6,8,10],r),d=v*t;
   const [obj,place]=h.pick([['A stone','a cliff'],['A ball','a flat roof'],['A rugby ball','a platform']],r);
   return {cloze:`${obj} is kicked horizontally at ${v} m/s off ${place}\n${height} m above level ground. g = 10 m/s². Ignore air resistance.\nFind how far from the edge it lands: ____ m`,answer:String(d),answerUnit:'m',
-   explanation:`Vertical: u = 0, s = ${height} m, a = 10 m/s², so t = √(2s ÷ a) = ${t} s. Horizontal: d = vt = ${v} × ${t} = ${d} m.`};});
+   explanation:`Vertical: v_i = 0, d = ${height} m, a = 10 m/s², so t = √(2d ÷ a) = ${t} s. Horizontal: d = vt = ${v} × ${t} = ${d} m.`};});
 
  A('L7-M10','Newton’s second law',(r,h)=>{
   const m=h.pick([2,3,4,5,8,10,40,60,800,1200],r),a=h.pick([1,2,2.5,3,4,5],r),F=R(m*a),k=h.int(0,2,r);
@@ -85,7 +85,7 @@
   const m=h.pick([2,4,5,10,20],r),a=h.pick([1,2,2.5,3],r),f=h.pick([2,4,5,10],r),t=h.int(2,8,r),F=R(m*a+f),v=R(a*t);
   const obj=h.pick(['crate','sledge','trolley'],r);
   return {cloze:`${an(m)} ${m} kg ${obj} starts from rest. A constant force of ${h.fmt(F)} N\npushes it along a surface with friction of ${f} N.\nFind its speed after ${t} s: ____ m/s`,answer:h.fmt(v),answerUnit:'m/s',
-   explanation:`Net force = ${h.fmt(F)} − ${f} = ${h.fmt(F-f)} N, so a = ${h.fmt(F-f)} ÷ ${m} = ${h.fmt(a)} m/s². v = u + at = 0 + ${h.fmt(a)} × ${t} = ${h.fmt(v)} m/s.`};});
+   explanation:`Net force = ${h.fmt(F)} − ${f} = ${h.fmt(F-f)} N, so a = ${h.fmt(F-f)} ÷ ${m} = ${h.fmt(a)} m/s². v_f = v_i + at = 0 + ${h.fmt(a)} × ${t} = ${h.fmt(v)} m/s.`};});
 
  A('L7-M13','Weight and mass',(r,h)=>{
   const k=h.int(0,3,r);
@@ -117,14 +117,14 @@
   const {F}=tries(()=>({F:R(m*v/t)}),o=>ok3(o.F));
   const ctx=h.pick([['A rugby ball','kicked from rest and leaves the boot'],['A football','kicked from rest and leaves the foot'],['A hockey ball','hit from rest and leaves the stick']],r);
   return {cloze:`${ctx[0]} of mass ${m} kg is ${ctx[1]}\nat ${v} m/s. The contact lasts ${t} s.\nFind the average force on the ball: ____ N`,answer:h.fmt(F),answerUnit:'N',
-   explanation:`Δp = m(v − u) = ${m} × ${v} = ${h.fmt(m*v)} kg m/s. F = Δp ÷ Δt = ${h.fmt(m*v)} ÷ ${t} = ${h.fmt(F)} N.`};});
+   explanation:`Δp = m(v_f − v_i) = ${m} × (${v} − 0) = ${h.fmt(m*v)} kg m/s. F = Δp ÷ Δt = ${h.fmt(m*v)} ÷ ${t} = ${h.fmt(F)} N.`};});
 
  A('L7-M18','Impulse in a crash (force, time, Δv)',(r,h)=>{
   const m=h.pick([60,70,80,1000,1200],r),v=h.pick([10,15,20,25],r),t=h.pick([0.1,0.2,0.5],r);
   const {F}=tries(()=>({F:R(m*v/t)}),o=>ok3(o.F));
   const [obj,ver]=m>=1000?['A car',`hits a wall and stops`]:['A passenger',`is stopped by the seatbelt`];
   return {cloze:`${obj} of mass ${m} kg travelling at ${v} m/s\n${ver} in ${t} s.\nFind the average stopping force: ____ N`,answer:h.fmt(F),answerUnit:'N',
-   explanation:`Δp = m(v − u) = ${m} × (0 − ${v}) = −${m*v} kg m/s. F = Δp ÷ Δt, so size = ${m*v} ÷ ${t} = ${h.fmt(F)} N.`};});
+   explanation:`Δp = m(v_f − v_i) = ${m} × (0 − ${v}) = −${m*v} kg m/s. F = Δp ÷ Δt, so size = ${m*v} ÷ ${t} = ${h.fmt(F)} N.`};});
 
  A('L7-M19','Collision where objects stick',(r,h)=>{
   const {m1,m2,vv,tot,u}=tries(()=>{const m1=h.pick([1,2,3,4,5],r),m2=h.pick([1,2,3,4,5,6],r),vv=h.pick([1,1.5,2,2.5,3],r);return {m1,m2,vv,tot:m1+m2,u:R((m1+m2)*vv/m1)};},o=>ok3(o.u));

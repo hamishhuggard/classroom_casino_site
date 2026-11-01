@@ -59,7 +59,7 @@ let musicTimer,musicStep=0,musicEffectPause=false;
 const musicVoices=new Set();
 let selectedUnit='electricity_magnetism';
 let returnToPreferences=false;
-const menuIds=['start-game','menu-leaderboard','menu-settings','menu-class','finish-run'];
+const menuIds=['start-game','menu-leaderboard','menu-settings','finish-run'];
 // Question numbers are a debugging aid: shown only with ?show_number=true.
 const showNumber=new URLSearchParams(location.search).get('show_number')==='true';
 function questionNumber(){
@@ -82,13 +82,13 @@ function showScore(){
 function hud(){showScore();renderCasinoProgress();renderDeckProgress(); if(activeRun)highestLevel=Math.max(highestLevel,enabled[position]+1); $('level').textContent=`LEARNING UNIT ${position+1}${showNumber&&questionNumber()?' · QUESTION '+questionNumber():''}`;$('score').textContent=`BANK $${String(score).padStart(6,'0')}`;}
 function renderDeckProgress(){const box=$('deck-progress');box.hidden=true; // progress line hidden at Hamish's request; label text still maintained
   if(!reviewDeck)return;const progress=reviewDeck.progress;$('deck-progress-label').textContent=`LEARNING UNIT ${progress.position+1} · ${progress.seen}/${progress.total} new questions attempted · ${progress.pending} awaiting review${currentReview?.review?' · REVIEW '+(currentReview.stage+1)+'/3 (LEARNING UNIT '+(enabled.indexOf(questionLevel)+1)+')':''}`;}
-function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new ReviewDeck(enabled.map(index=>{const items=levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4');
+function resetReviewDeck(){reviewDeck=null;currentReview=null;advanceAfterCorrection=false;if(typeof ReviewDeck==='undefined'||!enabled.every(index=>levels[index].questions))return;reviewDeck=new (globalThis.CasinoDiagnostic?.deckFor(selectedUnit)||globalThis.CasinoQuiz?.deckFor(selectedUnit)||globalThis.CasinoExam?.deckFor(selectedUnit)||ReviewDeck)(enabled.map(index=>{const items=levels[index].questions.filter(item=>selectedUnit!=='mixed_key_skills'||item.id!=='E4');
   return {index,ordered:levels[index].ordered,jumpAfter:levels[index].jumpAfter,checkpoints:items.flatMap((item,i)=>item.checkpoint?[i]:[]),cards:items.map(item=>makeRevisionQuestion(item,selectedUnit==='mixed_key_skills'))};}));}
 function makeRevisionQuestion(base,mixed){const item=typeof base.gen==='function'?Physics12.generate(base):mixed&&typeof CasinoPractice!=='undefined'?CasinoPractice.generate(base):base;return q(item.cloze||item.prompt,item.answer,{kind:'revision',aliases:item.aliases||[],caseSensitive:!!item.caseSensitive||/chemical symbol|formula|base pairs|neutral formula|genotype =/.test(item.prompt),worked:item.explanation,source:item});}
-function finishDeck(){stop();currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
+function finishDeck(){stop();if(globalThis.CasinoDiagnostic?.finish(selectedUnit)||globalThis.CasinoQuiz?.finish(selectedUnit)||globalThis.CasinoExam?.finish(selectedUnit))return;currentReview=null;saveRun();showMenu();$('chapter-summary').textContent='Every question is done. All missed questions passed three successful reviews.';$('chapter-dialog').querySelector('h2').textContent='Practice complete';$('chapter-dialog').showModal();}
 function stop(){clearInterval(timer);clearTimeout(beepTimer);$('clock').textContent='';}
-function focus(){setTimeout(()=>{if(screen==='game'&&!$('rule-dialog').open&&!$('settings-dialog').open&&!$('preferences-dialog').open&&!$('roulette-dialog').open&&!$('chapter-dialog').open&&!$('skill-dialog').open&&!$('practice-dialog').open)answerFocusTarget().focus();},0);}
-function startTimer(reset=true){stop();if(screen!=='game'||!activeRun||$('rule-dialog').open||$('settings-dialog').open||$('chapter-dialog').open||$('preferences-dialog').open||$('skill-dialog').open||$('practice-dialog').open||$('roulette-dialog').open||!$('timed').checked)return;if(reset)seconds=30;$('clock').textContent=`${seconds}s`;timer=setInterval(()=>{seconds--;$('clock').textContent=`${seconds}s`;if(seconds<=0)fail(true);},1000);scheduleBeep();}
+function focus(){setTimeout(()=>{if(screen==='game'&&!$('rule-dialog').open&&!$('settings-dialog').open&&!$('preferences-dialog').open&&!$('roulette-dialog').open&&!$('chapter-dialog').open&&!$('practice-dialog').open)answerFocusTarget().focus();},0);}
+function startTimer(reset=true){stop();if(screen!=='game'||!activeRun||$('rule-dialog').open||$('settings-dialog').open||$('chapter-dialog').open||$('preferences-dialog').open||$('practice-dialog').open||$('roulette-dialog').open||!$('timed').checked||globalThis.CasinoExam?.owns(selectedUnit))return;if(reset)seconds=30;$('clock').textContent=`${seconds}s`;timer=setInterval(()=>{seconds--;$('clock').textContent=`${seconds}s`;if(seconds<=0)fail(true);},1000);scheduleBeep();}
 function escapeMarkup(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function statement(question,answer=''){
   if(question.kind==='revision')return `<div class="statement revision-statement">${revisionVisual(question)}<div class="statement-link">${scienceMarkup(removeProvidedUnit(question,question.prompt)).replace('____',answer?`<span class="statement-answer answer-value">${answer}</span>`:'____')}</div></div>`;
@@ -215,7 +215,7 @@ function render(){
   $('game-screen').classList.toggle('large-circuit-question',current.source?.visual?.type==='circuit');
   $('answer-suffix').hidden=true;$('game-screen').classList.toggle('statement-question',simple);$('game-screen').classList.toggle('cloze-question',true);
   $('prompt').textContent=questionInstruction();$('prompt').classList.toggle('sr-only',false);$('prompt').hidden=!$('prompt').textContent;
-  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder||current.source.fixedChoices?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
+  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder||current.source.fixedChoices?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices${current.source.stackChoices?' stacked-choices':''}" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
   else if(current.kind==='revision'&&current.source?.visual?.type==='circuit')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,answerMarkup:clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='F2')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true})}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='punnett')$('diagram').innerHTML=`<div class="cloze-game punnett-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,fields:current.source.fields,answerMarkup:current.source.id==='G3'||current.source.fields?'':clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
@@ -240,6 +240,7 @@ function render(){
   else $('diagram').innerHTML=`<div class="cloze-game">${['series','parallel','mixed'].includes(current.kind)?circuitAnswerDiagram(diagram(current),clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')):diagram(current)+clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')}</div>`;
   ($('diagram').firstElementChild||$('diagram')).appendChild(reminder);
   if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1'||current.source?.flag);if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
+  globalThis.CasinoExam?.afterRender();
 }
 
 function questionKey(question){return JSON.stringify([question.prompt,question.unit,diagram(question)]);}
@@ -252,7 +253,7 @@ function freshQuestion(make){
 }
 function next(){if(reviewDeck){currentReview=reviewDeck.next();
   // One level or skill selected: start its questions again with fresh values instead of finishing.
-  if(!currentReview&&enabled.length===1){resetReviewDeck();currentReview=reviewDeck?.next();}
+  if(!currentReview&&enabled.length===1&&!globalThis.CasinoDiagnostic?.owns(selectedUnit)&&!globalThis.CasinoQuiz?.owns(selectedUnit)&&!globalThis.CasinoExam?.owns(selectedUnit)){resetReviewDeck();currentReview=reviewDeck?.next();}
   if(!currentReview){finishDeck();return;}position=reviewDeck.progress.position;questionLevel=currentReview.level;current=currentReview.question;}else{questionLevel=enabled[position];current=freshQuestion(levels[questionLevel].make);}attempts=0;render();}
 function scientificInput(s){return String(s).normalize('NFKC').replace(/−/g,'-').trim();}
 // "1,000" and "12,345,678" are the numbers 1000 and 12345678. Other commas are left for the caller.
@@ -266,8 +267,22 @@ function expectedAnswerUnit(question){
   const cloze=question.source?.cloze||question.prompt;
   return cloze.match(/____\s*(m\/s²|m\/s|N\/kg|kg|N|A|V|m|s|%)(?![A-Za-z])/i)?.[1]||'';
 }
+// Choice buttons follow the on-screen layout (styleguide): left/right stay in the row and stop at its ends;
+// up/down go to the nearest button in the row above or below, wrapping from the bottom row to the top.
+function choiceInDirection(key){
+  const buttons=[...document.querySelectorAll('[data-connection]')];if(!buttons.length)return null;
+  const here=buttons.find(b=>b.dataset.connection===$('answer').value)||buttons[0],box=b=>b.getBoundingClientRect(),cx=b=>box(b).left+box(b).width/2,top=b=>Math.round(box(b).top);
+  const rows=[...new Set(buttons.map(top))].sort((a,b)=>a-b),row=rows.findIndex(t=>Math.abs(t-top(here))<4);
+  if(key==='ArrowLeft'||key==='ArrowRight'){
+    const forward=key==='ArrowRight',ahead=buttons.filter(b=>Math.abs(top(b)-top(here))<4&&(forward?cx(b)>cx(here):cx(b)<cx(here))).sort((a,b)=>Math.abs(cx(a)-cx(here))-Math.abs(cx(b)-cx(here)));
+    return ahead[0]?.dataset.connection||null;
+  }
+  if(rows.length<2)return null;
+  const target=rows[(row+(key==='ArrowDown'?1:-1)+rows.length)%rows.length];
+  return buttons.filter(b=>Math.abs(top(b)-target)<4).sort((a,b)=>Math.abs(cx(a)-cx(here))-Math.abs(cx(b)-cx(here)))[0].dataset.connection;
+}
 function renderAnswerHint(){$('feedback').innerHTML=escapeMarkup(answerHint()).replace(/\s*ENTER/g,'<strong class="enter-key">ENTER</strong>');}
-function answerHint(){return 'type an answer and press ENTER';}
+function answerHint(){return current?.source?.choices||current?.source?.id==='E1'?'choose with the arrow keys and press ENTER':'type an answer and press ENTER';}
 function matches(value){
   if(current)current.spellingFix=null;
   if(current.source?.phys&&current.source.numeric)return Physics12.checkNumeric(current.source,value)==='ok';
@@ -325,7 +340,7 @@ function millisecondHint(value){
 }
 // Shows the correct answer in symbols a student can type: N·m → N m, m/s² → m/s^2.
 function typeableUnits(s){return String(s).replace(/[·⋅]/g,' ').replace(/²/g,'^2').replace(/³/g,'^3').replace(/⁻¹/g,'^-1').replace(/⁻²/g,'^-2').replace(/⁻³/g,'^-3');}
-function fail(timeout=false,hint=''){playEffect('wrong');stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(`${hint?hint+' ':''}${typeableUnits(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`)}`,timeout?'Time’s up':'Try again');}
+function fail(timeout=false,hint=''){playEffect('wrong');reportAnswer(false);stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(`${hint?hint+' ':''}${typeableUnits(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`)}`,timeout?'Time’s up':'Try again');}
 let correctFlashTimer;
 function cashPop(amount){
   try{ // cosmetic only: never let it interrupt answering
@@ -339,17 +354,21 @@ function flashCorrect(){
   correctFlashTimer=setTimeout(()=>{$('answer-result').innerHTML='';renderAnswerHint();},800);
 }
 
+// Optional listeners (results.js, mastery.js); called before attempts changes, so they can tell a first try.
+function reportAnswer(ok){globalThis.CasinoQuiz?.record(ok);globalThis.CasinoResults?.record(ok);globalThis.CasinoMastery?.record(ok);}
 function completedLevel(completed,advance){if(advance)position++;next();}
 // Roulette opens after a short pause so the tick, cha-ching and count-up are seen first.
 let pendingRoulette=false,rouletteSpinTimer,rouletteFinishSpin;const ROULETTE_DELAY_MS=1100;
 $('answer-form').addEventListener('submit',e=>{
   e.preventDefault();if($('roulette-dialog').open||pendingRoulette)return;
+  if(globalThis.CasinoExam?.beforeSubmit())return;   // self-marked part: ENTER first shows the marking points
   if(current.source?.phys&&current.source.numeric?Physics12.checkNumeric(current.source,$('answer').value)==='nounit':expectedAnswerUnit(current)&&/^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)\s*[.!?;]*$/.test(withoutThousands(scientificInput($('answer').value)))){
     clearTimeout(correctFlashTimer);renderAnswerHint();
     const reminder=$('unit-reminder');reminder.hidden=false;reminder.classList.remove('unit-missing');void reminder.offsetWidth;reminder.classList.add('unit-missing');focus();return;
   }
   $('unit-reminder').hidden=true;
   if(!matches($('answer').value)){fail(false,millisecondHint($('answer').value));return;}
+  reportAnswer(true);
   playEffect('correct');flashCorrect();stop();score+=attempts?5:10;correct++;wrong=0;rouletteCorrectCount++;hud();
   if(reviewDeck)reviewDeck.answer(true);
   const levelFinished=!reviewDeck&&correct===(levels[questionLevel].correctTarget||3),completed=questionLevel,advance=position<enabled.length-1;
@@ -804,18 +823,17 @@ try{$('roulette-enabled').checked=localStorage.getItem('circuit-blaster-roulette
 $('roulette-enabled').onchange=()=>{renderCasinoProgress();try{localStorage.setItem('circuit-blaster-roulette',$('roulette-enabled').checked?'on':'off');}catch{}};
 $('preferences').onclick=()=>{stop();$('preferences-dialog').showModal();};
 $('preferences-dialog').addEventListener('close',()=>{if(returnToPreferences)return;if(screen==='game'){startTimer(false);focus();}else selectMenu(menuIndex);});
-$('choose-skill').onclick=()=>{returnToPreferences=true;$('preferences-dialog').close();stop();renderSkillChoices();$('skill-dialog').showModal();};
-$('skill-dialog').addEventListener('close',()=>{returnToPreferences=false;$('preferences-dialog').showModal();stop();});
-$('skill-rows').addEventListener('click',event=>{const button=event.target.closest?.('[data-unit]');if(!button)return;chooseUnit(button.dataset.unit);$('skill-dialog').close();});
 
 
 
 // Year 10 units share the original answer, retry, score and roulette loop.
 const circuitLevelCount=levels.length;
-const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit()],typeof EXTRA_UNITS==='undefined'?[]:EXTRA_UNITS);
+// Investigation and Survival aren't in the Year 10 exam: their data stays in curriculum.json but the game never loads them.
+const EXCLUDED_UNITS=['investigation_skills','survival_auckland'];
+const curriculumUnits=(typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS.filter(u=>!EXCLUDED_UNITS.includes(u.id))).concat(typeof MIXED_REVISION_UNIT==='undefined'?[]:[MIXED_REVISION_UNIT],typeof Physics12==='undefined'?[]:[Physics12.unit(),Physics12.unit13()],typeof EXTRA_UNITS==='undefined'?[]:EXTRA_UNITS);
 // Classes: each unit belongs to one. URL: ?class=yr12 (or yr10, flags, dutch); ?unit=… still works and implies its class.
 // Extra units (revision/flags, revision/dutch) push themselves onto EXTRA_UNITS with their own `class`; a class with no units is hidden.
-const CLASSES=[{id:'yr10',name:'YEAR 10',defaultUnit:'electricity_magnetism'},{id:'yr12',name:'YEAR 12',defaultUnit:'yr12_physics'},{id:'flags',name:'FLAGS',defaultUnit:'flags'},{id:'dutch',name:'DUTCH',defaultUnit:'dutch'}].filter(c=>c.id==='yr10'||curriculumUnits.some(u=>u.id===c.defaultUnit));
+const CLASSES=[{id:'yr10',name:'YEAR 10',defaultUnit:'forces_motion'},{id:'yr12',name:'YEAR 12',defaultUnit:'yr12_physics'},{id:'yr13',name:'YEAR 13',defaultUnit:'yr13_physics'},{id:'flags',name:'FLAGS',defaultUnit:'flags'},{id:'dutch',name:'DUTCH',defaultUnit:'dutch'}].filter(c=>c.id==='yr10'||curriculumUnits.some(u=>u.id===c.defaultUnit));
 const unitClass=id=>id==='yr12_physics'?'yr12':curriculumUnits.find(u=>u.id===id)?.class||'yr10';
 let selectedClass='yr10';const lastUnitForClass={};
 function mixedQuestionPicker(questions,ordered=false){
@@ -841,10 +859,6 @@ for(const unit of curriculumUnits){
     levels.push(entry);
   }
 }
-function renderSkillChoices(){
-  const choices=curriculumUnits.concat([{id:'circuit_extension',name:'Circuit calculations — original extension ladder'}]).filter(unit=>unitClass(unit.id)===selectedClass);
-  $('skill-rows').innerHTML=choices.map((unit,i)=>`<button type="button" data-unit="${unit.id}" aria-pressed="${unit.id===selectedUnit}"><span class="skill-rank">${String(i+1).padStart(2,'0')}</span><span>${escapeMarkup(unit.name)}</span><span class="skill-selected">${unit.id===selectedUnit?'SELECTED':''}</span></button>`).join('');
-}
 function chooseUnit(id){
   if($('roulette-dialog').open)return;
   saveRun();reviewDeck=null;currentReview=null;advanceAfterCorrection=false;selectedUnit=id;selectedClass=unitClass(id);lastUnitForClass[selectedClass]=id;syncClassUi();position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;needsLevelCard=false;lastQuestionKey=null;
@@ -852,21 +866,19 @@ function chooseUnit(id){
   $('calculations').hidden=!!unit?.mixed;
   enabled=levels.map((l,i)=>({l,i})).filter(({l,i})=>id==='circuit_extension'?i<circuitLevelCount:l.unit===id).map(({i})=>i);
   $('start-game').disabled=!enabled.length;$('settings').disabled=!enabled.length;
-  $('unit-note').textContent=unit?.status==='cross-unit'?'No separate unit plan available; investigation skills are woven into the other units.':unit?.status==='unconfirmed'?'Optional unit — confirm with your teacher.':id==='circuit_extension'?'Original circuit ladder, including extension calculations.':'';
   if(enabled.length){current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;}
   hud();showMenu();
 }
 function syncClassUi(){
-  const cls=CLASSES.find(c=>c.id===selectedClass);$('class').value=selectedClass;$('menu-class').textContent='CLASS: '+cls.name;
+  const cls=CLASSES.find(c=>c.id===selectedClass);$('class').value=selectedClass;
   try{const params=new URLSearchParams(location.search);params.set('class',selectedClass);if(selectedUnit===cls.defaultUnit)params.delete('unit');else params.set('unit',selectedUnit);history.replaceState(null,'','?'+params);}catch{}
   syncSettingChoices?.();
 }
 function chooseClass(id){if(id===selectedClass||!CLASSES.some(c=>c.id===id))return;chooseUnit(lastUnitForClass[id]||CLASSES.find(c=>c.id===id).defaultUnit);}
 $('class').onchange=()=>chooseClass($('class').value);
 for(const button of document.querySelectorAll('[data-setting="class"]'))button.hidden=!CLASSES.some(c=>c.id===button.dataset.value);
-$('menu-class').onclick=()=>{chooseClass(CLASSES[(CLASSES.findIndex(c=>c.id===selectedClass)+1)%CLASSES.length].id);selectMenu(menuIds.indexOf('menu-class'));};
 if(curriculumUnits.length){
-  const params=new URLSearchParams(location.search),requestedUnit=params.get('unit');let requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12',flags:'flags',flag:'flags',dutch:'dutch',nl:'dutch'})[String(params.get('class')||'').toLowerCase()];
+  const params=new URLSearchParams(location.search),requestedUnit=params.get('unit');let requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12',yr13:'yr13',y13:'yr13',13:'yr13',year13:'yr13',flags:'flags',flag:'flags',dutch:'dutch',nl:'dutch'})[String(params.get('class')||'').toLowerCase()];
   const validUnit=curriculumUnits.some(u=>u.id===requestedUnit)||requestedUnit==='circuit_extension';
   if(requestedClass&&!CLASSES.some(c=>c.id===requestedClass))requestedClass=undefined;
   if(requestedClass)selectedClass=requestedClass;
@@ -879,8 +891,14 @@ if(curriculumUnits.length){
 // START opens a chooser: all levels, one level, or (Year 12) one skill group, optionally limited to one topic.
 // Each choice becomes a level entry so the usual deck, review and roulette loop runs unchanged.
 const practiceEntries=new Map();let practiceTopic='all';
-const practiceUnit=()=>curriculumUnits.find(u=>u.id===selectedUnit);
-const practiceChoosable=()=>{const unit=practiceUnit();return !!unit&&unit.skills.length>0;};
+// Diagnostic and quiz units have no skills of their own: START shows their parent unit's chooser with their tile selected.
+// The original circuit ladder ('circuit_extension', the first circuitLevelCount levels) is chosen from the Electricity chooser's CIRCUIT EXTENSION section.
+// Starting one of its tiles makes selectedUnit 'circuit_extension' (as the old unit tab did); the chooser keeps showing Electricity.
+const chooserUnit=()=>selectedUnit==='circuit_extension'?'electricity_magnetism':selectedUnit;
+const practiceUnit=()=>curriculumUnits.find(u=>u.id===chooserUnit());
+const isCircuitTile=code=>code.startsWith('level:')&&Number(code.slice(6))<circuitLevelCount;
+const PRACTICE_TILE_OF_UNIT={yr12_diagnostic:'diagnostic',yr12_physics_type:'physics-type',circuit_extension:'level:0'};
+const practiceChoosable=()=>{const unit=practiceUnit();return !!unit&&unit.skills.length>0&&!unit.diagnostic;};
 function practiceEntry(key,name,questions,mixed=true){
   if(!practiceEntries.has(key)){
     const next=mixedQuestionPicker(questions);
@@ -889,10 +907,11 @@ function practiceEntry(key,name,questions,mixed=true){
   }
   return practiceEntries.get(key);
 }
-const ownLevels=()=>levels.map((l,i)=>i).filter(i=>!levels[i].focus&&levels[i].unit===selectedUnit);
+const ownLevels=()=>levels.map((l,i)=>i).filter(i=>!levels[i].focus&&levels[i].unit===chooserUnit());
 function levelForTopic(index,topic){
+  if(topic==='all'||!levels[index].questions)return index;   // circuit levels are generated, with no question list
   const questions=levels[index].questions.filter(item=>item.unit===topic);
-  if(topic==='all'||questions.length===levels[index].questions.length)return index;   // nothing filtered out: keep the real level (its card and order)
+  if(questions.length===levels[index].questions.length)return index;   // nothing filtered out: keep the real level (its card and order)
   return questions.length?practiceEntry(`${levels[index].skill}|${topic}`,`${levels[index].name} · ${topic}`,questions):null;
 }
 function skillGroups(unit){
@@ -903,11 +922,12 @@ function skillGroups(unit){
 }
 // 16×16 pixel icons for the practice tiles, picked by keywords in the level name (first match wins; star otherwise).
 // Each icon is 16 rows of 4 hex digits (one bit per pixel, left = high bit). Redraw them with scripts/pixel_icons.py.
-const PIXEL_ICONS={atom:'01800ff01818203467f64c324812c993c99348124c3267e6200418180ff00000',balls:'000003c0066004200420042006603ffc418241824182418241823e7c00000000',bars:'40004000401c401c401c41dc41dc41dc41dc5ddc5ddc5ddc5ddc5ddc5ddc7fff',bb:'00000000000078606c606c6078786c6c6c6c787800000000ffff000000000000',bolt:'007800f001e003c007800ff801f003e007c00f001c0030004000000000000000',breed:'700e88118a518991718e22442004218403c004200420042003c0018001800180',bulb:'07e008101008124812481188099005a003c003c003c001800000000000000000',car:'00000000f80000003bf00408088410827ffe80018001f3e712240c1800000000',charged:'000000000000000000387c440092feba00927c44003800000000000000000000',circuit:'0000020002407e7e42424202400240024002400247e27c3e07e0000000000000',collide:'0000000000001c383e7c3e7c3e7c1c3800002004f00f20040000000000000000',conical:'000007e002400240024002400240042004200e1010101ff8200420047ffe0000',directions:'0000020007000a800200020002000208020403fe040448085000600078000000',dna:'20043ffc10080c3003c00c3010083ffc200410080c3003c00c3010083ffc2004',dom:'0000000000000000f030da30d930f0bcd936da36f03c00000000000000000000',electromagnet:'00000000000000001e781248124a1249f24f1249124a124813c8000000000000',element:'7ffe400258024402480250025c024002520252e25ea252e25282527240027ffe',eq_choose:'00000000003c00660006e00c8e18c0188e008018001800000000000000000000',eq_given:'000000000000ffff0000a0ecae4aa04cae4a40ea0000ffff0000000000000000',equation:'0000000040c0a4a0eec0a4a0a0c00000000600887fc800880006000000000000',flag:'000040007f1c7ffe7ffe7ffe7ffe7ffe61fe401c4000400040004000e0000000',flask:'00000ff0042004200620046004200820091010101ff83fbc3bfc7ffc7ffe0000',force:'0000000000000000000007e004244422fc3f442207e400000000000000000000',graph:'4000400040024004400840104020402040404640498048005000600040007fff',indicator:'00001fe008400844084e085f085f085f0fce0fc00fc00fc00fc007c007800000',magnet:'000007e0181827e42814500a500a500a500a500a700e500a700e000000000000',meter:'0000000007e01818100821042284e387e287228420041008181807e000000000',mixed:'0000007f0041005100410045ffc180ffa08080808880808082808080ff800000',motor:'01000380054001000100e7c7e827eaa7e927eaa7e827e7c70000000000000000',mutation:'40087ff8201018600780186020107ff840080008001c00bf001c000800000008',orbit:'000001801818200400000002400741ff40070002000020041818018000000000',pack:'07e0081008103ffc4002400240027ffe43c2424243c2400240027ffe00000000',page:'00003fe020302028203c200420042ff420042ff420042ff420042f8420043ffc',plant:'03800440044003800100610c911289224544393801000100010007c000000000',plates:'0000ffff000021082108210821082108739c21080000ffff0000000000000000',prefix:'0000000000070001000700010007017003505150215051700000000000000000',projectile:'000000000540101020080000400400008002000080020001c000c00100000000',punnett:'0e3800003fff2081ae81ae81ae8120813fff2081a081a081a081208120813fff',quake:'000000000200020002800a800a801ae0fdff05c0054005000500010001000000',ramp:'000038007c007c0038008000e0009800860081808060801880068001ffff0000',resistor:'00000000000000000000111011102aa8eaab0aaa044404440000000000000000',seesaw:'0000000000000000000760076007ffff018003c007e00ff00000000000000000',spring:'3ffc018007e0081007e0081007e0081007e001800ff00810081008100ff00000',star:'0180018003c003c007e0ffff7ffe1ff80ff00ff01e781c38381c300c40020000',states:'00000000000800140014002200220041fe518249b222821c82008200fe000000',stopwatch:'000003c0018203c40c301008210421242144218420042004200410080c3003c0',table:'0000e007a005e007b81fe815bfeeeaaabfeeeaaabfeeeaaa7fee00003ff03ff0',tip:'000003c0044004200820081009901188124810042004210420047ffe0000ffff',vectors:'003c000c00140024004400840104020404040804100420044004fffe00000000',wave:'000001e00618080210e02100210040c040008000830c4cdb30200000ffff0000',weight:'03c0024003c00ff00810100814081508263426542534406240027ffe00000000',xx:'00006363363636361c1c1c1c3636363636366363636300000000000000000000'};
+const PIXEL_ICONS={atom:'01800ff01818203467f64c324812c993c99348124c3267e6200418180ff00000',balls:'000003c0066004200420042006603ffc418241824182418241823e7c00000000',bars:'40004000401c401c401c41dc41dc41dc41dc5ddc5ddc5ddc5ddc5ddc5ddc7fff',bb:'00000000000078606c606c6078786c6c6c6c787800000000ffff000000000000',bolt:'007800f001e003c007800ff801f003e007c00f001c0030004000000000000000',breed:'700e88118a518991718e22442004218403c004200420042003c0018001800180',bulb:'07e008101008124812481188099005a003c003c003c001800000000000000000',car:'00000000f80000003bf00408088410827ffe80018001f3e712240c1800000000',charged:'000000000000000000387c440092feba00927c44003800000000000000000000',circuit:'0000020002407e7e42424202400240024002400247e27c3e07e0000000000000',collide:'0000000000001c383e7c3e7c3e7c1c3800002004f00f20040000000000000000',conical:'000007e002400240024002400240042004200e1010101ff8200420047ffe0000',coulomb:'00000ff0181824046806500240ba49a25ca248a240ba6006200418180ff00000',directions:'0000020007000a800200020002000208020403fe040448085000600078000000',dna:'20043ffc10080c3003c00c3010083ffc200410080c3003c00c3010083ffc2004',dom:'0000000000000000f030da30d930f0bcd936da36f03c00000000000000000000',electromagnet:'00000000000000001e781248124a1249f24f1249124a124813c8000000000000',element:'7ffe400258024402480250025c024002520252e25ea252e25282527240027ffe',eq_choose:'00000000003c00660006e00c8e18c0188e008018001800000000000000000000',eq_given:'000000000000ffff0000a0ecae4aa04cae4a40ea0000ffff0000000000000000',equation:'0000000040c0a4a0eec0a4a0a0c00000000600887fc800880006000000000000',eye:'00000000000000000ff0300c43c287e187e143c2300c0ff00000000000000000',flag:'000040007f1c7ffe7ffe7ffe7ffe7ffe61fe401c4000400040004000e0000000',flask:'00000ff0042004200620046004200820091010101ff83fbc3bfc7ffc7ffe0000',force:'0000000000000000000007e004244422fc3f442207e400000000000000000000',graph:'4000400040024004400840104020402040404640498048005000600040007fff',indicator:'00001fe008400844084e085f085f085f0fce0fc00fc00fc00fc007c007800000',magnet:'000007e00c3013c82c346816500a500a500a700e720a710a7ffa710a720e0000',meter:'0000000007e01818100821042284e387e287228420041008181807e000000000',mixed:'0000007f0041005100410045ffc180ffa08080808880808082808080ff800000',motor:'01000380054001000100e7c7e827eaa7e927eaa7e827e7c70000000000000000',mutation:'40087ff8201018600780186020107ff840080008001c00bf001c000800000008',orbit:'000001801818200400000002400741ff40070002000020041818018000000000',pack:'07e0081008103ffc4002400240027ffe43c2424243c2400240027ffe00000000',page:'00003fe020302028203c200420042ff420042ff420042ff420042f8420043ffc',plant:'03800440044003800100610c911289224544393801000100010007c000000000',plates:'0000ffff2108210821082108ad6a739c210821082108210821082108ffff0000',prefix:'0000000000070001000700010007017003505150215051700000000000000000',projectile:'000000000540101020080000400400008002000080020001c000c00100000000',punnett:'0e3800003fff2081ae81ae81ae8120813fff2081a081a081a081208120813fff',quake:'000000000200020002800a800a801ae0fdff05c0054005000500010001000000',ramp:'000000000004000c031407a407c43b8419042a0444048804100420044004fffc',resistor:'00000000000000000000111011102aa8eaab0aaa044404440000000000000000',seesaw:'0000000000000000000760076007ffff018003c007e00ff00000000000000000',spring:'3ffc018007e0081007e0081007e0081007e001800ff00810081008100ff00000',star:'0180018003c003c007e0ffff7ffe1ff80ff00ff01e781c38381c300c40020000',states:'00000000000800140014002200220041fe518249b222821c82008200fe000000',stopwatch:'000003c0018203c40c301008210421242144218420042004200410080c3003c0',table:'0000e007a005e007b81fe815bfeeeaaabfeeeaaabfeeeaaa7fee00003ff03ff0',tip:'000003c0044004200820081009901188124810042004210420047ffe0000ffff',vectors:'0000001c000e00040024004400040104020400040804102400147ffc00100020',wave:'000001e00618080210e02100210040c040008000830c4cdb30200000ffff0000',weight:'03c0024003c00ff00810100814081508263426542534406240027ffe00000000',xx:'00006363363636361c1c1c1c3636363636366363636300000000000000000000'};
 // Extra frames for a few icons, shown in turn while the tile is highlighted (2, 4 or 8 frames in all, counting the still icon); the rest bob. Edit with scripts/pixel_icons.py.
-const PIXEL_FRAMES={orbit:['0000018018182004000000004002410241020100010021041b9807c003800000','000001801818200400004000e002ff82e0024000000020041818018000000000','038007c01b982104010001004102410240020000000020041818018000000000'],projectile:['0000000005401010200800004004c000c0020000800200010000000100000000','0000000005403010300800004004000080020000800200010000000100000000','0000060007401010200800004004000080020000800200010000000100000000','0000006005601010200800004004000080020000800200010000000100000000','000000000540101c200c00004004000080020000800200010000000100000000','0000000005401010200800004004000380030000800200010000000100000000','0000000005401010200800004004000080020000800200010003000300000000'],seesaw:['00000000000060006000c0073c0703c701bc03c307e00ff00000000000000000','0000000000000000000760076007ffff018003c007e00ff00000000000000000','000000000007000700070003603c63c03d80c3c007e00ff00000000000000000'],spring:['3ffc018007e0081007e0081007e001800ff00810081008100ff0000000000000'],stopwatch:['000003c0018203c40c301008210421042104218420442024200410080c3003c0','000003c0018203c40c301008210421042104230424042804200410080c3003c0','000003c0018203c40c301008210429042504230420042004200410080c3003c0']};
+const PIXEL_FRAMES={magnet:['000007e00c3013c82c346816500a500a500a700e710a708a7ffa708a710e0000','000007e00c3013c82c346816500a500a500a700e708a704a7ffa704a708e0000','000007e00c3013c82c346816500a500a500a700e704a702a7ffa702a704e0000','000007e00c3013c82c346816500a500a500a700e700a700a7ffa700a700e0000','000007e00c3013c82c346816500a500a500a700e700a780a7ffa780a700e0000','000007e00c3013c82c346816500a500a500a700e780a740a7ffa740a780e0000','000007e00c3013c82c346816500a500a500a700e740a720a7ffa720a740e0000'],orbit:['0000018018182004000000004002410241020100010021041b9807c003800000','000001801818200400004000e002ff82e0024000000020041818018000000000','038007c01b982104010001004102410240020000000020041818018000000000'],plates:['0000ffff21082108210821082108ad6a739c21082108210821082108ffff0000','0000ffff210821082108210821082108ad6a739c2108210821082108ffff0000','0000ffff2108210821082108210821082108ad6a739c210821082108ffff0000','0000ffff21082108210821082108210821082108ad6a739c21082108ffff0000','0000ffff2108ad6a739c210821082108210821082108210821082108ffff0000','0000ffff21082108ad6a739c21082108210821082108210821082108ffff0000','0000ffff210821082108ad6a739c2108210821082108210821082108ffff0000'],projectile:['0000000005401010200800004004c000c0020000800200010000000100000000','0000000005403010300800004004000080020000800200010000000100000000','0000060007401010200800004004000080020000800200010000000100000000','0000006005601010200800004004000080020000800200010000000100000000','000000000540101c200c00004004000080020000800200010000000100000000','0000000005401010200800004004000380030000800200010000000100000000','0000000005401010200800004004000080020000800200010003000300000000'],ramp:['000000000004018c03d403e41dc40c841504220444040804100420044004fffc','0000000000c401ec01f40ee406440a841104220404040804100420044004fffc','0000006000f400fc07740324054408841104020404040804100420044004fffc','00300078007c03bc019402a4044408840104020404040804100420044004fffc','000000000004000c00140024004418843d043e04dc04c804500420044004fffc','000000000004000c001400240c441e841f04ee046404a804100420044004fffc','000000000004000c001406240f440f847704320454048804100420044004fffc'],seesaw:['00000000000060006000c0073c0703c701bc03c307e00ff00000000000000000','0000000000000000000760076007ffff018003c007e00ff00000000000000000','000000000007000700070003603c63c03d80c3c007e00ff00000000000000000'],spring:['3ffc018007e0081007e0081007e001800ff00810081008100ff0000000000000'],stopwatch:['000003c0018203c40c301008210421042104218420442024200410080c3003c0','000003c0018203c40c301008210421042104230424042804200410080c3003c0','000003c0018203c40c301008210429042504230420042004200410080c3003c0'],vectors:['00000000000000000000000000000000000000000000002000107ff800100020','00000004000e00040004000400040004000400040004002400147ffc00100020','0000001c000e00040024004400040104020400040804102400147ffc00100020']};
 const DOODLES=[
   [/mixed|^all (mechanics|electromagnetism)$/,'mixed'],
+  [/^what should i study next/,'eye'],[/^practise next$/,'directions'],
   [/^(world|oceania|asia|europe|africa|north america|south america)$/,'flag'],
   // Year 12 umbrella skills
   [/hooke/,'spring'],[/torque and moments/,'seesaw'],[/momentum and impulse/,'collide'],[/circular motion/,'orbit'],[/^projectiles/,'projectile'],[/^vectors/,'vectors'],
@@ -917,7 +937,7 @@ const DOODLES=[
   [/same or different|series rules|parallel rules|circuits and/,'circuit'],
   [/prefix|conversion/,'prefix'],
   [/electromagnet(?!ism)/,'electromagnet'],
-  [/magnet|electromagnetism units/,'magnet'],
+  [/electromagnetism units/,'coulomb'],[/magnet/,'magnet'],
   [/mechanics units|mass and weight/,'weight'],
   [/multiple choice|directions/,'directions'],
   [/equation given/,'eq_given'],
@@ -932,7 +952,7 @@ const DOODLES=[
   [/states|chemical change/,'states'],
   [/charged particle/,'charged'],
   [/mass|bonding|particle/,'balls'],
-  [/net force|types of force/,'force'],
+  [/balanced forces|net force|types of force/,'force'],[/graphs/,'graph'],
   [/acceleration|newton/,'car'],
   [/speed|calculate/,'stopwatch'],
   [/data/,'bars'],
@@ -961,7 +981,7 @@ function levelDoodle(name){
 }
 const PRACTICE_PAGE=15,PRACTICE_COLS=5;let practicePage=0,practicePages=1,practiceSearch='';
 // Year 12 levels that belong to one topic's section of the chooser (the rest go under All physics).
-const PRACTICE_SECTION_OF={'yr12_physics-mech-units':'Mechanics','yr12_physics-em-units':'Electromagnetism','yr12_physics-same-circuit':'Electromagnetism'};
+const PRACTICE_SECTION_OF={'yr12_physics-mech-units':'Mechanics','yr12_physics-em-units':'Electromagnetism','yr12_physics-same-circuit':'Electromagnetism','yr13_physics-mech-units':'Mechanics','yr13_physics-em-units':'Electromagnetism','yr13_physics-same-circuit':'Electromagnetism'};
 function renderPractice(){
   const unit=practiceUnit(),own=ownLevels(),topical=!!unit.physics12;
   const tile=(code,label,note,rank,also='')=>({name:(label+' '+also).toLowerCase(),html:`<button type="button" class="practice-tile" data-practice="${escapeMarkup(code)}" data-name="${escapeMarkup(label.toLowerCase())}"><span class="skill-rank">${rank}</span>${levelDoodle(label)}<span class="practice-name">${escapeMarkup(label)}</span><span class="skill-selected">${note}</span></button>`});
@@ -974,11 +994,17 @@ function renderPractice(){
     const groups=[...skillGroups(unit)].map(([name,items])=>[name,items.filter(item=>practiceTopic==='all'||item.unit===practiceTopic)]).filter(([,items])=>items.length).sort((a,b)=>place(a[0])-place(b[0])||a[0].localeCompare(b[0]));
     const sectionOf=index=>PRACTICE_SECTION_OF[levels[index].skill]||'All physics';
     sections=['All physics','Mechanics','Electromagnetism'].map(title=>({title,tiles:[
+      // Diagnostic and Practise next (diagnostic.js, mastery.js) come first.
+      ...(title==='All physics'?[...(globalThis.CasinoDiagnostic?.tiles(unit)||[]),...(globalThis.CasinoQuiz?.tiles(unit)||[])]:[]).map(extra=>tile(extra.code,extra.label,escapeMarkup(extra.note),extra.rank)),
       title==='All physics'?tile('mixed',unit.mixedName||'Everything mixed together','','ALL'):tile(`topic:${title}`,`All ${title.toLowerCase()}`,'','ALL'),
       ...levelTiles.filter(index=>sectionOf(index)===title).map(index=>tile(`level:${index}`,levels[index].name,'',rank())),
       // Search also matches the fine-grained skills inside each umbrella (e.g. "hooke").
       ...groups.filter(([,items])=>items[0].unit===title).map(([name,items])=>tile(`skill:${name}`,name,'',rank(),[...new Set(items.map(item=>item.skill))].join(' ')))]}));
-  }else sections=[{title:'',tiles:[tile('mixed',unit.mixedName||'Everything mixed together','','ALL'),...levelTiles.map(index=>tile(`level:${index}`,levels[index].name,'',rank()))]}];
+  }else sections=[{title:chooserUnit()==='electricity_magnetism'?'Electricity':'',tiles:[...(own.every(index=>levels[index].questions)?[tile('mixed',unit.mixedName||'Everything mixed together','','ALL')]:[]),...levelTiles.map(index=>tile(`level:${index}`,levels[index].name,'',rank()))]}];
+  if(!topical&&chooserUnit()==='electricity_magnetism'){
+    // Electricity also holds the original circuit ladder, as its own section (and so its own page tabs).
+    let m=0;sections.push({title:'Circuit extension',tiles:levels.slice(0,circuitLevelCount).map((l,index)=>tile(`level:${index}`,l.name,'',String(++m).padStart(2,'0')))});
+  }
   if(practiceSearch)sections.forEach(section=>section.tiles=section.tiles.filter(item=>item.name.includes(practiceSearch)));
   sections=sections.filter(section=>section.tiles.length);
   // Pages hold 3 rows of 5 cells. A section moves to the next page whole when it doesn't fit; a section longer than a page is split.
@@ -998,9 +1024,29 @@ function renderPractice(){
   const labels=names.map((list,i)=>[...new Set(list)].join(' · ')||`Page ${i+1}`).map((label,i,all)=>all.indexOf(label)<i?`${label} ${all.slice(0,i+1).filter(x=>x===label).length}`:label);
   $('practice-pager').innerHTML=labels.map((label,i)=>`<button type="button" role="tab" data-tab="${i}" aria-selected="${i===practicePage}">${escapeMarkup(label)}</button>`).join('');
   $('practice-find').hidden=!topical;
+  const tabs=practiceUnitTabs();
+  $('practice-units').hidden=tabs.length<2;
+  $('practice-units').innerHTML=tabs.map(([id,label])=>`<button type="button" role="tab" data-unit="${id}" aria-selected="${id===chooserUnit()}">${escapeMarkup(label)}</button>`).join('');
 }
+// Unit tabs along the top of the chooser: the selected class's units (not the diagnostic or quiz, which are tiles in Year 12 physics). One unit means no tabs.
+const PRACTICE_UNIT_LABELS={electricity_magnetism:'Electricity',forces_motion:'Forces',acids_bases:'Acids & bases',atomic_matter:'Atoms',genetics:'Genetics',mixed_key_skills:'Mixed',yr12_physics:'Year 12 physics',yr12_ncea:'NCEA exams'};
+function practiceUnitTabs(){
+  const ids=curriculumUnits.filter(u=>!u.diagnostic&&unitClass(u.id)===selectedClass).map(u=>u.id);
+  const order=Object.keys(PRACTICE_UNIT_LABELS);
+  return ids.sort((a,b)=>order.indexOf(a)-order.indexOf(b)).map(id=>[id,PRACTICE_UNIT_LABELS[id]||curriculumUnits.find(u=>u.id===id)?.name||id]);
+}
+// Choosing a unit tab switches the unit and shows its chooser from the first page.
+function switchPracticeUnit(id){
+  if(id===chooserUnit())return;
+  chooseUnit(id);practicePage=0;practiceSearch='';$('practice-search').value='';renderPractice();
+}
+const selectUnitTab=id=>selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf($('practice-units').querySelector(`[data-unit="${id}"]`)));
 function filterPractice(){practiceSearch=$('practice-search').value.trim().toLowerCase();practicePage=0;renderPractice();}
 function beginPractice(code){
+  if(globalThis.CasinoDiagnostic?.begin(code)||globalThis.CasinoQuiz?.begin(code))return;
+  // A circuit tile runs as the circuit_extension unit; any other tile runs as the chooser's own unit.
+  const target=isCircuitTile(code)?'circuit_extension':chooserUnit();
+  if(selectedUnit!==target)chooseUnit(target);
   const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all';
   let picked;
   if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}`,unit.mixedName||'Everything mixed together',questions,!!unit.mixed)]:[];}
@@ -1010,16 +1056,32 @@ function beginPractice(code){
   picked=picked.filter(index=>index!==null);if(!picked.length)return;
   enabled=picked;enabled.forEach(index=>levels[index].reset?.());
   position=0;current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;
-  $('unit-note').textContent='';
   $('practice-dialog').close();hud();startGame();
 }
 $('practice-dialog').addEventListener('click',event=>{
+  const unitTab=event.target.closest?.('[data-unit]');
+  if(unitTab){switchPracticeUnit(unitTab.dataset.unit);selectUnitTab(unitTab.dataset.unit);return;}
   const pager=event.target.closest?.('[data-tab]');
   if(pager){practicePage=Number(pager.dataset.tab);renderPractice();selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf($('practice-pager').querySelector(`[data-tab="${practicePage}"]`)));return;}
   const button=event.target.closest?.('[data-practice]');if(button)beginPractice(button.dataset.practice);
 });
 $('practice-search').addEventListener('input',filterPractice);
-$('start-game').onclick=()=>{if(activeRun||selectedUnit==='circuit_extension'||!practiceChoosable())return startGame();practicePage=0;practiceSearch='';$('practice-search').value='';renderPractice();$('practice-dialog').showModal();selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf($('practice-rows').querySelector('.practice-tile')));};
+// START always opens the chooser (unless a run is under way). A diagnostic/quiz unit named in the URL shows its parent's chooser with its tile selected, not started.
+function openPractice(code){
+  practicePage=0;practiceSearch='';$('practice-search').value='';renderPractice();
+  const find=()=>code&&$('practice-rows').querySelector(`[data-practice="${code}"]`);
+  for(let page=0;code&&!find()&&page<practicePages;page++){practicePage=page;renderPractice();}
+  $('practice-dialog').showModal();
+  const tile=find()||$('practice-rows').querySelector('.practice-tile');
+  selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf(tile));
+}
+$('start-game').onclick=()=>{
+  if(activeRun)return startGame();
+  const code=PRACTICE_TILE_OF_UNIT[selectedUnit],unit=practiceUnit();
+  if(unit?.diagnostic){const parent=curriculumUnits.find(u=>u.id===`${unit.class}_physics`);if(parent)chooseUnit(parent.id);}
+  if(!practiceUnit())return startGame();
+  openPractice(code);
+};
 
 function syncSettingChoices(){
   for(const button of document.querySelectorAll('[data-setting]'))button.setAttribute('aria-pressed',String($(button.dataset.setting).value===button.dataset.value));
@@ -1030,8 +1092,8 @@ $('preferences-dialog').addEventListener('click',event=>{
 });
 syncSettingChoices();
 
-var menuPanelIds=['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','skill-dialog','practice-dialog'];
-function activeMenuPanel(){return (menuPanelIds||['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','skill-dialog','practice-dialog']).map($).find(panel=>panel.open);}
+var menuPanelIds=['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','practice-dialog','diagnostic-dialog'];
+function activeMenuPanel(){return (menuPanelIds||['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','practice-dialog','diagnostic-dialog']).map($).find(panel=>panel.open);}
 function panelControls(panel){
   // After the wheel has spun, the only thing to do is Continue: keep arrow keys on it.
   if(panel.id==='roulette-dialog'&&roulettePlayed)return [$('roulette-continue')].filter(control=>!control.disabled);
@@ -1051,6 +1113,12 @@ function navigatePanel(panel,event){
       const boxes=controls.map((control,i)=>({i,box:control.getBoundingClientRect()})),here=boxes[index].box,cx=here.left+here.width/2,cy=here.top+here.height/2;
       const centre=({box})=>[box.left+box.width/2,box.top+box.height/2];
       const sameRow=boxes.filter(item=>item.i!==index&&Math.abs(centre(item)[1]-cy)<here.height/2);
+      // Left/right along the unit tabs switch unit as they go (within the row; the end of a row is a stop).
+      if(horizontal&&controls[index].dataset.unit!==undefined){
+        const ahead=sameRow.filter(item=>controls[item.i].dataset.unit!==undefined&&(forward?centre(item)[0]>cx:centre(item)[0]<cx)).sort((a,b)=>Math.abs(centre(a)[0]-cx)-Math.abs(centre(b)[0]-cx));
+        if(!ahead.length)return;
+        const id=controls[ahead[0].i].dataset.unit;switchPracticeUnit(id);return selectUnitTab(id);
+      }
       // Left/right along the page tabs turn the page as they go.
       if(horizontal&&controls[index].dataset.tab!==undefined){
         const next=practicePage+(forward?1:-1);if(next<0||next>=practicePages)return;
@@ -1073,7 +1141,7 @@ function navigatePanel(panel,event){
       // Down from the bottom row of tiles turns to the next page; up from the top row goes to the current page's tab.
       if(controls[index].classList.contains('practice-tile')){
         const tileBoxes=boxes.filter(item=>controls[item.i].classList.contains('practice-tile')),beyond=tileBoxes.some(item=>forward?item.box.top>=here.bottom-1:item.box.bottom<=here.top+1),next=practicePage+(forward?1:-1);
-        const tab=$('practice-pager').hidden?null:$('practice-pager').querySelector(`[data-tab="${practicePage}"]`);
+        const tab=$('practice-pager').hidden?($('practice-units').hidden?null:$('practice-units').querySelector('[aria-selected="true"]')):$('practice-pager').querySelector(`[data-tab="${practicePage}"]`);
         if(!beyond&&!forward&&tab)return selectPanelControl(panel,controls.indexOf(tab));
         if(!beyond&&next>=0&&next<practicePages){
           practicePage=next;renderPractice();
@@ -1081,13 +1149,18 @@ function navigatePanel(panel,event){
           const row=tiles.filter(tile=>Math.abs(tile.getBoundingClientRect().top-edge)<4).sort((a,b)=>Math.abs(a.getBoundingClientRect().left+a.offsetWidth/2-cx)-Math.abs(b.getBoundingClientRect().left+b.offsetWidth/2-cx));
           return selectPanelControl(panel,panelControls(panel).indexOf(row[0]));}
       }
-      let rows=boxes.filter(item=>forward?item.box.top>=here.bottom-1:item.box.bottom<=here.top+1);
+      // Settings in two columns: up/down stay in the current column (Done sits below both).
+      const cols=panel.id==='preferences-dialog'?[...panel.querySelectorAll('.prefs-col')]:[],split=cols.length>1&&Math.abs(cols[0].getBoundingClientRect().left-cols[1].getBoundingClientRect().left)>10;
+      const colOf=control=>control.closest?.('.prefs-col'),sameCol=item=>!split||!colOf(controls[index])||!colOf(controls[item.i])||colOf(controls[index])===colOf(controls[item.i]);
+      let rows=boxes.filter(item=>(forward?item.box.top>=here.bottom-1:item.box.bottom<=here.top+1)&&sameCol(item));
       if(!rows.length)rows=boxes.filter(item=>!sameRow.includes(item)&&item.i!==index);
       if(!rows.length)return;
       // Down takes the highest row below (wrapping: the first row); up takes the lowest row above (wrapping: the bottom row).
       const near=forward?Math.min(...rows.map(r=>r.box.top)):Math.max(...rows.map(r=>r.box.bottom));
       const row=rows.filter(({box})=>Math.abs((forward?box.top:box.bottom)-near)<4).sort((a,b)=>Math.abs(centre(a)[0]-cx)-Math.abs(centre(b)[0]-cx));
-      return selectPanelControl(panel,row[0].i);
+      // Landing on the unit tabs picks the current unit, whatever the column.
+      const currentUnit=row.find(item=>controls[item.i].dataset.unit!==undefined&&controls[item.i].getAttribute('aria-selected')==='true');
+      return selectPanelControl(panel,(currentUnit||row[0]).i);
     }
     selectPanelControl(panel,index+(['ArrowDown','ArrowRight'].includes(event.key)?1:-1));
   }else if(event.key==='Enter'){event.preventDefault();controls[index].click();}
@@ -1096,9 +1169,10 @@ for(const id of menuPanelIds){const panel=$(id),open=panel.showModal.bind(panel)
 
 function selectConnection(value){$('answer').value=value;document.querySelectorAll('[data-connection]').forEach(button=>{const selected=button.dataset.connection===value;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));if(selected)button.focus();});}
 function routeAnswerKey(event){
+  if(globalThis.CasinoExam?.ownsKey(event))return;
   if(!activeRun||event.ctrlKey||event.metaKey||event.altKey||event.isComposing)return;
   if(current.source?.choices||current.source?.id==='E1'){
-    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();const choices=current.choiceOrder||['series','parallel'];const index=choices.indexOf($('answer').value);const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1;selectConnection(choices[Math.min(choices.length-1,Math.max(0,index+direction))]);} // stop at the ends, no wrapping
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();const to=choiceInDirection(event.key);if(to)selectConnection(to);}
     else if(event.key==='Enter'){event.preventDefault();$('answer-form').requestSubmit();}return;
   }
   const input=answerFocusTarget();if(event.target===input)return;
@@ -1152,7 +1226,7 @@ function clozeSentence(text,blank){
 function componentField(field,index){return `<span class="component-slot"><input class="shell-input component-input" data-shell="${index}" form="answer-form" maxlength="8" placeholder="_" aria-label="${escapeMarkup(field.label)}" autocomplete="off"></span>`;}
 
 function shellFields(count){return '<span class="shell-fields">'+Array.from({length:count},(_,i)=>`<input class="shell-input" data-shell="${i}" form="answer-form" inputmode="numeric" maxlength="2" placeholder="_" aria-label="Electrons in shell ${i+1}" autocomplete="off">`).join('<span class="shell-comma">,</span>')+'</span>';}
-function answerFocusTarget(){if(current.source?.choices||current.source?.id==='E1')return document.querySelector('[data-connection].selected')||$('answer');const fields=[...document.querySelectorAll('.shell-input')];if(fields.length)return fields.includes(document.activeElement)?document.activeElement:fields.find(field=>!field.value)||fields[0];return $('answer');}
+function answerFocusTarget(){const exam=globalThis.CasinoExam?.focusTarget();if(exam)return exam;if(current.source?.choices||current.source?.id==='E1')return document.querySelector('[data-connection].selected')||$('answer');const fields=[...document.querySelectorAll('.shell-input')];if(fields.length)return fields.includes(document.activeElement)?document.activeElement:fields.find(field=>!field.value)||fields[0];return $('answer');}
 function syncShellAnswer(){const fields=[...document.querySelectorAll('.shell-input')];if(fields.length)$('answer').value=fields.map(field=>field.value.trim()).join(',');}
 $('game-screen').addEventListener('input',event=>{if(event.target.classList?.contains('shell-input'))syncShellAnswer();});
 $('game-screen').addEventListener('keydown',event=>{

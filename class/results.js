@@ -105,7 +105,15 @@
     // Show the student their leaderboard name on the main menu.
     const hint=document.querySelector('#menu-screen .menu-hint');
     let tag=null;
-    const showTag=()=>{if(!tag)return;tag.textContent=`YOU ARE ${name.toUpperCase()}`+(code?` · CLASS ${code}`:' · NO CLASS CODE (RESULTS NOT SENT)');
+    // Name and animal in the top bar of every screen, so students can find themselves on the class race.
+    const showBadge=()=>{
+      const bar=document.querySelector('header.arcade-hud');if(!bar||document.getElementById('player-badge'))return;
+      const badge=document.createElement('span');badge.id='player-badge';badge.setAttribute('aria-label','You are '+name);
+      badge.style.cssText='flex:0 0 auto;display:flex;align-items:center;gap:8px;font-size:16px;letter-spacing:.04em;margin-left:auto;color:var(--a2-green,var(--ink))';
+      badge.innerHTML=(globalThis.animalIcon?.(name,2,true)||'')+'<span>'+name.toUpperCase()+'</span>';
+      const nav=bar.querySelector('nav');bar.insertBefore(badge,nav);if(nav)nav.style.marginLeft='0';
+    };
+    const showTag=()=>{showBadge();if(!tag)return;tag.textContent=`YOU ARE ${name.toUpperCase()}`+(code?` · CLASS ${code}`:' · NO CLASS CODE (RESULTS NOT SENT)');
       const art=globalThis.animalIcon?.(name,3,true);if(art){tag.insertAdjacentHTML('afterbegin',art);const svg=tag.firstElementChild;svg.style.cssText='display:block;margin:0 auto 6px';}};
     if(hint){tag=document.createElement('p');tag.className='menu-hint player-name';hint.before(tag);showTag();}
     {

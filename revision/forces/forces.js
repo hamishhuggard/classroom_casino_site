@@ -420,6 +420,14 @@
  card(S9,'DG14',3,(r,h)=>{const a=h.pick([{v:5,dt:4},{v:4,dt:5},{v:10,dt:2},{v:5,dt:6}],r),b=h.pick([{v:2,dt:5},{v:3,dt:5},{v:2,dt:10},{v:6,dt:5},{v:4,dt:5}],r),stop=h.pick([2,4],r);
   const secs=[a,{dt:stop,v:0},b];const ask=h.pick([0,2],r),g=secs[ask];
   return {cloze:`Speed in section ${LET[ask]} = ${Q} m/s`,answer:String(g.v),answerUnit:'m/s',visual:graphSvg(h,secs,{tstep:ask===2&&secs.reduce((s,x)=>s+x.dt,0)>10?5:2,dstep:10}),meta:{kind:'ggrad',secs,ask},explanation:`Gradient = rise ÷ run = ${g.v*g.dt} m ÷ ${g.dt} s = ${g.v} m/s.`};});
+ // Whole-journey cards (Forces revision 3, LO2): total distance, then average speed = total distance ÷ total time. Every vertex is on a gridline of 5 m.
+ const AVG=[[{dt:4,v:5},{dt:2,v:0},{dt:4,v:5}],[{dt:5,v:4},{dt:5,v:0}],[{dt:2,v:10},{dt:3,v:0},{dt:5,v:4}],[{dt:4,v:5},{dt:4,v:0},{dt:2,v:5}],[{dt:3,v:5},{dt:2,v:0},{dt:5,v:3}],[{dt:5,v:6},{dt:5,v:2}],[{dt:5,v:2},{dt:2,v:0},{dt:3,v:10}],[{dt:10,v:2},{dt:5,v:0},{dt:5,v:4}],[{dt:5,v:6},{dt:5,v:0},{dt:10,v:3}]];
+ const totals=s=>({d:s.reduce((a,x)=>a+x.dt*x.v,0),t:s.reduce((a,x)=>a+x.dt,0)});
+ const avgOpts=s=>({tstep:totals(s).t>10?5:2,dstep:5,labelStep:totals(s).d>30?10:5});
+ card(S9,'GA01',3,(r,h)=>{const s=h.pick(AVG,r),T=totals(s);return {cloze:`Total distance travelled = ${Q} m`,answer:String(T.d),answerUnit:'m',visual:graphSvg(h,s,avgOpts(s)),meta:{kind:'gtotal',s},explanation:`The graph ends at ${T.d} m, so the object travelled ${T.d} m in total.`};});
+ const avgCard=code=>card(S9,code,3,(r,h)=>{const s=h.pick(AVG,r),T=totals(s),a=T.d/T.t;return {cloze:`Average speed for the whole journey = ${Q} m/s`,answer:String(a),answerUnit:'m/s',visual:graphSvg(h,s,avgOpts(s)),meta:{kind:'gavg',s},explanation:`Average speed = total distance ÷ total time = ${T.d} ÷ ${T.t} = ${a} m/s.`};});
+ avgCard('GA02');avgCard('GA03');
+ card(S9,'GA04',3,(r,h)=>{const ans='total distance ÷ total time';return {cloze:'The average speed for a whole journey is found by '+Q,answer:ans,choices:mc(h,r,ans,['adding the section speeds and dividing by the number of sections','the speed of the steepest section','the final distance × the final time']),explanation:'Average speed = total distance ÷ total time. Averaging the section speeds gives the wrong answer when the sections last different times.'};});
  card(S9,'DG15',3,(r,h)=>{const s=h.pick([[{dt:4,v:5},{dt:2,v:0},{dt:4,v:3}],[{dt:2,v:5},{dt:4,v:0},{dt:2,v:10}],[{dt:2,v:10},{dt:2,v:0},{dt:4,v:5}]],r),i=2,d=s[i].v*s[i].dt;
   return {cloze:`Distance travelled in section C = ${Q} m`,answer:String(d),answerUnit:'m',visual:graphSvg(h,s,{tstep:2,dstep:5}),meta:{kind:'gdist',s,i},explanation:`Read the distance at the start and end of section C and subtract. The object travels ${d} m in section C.`};});
  card(S9,'DG16',3,(r,h)=>{const stop=h.pick([2,3,4],r),s=[{dt:h.pick([3,4],r),v:5},{dt:stop,v:0},{dt:3,v:h.pick([2,4],r)}];

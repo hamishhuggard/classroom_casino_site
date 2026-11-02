@@ -217,4 +217,4 @@ const titleCard=(()=>{
     },finish);
   };
 })();
-titleCard(()=>{});
+if(new URLSearchParams(location.search).get('mode')!=='class')titleCard(()=>{});

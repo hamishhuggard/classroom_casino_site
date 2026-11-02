@@ -1077,6 +1077,7 @@ function openPractice(code){
 }
 $('start-game').onclick=()=>{
   if(activeRun)return startGame();
+  if(globalThis.CasinoClass)return CasinoClass.restart();
   const code=PRACTICE_TILE_OF_UNIT[selectedUnit],unit=practiceUnit();
   if(unit?.diagnostic){const parent=curriculumUnits.find(u=>u.id===`${unit.class}_physics`);if(parent)chooseUnit(parent.id);}
   if(!practiceUnit())return startGame();

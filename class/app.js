@@ -1093,7 +1093,8 @@ function filterPractice(){practiceSearch=$('practice-search').value.trim().toLow
 // forces3 = Forces revision 3 (distance–time graphs, average speed). Cards chosen from the 2025 Year 10 test's style and the lesson's objectives.
 const LESSON_CARDS={
   forces1:'FT01-FT07,FT14,FT18-FT23,NF01-NF14,NG01-NG11,NG14,NG19-NG23,BF01-BF12,BF14,BF15,BF18-BF23',
-  forces3:'TG*,DG01-DG12,DG17,GA01-GA04,DS01-DS12,DS14'
+  forces2:'SP01-SP12,SP22,SP23,AV01-AV12,AV16-AV21,GA04,MW01-MW06,MW12,MW14,MW16,MW17,MW19-MW26',
+  forces3:'TG*,DG01-DG12,DG17,GA01-GA04,DS01-DS12,DS14,CG*'
 };
 function cardFilter(){
   const params=new URLSearchParams(location.search);

@@ -17,7 +17,7 @@ h1{margin:0;font-size:clamp(34px,7vh,84px);line-height:1;letter-spacing:.04em;co
   background-image:linear-gradient(var(--a2-green) 0 25%,var(--a2-orange) 25% 50%,var(--a2-violet) 50% 75%,var(--a2-blue) 75%)}
 .sub{color:var(--a2-blue);font-size:clamp(16px,3vh,32px);text-align:right;line-height:1.15}
 .sub b{color:var(--a2-green)}
-#class{font-size:clamp(30px,7vh,76px);line-height:1}#join{font-size:clamp(14px,2.4vh,26px);margin-top:.6vh}
+#class{font-size:clamp(30px,7vh,76px);line-height:1}
 #chart{position:relative;flex:1 1 auto;margin:1.4vh 0;min-height:0}
 .row{position:absolute;left:0;right:0;top:0;height:var(--row);display:flex;align-items:center;gap:1.4vw;
   transition:transform .9s steps(9,end),opacity .5s steps(4,end)}
@@ -32,7 +32,6 @@ h1{margin:0;font-size:clamp(34px,7vh,84px);line-height:1;letter-spacing:.04em;co
 .val{position:absolute;top:50%;transform:translateY(-50%);left:0;padding-left:.6vw;white-space:nowrap;color:#fff;font-size:calc(var(--row)*.52);
   transition:left .9s steps(9,end)}
 .row.leader .who span{color:var(--a2-green)}
-.row.leader .rank::after{content:"★";color:var(--a2-orange);animation:flash 1.07s steps(1,end) infinite}
 .row.leader .rank{color:var(--a2-orange)}
 .row.out{opacity:0}
 @keyframes flash{0%,49%{opacity:1}50%,100%{opacity:.2}}
@@ -44,13 +43,13 @@ footer{flex:0 0 auto;display:flex;justify-content:space-between;color:var(--a2-b
 #setup[hidden]{display:none}
 #setup input{font:inherit;font-size:clamp(30px,8vh,80px);width:6em;text-align:center;text-transform:uppercase;background:#000;color:var(--a2-green);border:3px solid var(--a2-green);padding:8px}
 #setup p{color:var(--a2-blue);font-size:clamp(18px,4vh,40px)}
-@media(prefers-reduced-motion:reduce){.row,.bar,.val{transition:none}.blink,.row.leader .rank::after{animation:none}}
+@media(prefers-reduced-motion:reduce){.row,.bar,.val{transition:none}.blink}
 </style>
 </head>
 <body>
-<header><h1>CLASS RACE</h1><div class="sub"><div id="class">CLASS <b>----</b></div><div id="day"></div><div id="join"></div></div></header>
+<header><h1>CLASS RACE</h1><div class="sub"><div id="class">CLASS <b>----</b></div><div id="day"></div></div></header>
 <main id="chart" aria-live="off"><div id="empty">WAITING FOR PLAYERS<br><span class="blink">GET READY TO ANSWER...</span></div></main>
-<footer><span id="status">CONNECTING...</span><span>BARS = CORRECT ANSWERS TODAY &nbsp; F = FULLSCREEN</span></footer>
+<footer><span id="status">CONNECTING...</span></footer>
 <section id="setup" hidden><form><h1 style="font-size:clamp(34px,9vh,90px)">CLASS CODE</h1><p>TYPE THE CODE, THEN PRESS ENTER</p><input id="code-in" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12"></form></section>
 <script src="results-config.js"></script>
 <script src="assets/animals/animals.js"></script>
@@ -65,22 +64,17 @@ try{if(code)localStorage.setItem('casino-class-code',code);else code=localStorag
 const COLOURS=['#14f53c','#ff44fd','#ff6a3c','#14cffd'];
 const hash=s=>{let h=0;for(const ch of s)h=(h*31+ch.charCodeAt(0))>>>0;return h;};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-// "v1 2026-11-02 unit=id:attempts.correct.first,..." -> total correct answers
-function correctTotal(payload){
-  let total=0;const m=String(payload).match(/^v1\s+\S+\s+(.*)$/s);if(!m)return 0;
-  for(const group of m[1].split(';')){const eq=group.indexOf('=');if(eq<0)continue;
-    for(const entry of group.slice(eq+1).split(',')){const colon=entry.lastIndexOf(':');if(colon<0)continue;total+=Number(entry.slice(colon+1).split('.')[1])||0;}}
-  return total;
-}
+// "v1 2026-11-02 unit=id:attempts.correct.first,...;bank=120" -> the player's bank in dollars (0 if the game didn't send one)
+function bankOf(payload){const m=String(payload).match(/;bank=(\d+)\s*$/);return m?Number(m[1]):0;}
 let players=[];          // [{key,name,score}]
 const rows=new Map();    // key -> {el,bar,val,shown,target}
-let maxScale=10,lastDay='';
+let maxScale=50,lastDay='';
 function layout(){
   const chart=$('chart'),h=chart.clientHeight;
   const n=Math.max(5,Math.min(players.length||5,Math.floor(h/46),14));
   return {n,row:Math.floor(h/n)};
 }
-function niceMax(v){const steps=[10,15,20,30,40,50,75,100,150,200,300,400,500,750,1000,1500,2000,3000,5000];return steps.find(s=>s>=v*1.08)||Math.ceil(v*1.1);}
+function niceMax(v){const steps=[50,100,150,200,300,400,500,750,1000,1500,2000,3000,5000,10000];return steps.find(s=>s>=v*1.08)||Math.ceil(v*1.1);}
 function render(){
   const {n,row}=layout(),chart=$('chart');
   chart.style.setProperty('--row',row+'px');
@@ -97,7 +91,7 @@ function render(){
       const el=document.createElement('div');el.className='row';
       el.style.transform=`translateY(${n*row}px)`;
       const colour=COLOURS[hash(p.name)%COLOURS.length];
-      el.innerHTML=`<div class="rank"></div><div class="who">${globalThis.animalIcon?animalIcon(p.name,3,true):''}<span>${esc(p.name.toUpperCase())}</span></div><div class="lane"><div class="bar" style="--c:${colour}"></div><div class="val">0</div></div>`;
+      el.innerHTML=`<div class="rank"></div><div class="who">${globalThis.animalIcon?animalIcon(p.name,3,true):''}<span>${esc(p.name.toUpperCase())}</span></div><div class="lane"><div class="bar" style="--c:${colour}"></div><div class="val">$0</div></div>`;
       chart.append(el);r={el,bar:el.querySelector('.bar'),val:el.querySelector('.val'),rank:el.querySelector('.rank'),shown:0,colour};rows.set(p.key,r);
       void el.offsetWidth;
     }
@@ -109,7 +103,7 @@ function render(){
     r.val.style.left=`calc(${pct}% )`;
     // count up in hard steps to the new score
     const from=r.shown,to=p.score;r.target=to;
-    if(from!==to){clearInterval(r.count);let k=0;const steps=9;r.count=setInterval(()=>{k++;r.shown=k>=steps?to:Math.round(from+(to-from)*k/steps);r.val.textContent=r.shown;if(k>=steps)clearInterval(r.count);},100);}
+    if(from!==to){clearInterval(r.count);let k=0;const steps=9;r.count=setInterval(()=>{k++;r.shown=k>=steps?to:Math.round(from+(to-from)*k/steps);r.val.textContent='$'+r.shown;if(k>=steps)clearInterval(r.count);},100);}
   });
 }
 function setPlayers(list){players=list;render();}
@@ -121,7 +115,7 @@ async function poll(){
     const seen={},list=[];
     for(const r of reports.filter(r=>r.day===day)){
       const base=r.name||r.id;seen[base]=(seen[base]||0)+1;
-      list.push({key:r.id,name:seen[base]>1?`${base} ${seen[base]}`:base,score:correctTotal(r.payload)});
+      list.push({key:r.id,name:seen[base]>1?`${base} ${seen[base]}`:base,score:bankOf(r.payload)});
     }
     lastDay=day;$('day').textContent=day;
     $('status').textContent=`LIVE · ${list.length} PLAYER${list.length===1?'':'S'} · ${new Date().toLocaleTimeString()}`;
@@ -132,12 +126,11 @@ function demo(){
   const names=['Grumpy Gorilla','Shrieking Seagull','Dizzy Dolphin','Lucky Llama','Mighty Meerkat','Sneaky Sloth','Plucky Penguin','Wobbly Walrus','Jolly Jellyfish','Quirky Quokka','Happy Hedgehog','Sleepy Otter','Bouncing Beaver','Cheeky Cheetah'];
   const list=names.map((name,i)=>({key:'P-'+i,name,score:0,pace:.3+Math.random()*.9}));
   $('class').innerHTML='CLASS <b>DEMO</b>';$('day').textContent=new Date().toLocaleDateString('en-CA');
-  setInterval(()=>{for(const p of list)if(Math.random()<p.pace*.6)p.score+=1+(Math.random()<.2?1:0);
+  setInterval(()=>{for(const p of list)if(Math.random()<p.pace*.6)p.score+=Math.random()<.7?10:5;if(Math.random()<.03){p.score=Math.max(0,p.score+(Math.random()<.5?-1:2)*Math.floor(p.score/3));}
     $('status').textContent=`DEMO · FAKE DATA · ${list.length} PLAYERS`;setPlayers(list.map(p=>({...p})));},1100);
   setPlayers(list.map(p=>({...p})));
 }
 function start(){
-  try{$('join').textContent='JOIN AT '+new URL('class.html',location.href).href.replace(/^https?:\/\//,'').toUpperCase();}catch{}
   $('setup').hidden=true;$('class').innerHTML=`CLASS <b>${esc(code||'----')}</b>`;
   if(DEMO)return demo();
   if(!API){$('status').textContent='NO RESULTS SERVER SET (results-config.js)';return;}

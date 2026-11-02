@@ -44,7 +44,9 @@
   function payload(){
     const groups={};
     for(const [key,item] of Object.entries(state.items)){const [unit,id]=key.split('|');(groups[unit]||=[]).push(`${id}:${item.a}.${item.c}.${item.f}`);}
-    return 'v1 '+state.day+' '+Object.entries(groups).map(([unit,list])=>`${unit}=${list.join(',')}`).join(';');
+    // The current bank ($) rides along as a bank=N group for the class race page; the dashboard skips it (no id:a.c.f entries).
+    const bank=api&&typeof score==='number'?`;bank=${Math.max(0,Math.round(score))}`:'';
+    return 'v1 '+state.day+' '+Object.entries(groups).map(([unit,list])=>`${unit}=${list.join(',')}`).join(';')+bank;
   }
   function count(){return Object.keys(state.items).length;}
   function updateButton(){if(!form)return;const button=document.getElementById('send-results');if(button)button.textContent=`SEND RESULTS (${count()})`;}
@@ -123,7 +125,9 @@
       screen.querySelector('form').onsubmit=e=>{e.preventDefault();const v=tidy(input.value);if(!CODE_RE.test(v)){screen.querySelector('#class-code-error').textContent='2 TO 12 LETTERS OR NUMBERS';return;}code=v;try{localStorage.setItem('casino-class-code',code);}catch{}screen.remove();showTag();dirty=true;begin();};
       input.focus();
     }
-    setInterval(()=>report(false),20000);
+    // The bank also changes in the roulette without any answer being recorded, so notice that too.
+    let lastBank=null;
+    setInterval(()=>{if(typeof score==='number'&&score!==lastBank){if(lastBank!==null)dirty=true;lastBank=score;}report(false);},10000);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')report(true);});
     window.addEventListener('pagehide',()=>report(true));
   }

@@ -107,6 +107,16 @@
  const expl={friction:'Friction opposes sliding between surfaces.',support:'A surface pushes up on an object resting on it: the support force.',tension:'A stretched rope or string pulls with a tension force.',weight:'Weight is the pull of gravity on an object.',resistance:'Air resistance pushes against anything moving through the air.',pull:'A rope can only pull.'};
  card(S1,'FT06',1,(r,h)=>{const d=h.pick(DESC_A,r);return {cloze:d[0],answer:d[1],aliases:d[2],caseSensitive:false,explanation:expl[d[1]]};});
  card(S1,'FT07',1,(r,h)=>{const d=h.pick(DESC_B,r);return {cloze:d[0],answer:d[1],aliases:d[2],caseSensitive:false,explanation:expl[d[1]]};});
+ // Test-style (2025 test Q2 and Q4): units of force, speed, distance and time; the four forces on a plane in level flight.
+ card(S1,'FT18',1,(r,h)=>{const e=h.pick([['force','N'],['speed','m/s'],['distance','m'],['time','s']],r);return {cloze:`The unit for ${e[0]} is ${Q}`,answer:e[1],choices:mc(h,r,e[1],['N','m/s','m','s'].filter(x=>x!==e[1])),explanation:'Force is in newtons (N), speed in metres per second (m/s), distance in metres (m) and time in seconds (s).'};});
+ const PLANE=[['thrust','forwards',['thrust force']],['drag','backwards',['air resistance','drag force']],['lift','up',['lift force']],['weight','down',['gravity','weight force']]];
+ card(S1,'FT19',1,(r,h)=>{
+  const L=h.shuffle(['A','B','C','D'],r),at={up:L[0],down:L[1],left:L[2],right:L[3]};
+  const k=h.pick(['up','down','left','right'],r),nm={up:'lift',down:'weight',left:'drag',right:'thrust'}[k];
+  return {cloze:`A plane is in level flight, moving to the right.\nArrow ${at[k]} shows the ${Q} force`,answer:nm,aliases:{up:['lift force'],down:['gravity','weight force'],left:['air resistance','drag force'],right:['thrust force']}[k],caseSensitive:false,
+   visual:forceSvg(h,{up:{n:8,label:at.up},down:{n:8,label:at.down},left:{n:5,label:at.left},right:{n:5,label:at.right}},{obj:'plane',alt:'Four forces on a plane, each arrow labelled with a letter'}),
+   explanation:{up:'Lift pushes the plane up.',down:'Weight pulls the plane down.',left:'Drag acts backwards, against the motion.',right:'Thrust pushes the plane forwards.'}[k]};});
+ card(S1,'FT20',1,(r,h)=>{const e=h.pick(PLANE,r);return {cloze:`The force on a plane that acts ${e[1]} is ${Q}`,answer:e[0],aliases:e[2],caseSensitive:false,choices:mc(h,r,e[0],PLANE.map(p=>p[0]).filter(x=>x!==e[0])),explanation:{thrust:'Thrust pushes the plane forwards.',drag:'Drag (air resistance) acts backwards.',lift:'Lift acts upwards.',weight:'Weight acts downwards.'}[e[0]]};});
  const CON=[['the push of a hand','contact'],['friction','contact'],['tension in a rope','contact'],['air resistance','contact'],['the support force from the ground','contact'],['gravity','non-contact'],['the force between two magnets','non-contact'],['the pull of a rubbed balloon on small pieces of paper','non-contact']];
  const conCard=(code,items)=>card(S1,code,2,(r,h)=>{const [name,kind]=h.pick(items,r);return {cloze:`${name[0].toUpperCase()+name.slice(1)} is a ${Q} force`,answer:kind,choices:['contact','non-contact'],explanation:kind==='contact'?`${name[0].toUpperCase()+name.slice(1)} needs the objects to touch: a contact force.`:`${name[0].toUpperCase()+name.slice(1)} acts across a gap: a non-contact force.`};});
  conCard('FT08',[CON[0],CON[5]]);conCard('FT09',[CON[1],CON[6]]);conCard('FT10',[CON[2],CON[7]]);conCard('FT11',[CON[3],CON[5]]);
@@ -239,6 +249,14 @@
    meta:{kind:'air',push,fr,air},explanation:`Constant speed means balanced. The backwards forces add up to the push: ${fr} + air resistance = ${push}, so air resistance = ${air} N.`};});
  eqCard('BF11',2,(r,h)=>{const n=h.pick([1000,1500,2000,2500,3000],r);return {cloze:`A car travels at constant speed.\nThe engine force is ${n} N.\nThe total force against it = ${Q} N`,answer:String(n),answerUnit:'N',meta:{kind:'eq',n},explanation:`Constant speed means balanced forces. The forces against the car add up to ${n} N.`};});
  eqCard('BF12',2,(r,h)=>{const fr=h.int(10,20,r),extra=h.int(3,8,r);return {cloze:`A box moves at constant speed with a ${fr} N push.\nFriction is ${fr} N.\nThe push becomes ${fr+extra} N.\nNet force = ${Q} N`,answer:String(extra),answerUnit:'N',meta:{kind:'extra',fr,extra},explanation:`Friction stays ${fr} N: ${fr+extra} − ${fr} = ${extra} N forwards. The box speeds up.`};});
+ // Test-style (2025 test Q5): a plane at constant speed and height has balanced forces.
+ card(S4,'BF18',2,(r,h)=>{
+  const bal=r()<.6,T=h.pick([4,6,8],r),W=h.pick([10,12,14],r),D=bal?T:T+h.pick([1,2],r),Lf=W;
+  const state=bal?'flying at a constant speed and height':'in level flight and slowing down';
+  return {cloze:`A plane is ${state}.\nThe forces on it are ${Q}`,answer:bal?'balanced':'unbalanced',choices:['balanced','unbalanced'],
+   visual:forceSvg(h,{up:{n:Lf,label:'lift '+Lf+' N'},down:{n:W,label:'weight '+W+' N'},right:{n:T,label:'thrust '+T+' N'},left:{n:D,label:'drag '+D+' N'}},{obj:'plane',alt:'Four forces on a plane in level flight'}),
+   meta:{kind:'planebal',T,D,Lf,W},
+   explanation:bal?'Thrust equals drag and lift equals weight, so there is no net force. The speed and direction do not change: the forces are balanced.':'Drag is bigger than thrust, so there is a net force backwards and the plane slows down: the forces are unbalanced.'};});
  card(S4,'BF13',3,(r,h)=>{const ans='no force is needed to keep it moving';return {cloze:h.pick(['A puck slides at constant speed on very smooth ice.','A hockey puck glides at constant speed across smooth ice.','A curling stone slides at constant speed on very smooth ice.'],r)+'\nIt keeps moving because '+Q,answer:ans,choices:mc(h,r,ans,['the push it was given is still acting on it','a forward force is always needed to keep it moving','gravity pulls it forward']),explanation:'No net force is needed to keep an object moving at a constant speed. A push does not stay "inside" an object.'};});
  card(S4,'BF14',3,(r,h)=>{
   const good=h.pick(['a cyclist riding at a steady speed in a straight line','a lift moving up at a steady speed','a parachutist falling at a steady speed','a book resting on a shelf'],r);
@@ -263,6 +281,11 @@
  card(S5,'SP04',1,(r,h)=>{const v=h.int(3,12,r),t=h.int(2,8,r),d=v*t;return {cloze:`v = d ÷ t\nd = ${d} m\nt = ${t} s\nv = ${Q} m/s`,answer:String(v),answerUnit:'m/s',meta:{kind:'v',d,t,v},explanation:`v = d ÷ t = ${d} ÷ ${t} = ${v} m/s.`};});
  card(S5,'SP05',1,(r,h)=>{const e=h.pick([['speed','v = d ÷ t',['v = d × t','v = t ÷ d','v = d + t'],'Speed = distance ÷ time.'],['distance','d = v × t',['d = v ÷ t','d = t ÷ v','d = v + t'],'Distance = speed × time.'],['time','t = d ÷ v',['t = d × v','t = v ÷ d','t = d − v'],'Time = distance ÷ speed.']],r);return {cloze:`The equation for ${e[0]} is `+Q,answer:e[1],choices:mc(h,r,e[1],e[2]),explanation:e[3]};});
  card(S5,'SP06',1,(r,h)=>({cloze:'One unit of speed is '+Q,answer:'m/s',choices:mc(h,r,'m/s',h.pick([['m','s','N'],['kg','m','s'],['N','s','m']],r)),explanation:'Speed is distance per time, such as metres per second (m/s).'}));
+ // Test-style (2025 test Q8 and Q9): "100 m in 25 s, calculate the average speed" and "500 s at 4 m/s, how far?". Easy numbers, no conversions.
+ card(S5,'SP22',1,(r,h)=>{const [who,pro]=h.pick([['A student','her'],['A walker','their'],['A jogger','their']],r),t=h.pick([10,20,25,40,50],r),v=h.pick([2,3,4,5],r),d=v*t;
+  return {cloze:`${who} walks ${d} m in ${t} seconds.\nCalculate ${pro} average speed.\nAverage speed = ${Q} m/s`,answer:String(v),answerUnit:'m/s',meta:{kind:'v',d,t,v},explanation:`Average speed = distance ÷ time = ${d} ÷ ${t} = ${v} m/s.`};});
+ card(S5,'SP23',1,(r,h)=>{const t=h.pick([100,200,250,500],r),v=h.pick([2,3,4,5],r),d=v*t,o=h.pick(['car','bus','toy car'],r);
+  return {cloze:`A ${o}'s journey takes ${t} seconds at an average speed of ${v} metres/second.\nCalculate how far the ${o} travelled.\nDistance = ${Q} m`,answer:String(d),answerUnit:'m',meta:{kind:'d',v,t,d},explanation:`Distance = speed × time = ${v} × ${t} = ${d} m.`};});
  const word=(kind)=>(r,h)=>{const o=trip(r,h);
   if(kind==='v')return {cloze:`${o.who} travels ${o.d} m in ${o.t} s.\nSpeed = ${Q} m/s`,answer:String(o.v),answerUnit:'m/s',meta:{kind:'v',d:o.d,t:o.t,v:o.v},explanation:`v = d ÷ t = ${o.d} ÷ ${o.t} = ${o.v} m/s.`};
   if(kind==='d')return {cloze:`${o.who} travels at ${o.v} m/s for ${o.t} s.\nDistance = ${Q} m`,answer:String(o.d),answerUnit:'m',meta:{kind:'d',v:o.v,t:o.t,d:o.d},explanation:`d = v × t = ${o.v} × ${o.t} = ${o.d} m.`};
@@ -400,6 +423,15 @@
  stoppedCard('DG01',1,SHAPES3);stoppedCard('DG02',1,SHAPES3);stoppedCard('DG03',1,SHAPES3);
  const stateCard=(code,tier)=>card(S9,code,tier,(r,h)=>{const s=h.pick(SHAPES3,r),i=Math.floor(r()*s.length),st=s[i].v===0;return {cloze:`In section ${LET[i]} the object is ${Q}`,answer:st?'stopped':'moving at a steady speed',choices:['stopped','moving at a steady speed','speeding up'],visual:graphSvg(h,s,{dstep:10}),meta:{kind:'gstate',s,i},explanation:st?`Section ${LET[i]} is flat: the distance is not changing, so it is stopped.`:`Section ${LET[i]} is a straight sloping line: a steady speed.`};});
  stateCard('DG04',1);stateCard('DG05',1);
+ // Test-style graphs (2025 test Q10, remote control car): four sections A to D. A moves, B is stopped, C is the steepest, D is the slowest moving
+ // section and ends highest. Whole-number average speed that is not the mean of the section speeds.
+ const TG=(()=>{const out=[];for(const dA of [5,10])for(const dB of [5,10])for(const dC of [5,10])for(const dD of [10,15,20])for(let vA=2;vA<=8;vA++)for(let vC=vA+1;vC<=12;vC++)for(let vD=1;vD<vA;vD++){
+  const s=[{dt:dA,v:vA},{dt:dB,v:0},{dt:dC,v:vC},{dt:dD,v:vD}],d=dA*vA+dC*vC+dD*vD,t=dA+dB+dC+dD;
+  if(t<=40&&d<=300&&d%t===0&&d/t!==vA&&d/t!==vC&&d/t!==vD&&d/t!==(vA+vC+vD)/3)out.push(s);}return out;})();
+ const TGOBJ=['remote control car','toy car','model train','toy boat'];
+ const tgVis=(h,s)=>{const d=s.reduce((a,x)=>a+x.dt*x.v,0);return graphSvg(h,s,{tstep:5,dstep:d>60?20:10,labelStep:d>100?40:d>60?20:10});};
+ const tgStop=code=>card(S9,code,1,(r,h)=>{const s=h.pick(TG,r),o=h.pick(TGOBJ,r);return {cloze:`The graph is a distance–time graph for a ${o}.\nThe section where it is stationary (not moving) is ${Q}`,answer:'B',choices:['A','B','C','D'],visual:tgVis(h,s),meta:{kind:'gstop',s},explanation:'Section B is flat. The distance is not changing, so the '+o+' is stationary.'};});
+ tgStop('TG01');tgStop('TG02');
  // Fastest: the highest part of the graph is a flat (stopped) line, and the steepest section is not the last moving one.
  const FAST=[[{dt:3,v:6},{dt:4,v:2},{dt:3,v:0}],[{dt:3,v:5},{dt:3,v:0},{dt:4,v:2}],[{dt:4,v:2},{dt:3,v:6},{dt:3,v:0}],[{dt:3,v:6},{dt:2,v:3},{dt:3,v:0}],[{dt:2,v:5},{dt:4,v:1},{dt:4,v:0}]];
  const fastCard=(code,tier,shapes)=>card(S9,code,tier,(r,h)=>{const s=h.pick(shapes,r),v=s.map(x=>x.v),i=v.indexOf(Math.max(...v));return {cloze:`The object moves fastest in section ${Q}`,answer:LET[i],choices:LET.slice(0,s.length).split(''),visual:graphSvg(h,s,{dstep:10}),meta:{kind:'gfast',s},explanation:`Section ${LET[i]} is the steepest, so it has the biggest speed. Height does not show speed.`};});
@@ -407,6 +439,19 @@
  const FAST4=[[{dt:2,v:3},{dt:3,v:0},{dt:2,v:6},{dt:3,v:0}],[{dt:3,v:4},{dt:2,v:0},{dt:2,v:7},{dt:3,v:1}],[{dt:2,v:7},{dt:3,v:2},{dt:2,v:0},{dt:3,v:4}]];
  fastCard('DG08',2,FAST4);
  card(S9,'DG09',2,(r,h)=>{const s=h.pick([[{dt:3,v:6},{dt:3,v:0},{dt:4,v:2}],[{dt:3,v:5},{dt:2,v:0},{dt:5,v:1}],[{dt:2,v:7},{dt:3,v:0},{dt:4,v:3}]],r),i=s.findIndex(x=>x.v>0&&x.v===Math.min(...s.filter(y=>y.v>0).map(y=>y.v)));return {cloze:`The object is moving, but slowest, in section ${Q}`,answer:LET[i],choices:LET.slice(0,s.length).split(''),visual:graphSvg(h,s,{dstep:10}),meta:{kind:'gslow',s},explanation:`Section ${LET[i]} slopes up, so the object is moving, but it is the least steep of the moving sections.`};});
+ const tgSlow=code=>card(S9,code,2,(r,h)=>{const s=h.pick(TG,r),o=h.pick(TGOBJ,r);return {cloze:`The graph is a distance–time graph for a ${o}.\nThe section where it is moving the slowest is ${Q}`,answer:'D',choices:['A','B','C','D'],visual:tgVis(h,s),meta:{kind:'gslow',s},explanation:'Section D slopes up, so the '+o+' is moving, but it is the least steep section that is moving. B is flat: stopped, not slow.'};});
+ const tgFast=code=>card(S9,code,2,(r,h)=>{const s=h.pick(TG,r),o=h.pick(TGOBJ,r);return {cloze:`The graph is a distance–time graph for a ${o}.\nThe section where it is moving the fastest is ${Q}`,answer:'C',choices:['A','B','C','D'],visual:tgVis(h,s),meta:{kind:'gfast',s},explanation:'Section C is the steepest, so it has the biggest speed. D is the highest part of the graph, but height does not show speed.'};});
+ tgSlow('TG03');tgFast('TG04');
+ // "Explain your answer": multiple choice built from the mark scheme (slope = speed), with the misconceptions as wrong options.
+ card(S9,'TG05',2,(r,h)=>{const s=h.pick(TG,r),o=h.pick(TGOBJ,r),ans='the slope of its line is the smallest (it is the least steep moving section)';
+  return {cloze:`Section D is where the ${o} moves the slowest.\nThis is because ${Q}`,answer:ans,choices:mc(h,r,ans,['its line is the highest on the graph','its line is flat','it is the longest section on the graph']),visual:tgVis(h,s),
+   explanation:'The slope of the line shows the speed. D has the smallest slope of the moving sections. Being high on the graph only means it is far from the start, and a flat line means stopped.'};});
+ card(S9,'TG06',2,(r,h)=>{const s=h.pick(TG,r),o=h.pick(TGOBJ,r),ans='the slope of its line is the steepest';
+  return {cloze:`Section C is where the ${o} moves the fastest.\nThis is because ${Q}`,answer:ans,choices:mc(h,r,ans,['its line is the highest on the graph','its line is flat','it is the last section on the graph']),visual:tgVis(h,s),
+   explanation:'The slope of the line shows the speed. C is the steepest line, so it covers the most distance each second.'};});
+ card(S9,'TG07',2,(r,h)=>{const s=h.pick(TG,r),o=h.pick(TGOBJ,r),ans='the line is flat, so the distance is not changing';
+  return {cloze:`Section B is where the ${o} is stationary.\nThis is because ${Q}`,answer:ans,choices:mc(h,r,ans,['the line is the steepest','the line is the lowest on the graph','the line is going down']),visual:tgVis(h,s),
+   explanation:'A flat line means the distance stays the same as time goes on, so the object is not moving.'};});
  // gradient: every vertex on a gridline
  function gradCands(){const out=[];for(const v of [1,2,3,4,5,6,8,10])for(const dt of [2,4,6])if((v*dt)%10===0||(v*dt)%5===0)out.push({v,dt});return out;}
  const GC=gradCands();
@@ -427,6 +472,11 @@
  card(S9,'GA01',3,(r,h)=>{const s=h.pick(AVG,r),T=totals(s);return {cloze:`Total distance travelled = ${Q} m`,answer:String(T.d),answerUnit:'m',visual:graphSvg(h,s,avgOpts(s)),meta:{kind:'gtotal',s},explanation:`The graph ends at ${T.d} m, so the object travelled ${T.d} m in total.`};});
  const avgCard=code=>card(S9,code,3,(r,h)=>{const s=h.pick(AVG,r),T=totals(s),a=T.d/T.t;return {cloze:`Average speed for the whole journey = ${Q} m/s`,answer:String(a),answerUnit:'m/s',visual:graphSvg(h,s,avgOpts(s)),meta:{kind:'gavg',s},explanation:`Average speed = total distance ÷ total time = ${T.d} ÷ ${T.t} = ${a} m/s.`};});
  avgCard('GA02');avgCard('GA03');
+ // Test-style (2025 test Q10d): total distance and total time are read from the end of the graph; average speed = total distance ÷ total time.
+ card(S9,'TG08',3,(r,h)=>{const s=h.pick(TG,r),T=totals(s),o=h.pick(TGOBJ,r);return {cloze:`The graph is a distance–time graph for a ${o}.\nThe total distance travelled = ${Q} m`,answer:String(T.d),answerUnit:'m',visual:tgVis(h,s),meta:{kind:'gtotal',s},explanation:`The graph ends at ${T.d} m, so the total distance is ${T.d} m.`};});
+ card(S9,'TG09',3,(r,h)=>{const s=h.pick(TG,r),T=totals(s),o=h.pick(TGOBJ,r);return {cloze:`The graph is a distance–time graph for a ${o}.\nThe total time taken = ${Q} s`,answer:String(T.t),answerUnit:'s',visual:tgVis(h,s),meta:{kind:'gtime',s},explanation:`The graph ends at ${T.t} s, so the whole journey takes ${T.t} s.`};});
+ const tgAvg=code=>card(S9,code,3,(r,h)=>{const s=h.pick(TG,r),T=totals(s),o=h.pick(TGOBJ,r),a=T.d/T.t;return {cloze:`The graph is a distance–time graph for a ${o}.\nThe average speed over the whole journey = ${Q} m/s`,answer:String(a),answerUnit:'m/s',visual:tgVis(h,s),meta:{kind:'gavg',s},explanation:`Total distance = ${T.d} m. Total time = ${T.t} s. Average speed = total distance ÷ total time = ${T.d} ÷ ${T.t} = ${a} m/s.`};});
+ tgAvg('TG10');tgAvg('TG11');
  card(S9,'GA04',3,(r,h)=>{const ans='total distance ÷ total time';return {cloze:'The average speed for a whole journey is found by '+Q,answer:ans,choices:mc(h,r,ans,['adding the section speeds and dividing by the number of sections','the speed of the steepest section','the final distance × the final time']),explanation:'Average speed = total distance ÷ total time. Averaging the section speeds gives the wrong answer when the sections last different times.'};});
  card(S9,'DG15',3,(r,h)=>{const s=h.pick([[{dt:4,v:5},{dt:2,v:0},{dt:4,v:3}],[{dt:2,v:5},{dt:4,v:0},{dt:2,v:10}],[{dt:2,v:10},{dt:2,v:0},{dt:4,v:5}]],r),i=2,d=s[i].v*s[i].dt;
   return {cloze:`Distance travelled in section C = ${Q} m`,answer:String(d),answerUnit:'m',visual:graphSvg(h,s,{tstep:2,dstep:5}),meta:{kind:'gdist',s,i},explanation:`Read the distance at the start and end of section C and subtract. The object travels ${d} m in section C.`};});
@@ -452,6 +502,17 @@
  card(S10,'DS12',3,(r,h)=>{const sw=r()<.5,sp=h.pick([[2,5],[3,6],[2,4],[1,5]],r);const a=sw?sp[1]:sp[0],b=sw?sp[0]:sp[1];
   const P=[0,0,10,a*10],Qq=[0,0,10,b*10];
   return {cloze:`The faster object is ${Q}`,answer:a>b?'P':'Q',choices:['P','Q'],visual:twoLineSvg(h,P,Qq),meta:{kind:'twoline',a,b},explanation:`The steeper line is faster. P: ${a*10} ÷ 10 = ${a} m/s. Q: ${b*10} ÷ 10 = ${b} m/s.`};});
+ // Test-style (2025 test Q12, drawing the skateboard journey): pick the graph with the right curve shapes in the right order.
+ const stagePath=(kinds,x,y,w,hh)=>{const rise=kinds.map(k=>k==='stopped'?0:1),tot=rise.reduce((a,b)=>a+b,0)||1;let d0=0,p=[];
+  kinds.forEach((k,i)=>{const dr=rise[i]/tot;for(let j=(i?1:0);j<=12;j++){const u=j/12,v=k==='stopped'?0:shapeY(k,u);p.push(`${(x+(i+u)/kinds.length*w).toFixed(1)},${(y+hh-(d0+dr*v)*hh).toFixed(1)}`);}d0+=dr;});
+  return `<polyline points="${p.join(' ')}" fill="none" stroke="currentColor" stroke-width="5"/>`;};
+ const SEQS=[['fast','steady','slow'],['slow','steady','fast'],['steady','fast','slow'],['fast','stopped','slow'],['steady','stopped','fast'],['slow','stopped','steady'],['fast','steady','steady'],['steady','steady','slow']];
+ card(S10,'DS14',3,(r,h)=>{
+  const story=h.pick([[0,'A skateboarder rolls down a hill, then rolls at a steady speed, then slows down to a stop.'],[0,'A skater speeds up, then glides at a steady speed, then slows down to a stop.'],[4,'A cyclist rides at a steady speed, then stops at the lights, then speeds up.']],r);
+  const k=story[0]===0?0:4,correct=SEQS[k],others=h.shuffle(SEQS.filter((_,i)=>i!==k).filter(sq=>sq.filter((x,i)=>x!==correct[i]).length<=2),r).slice(0,3),seqs=h.shuffle([correct,...others],r),i=seqs.indexOf(correct);
+  let b='';seqs.forEach((sq,j)=>{const x=30+j*152,y=40,w=110,hh=110;b+=h.line(x,y-8,x,y+hh,3)+h.line(x,y+hh,x+w+8,y+hh,3)+stagePath(sq,x,y,w,hh)+h.text(x+w/2,y+hh+44,'ABCD'[j],30);});
+  return {cloze:story[1]+'\nThe matching graph is '+Q,answer:'ABCD'[i],choices:['A','B','C','D'],visual:{type:'svg',svg:h.svgWrap(b,'Four distance–time graphs labelled A to D, each with three stages','0 0 640 250')},meta:{kind:'seq',seqs,correct},
+   explanation:'Speeding up is a curve that gets steeper. A steady speed is a straight sloping line. Slowing down to a stop is a curve that gets flatter and ends flat. A flat line means stopped.'};});
  card(S10,'DS13',4,(r,h)=>{const [sa,sb]=h.pick([[2,4],[1,3],[2,5],[1,4]],r),y=h.pick([20,30],r),flip=r()<.5;
   // The slower object starts higher up, so it ends higher: P ends higher but Q is faster (or the other way round)
   const hi=[0,y,10,y+sa*10],lo=[0,0,10,sb*10];

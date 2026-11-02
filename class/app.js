@@ -1089,8 +1089,15 @@ const selectUnitTab=id=>selectPanelControl($('practice-dialog'),panelControls($(
 function filterPractice(){practiceSearch=$('practice-search').value.trim().toLowerCase();practicePage=0;renderPractice();}
 // ?only= limits a practice run to chosen cards (class mode, one lesson's learning objectives): comma list of ids (FM- prefix optional),
 // ranges (DG01-DG14) and prefix wildcards (DS*). Cards without an id are dropped when the filter is set.
+// ?lesson= is a named ?only= list for a revision lesson (so links stay short): forces1 = Forces revision 1 (types of force, net force, balanced forces),
+// forces3 = Forces revision 3 (distance–time graphs, average speed). Cards chosen from the 2025 Year 10 test's style and the lesson's objectives.
+const LESSON_CARDS={
+  forces1:'FT01-FT07,FT14,FT18-FT20,NF01-NF14,NG01-NG11,NG14,BF01-BF12,BF14,BF15,BF18',
+  forces3:'TG*,DG01-DG12,DG17,GA01-GA04,DS01-DS12,DS14'
+};
 function cardFilter(){
-  const spec=String(new URLSearchParams(location.search).get('only')||'').trim();if(!spec)return null;
+  const params=new URLSearchParams(location.search);
+  const spec=String(params.get('only')||LESSON_CARDS[params.get('lesson')]||'').trim();if(!spec)return null;
   const tests=spec.split(',').map(t=>t.trim().replace(/^FM-/,'')).filter(Boolean).map(t=>{
     if(t.endsWith('*')){const p=t.slice(0,-1);return id=>id.startsWith(p);}
     const range=t.match(/^([A-Za-z]+)(\d+)-(?:[A-Za-z]+)?(\d+)$/);
@@ -1105,7 +1112,7 @@ function beginPractice(code){
   if(selectedUnit!==target)chooseUnit(target);
   const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all',only=cardFilter();
   let picked;
-  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}`,unit.mixedName||'Everything mixed together',questions,!!unit.mixed)]:[];}
+  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>(topic==='all'||item.unit===topic)&&(!only||only(item)));picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}${only?'|only':''}`,unit.mixedName||'Everything mixed together',questions,!!unit.mixed)]:[];}
   else if(code.startsWith('topic:')){const name=code.slice(6),questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>item.unit===name);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${name}`,`All ${name.toLowerCase()}`,questions,!!unit.mixed)]:[];}
   else if(code.startsWith('level:'))picked=[levelForTopic(Number(code.slice(6)),topic)];
   else{const name=code.slice(6),questions=(skillGroups(unit).get(name)||[]).filter(item=>(topic==='all'||item.unit===topic)&&(!only||only(item)));picked=questions.length?[practiceEntry(`skill|${name}|${topic}${only?'|only':''}`,name,questions)]:[];}

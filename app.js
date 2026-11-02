@@ -871,6 +871,7 @@ function chooseUnit(id){
 }
 function syncClassUi(){
   const cls=CLASSES.find(c=>c.id===selectedClass);$('class').value=selectedClass;
+  $('symbol-pad').hidden=selectedClass==='yr10'; // Year 10 answers need no special characters (Hamish, 2 Nov 2026)
   try{const params=new URLSearchParams(location.search);params.set('class',selectedClass);if(selectedUnit===cls.defaultUnit)params.delete('unit');else params.set('unit',selectedUnit);history.replaceState(null,'','?'+params);}catch{}
   syncSettingChoices?.();
 }

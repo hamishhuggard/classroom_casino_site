@@ -22,9 +22,9 @@ h1{margin:0;font-size:clamp(34px,7vh,84px);line-height:1;letter-spacing:.04em;co
 .row{position:absolute;left:0;right:0;top:0;height:var(--row);display:flex;align-items:center;gap:1.4vw;
   transition:transform .9s steps(9,end),opacity .5s steps(4,end)}
 .rank{flex:0 0 2.4em;text-align:right;color:var(--a2-blue);font-size:calc(var(--row)*.5)}
-.who{flex:0 0 clamp(150px,22vw,420px);display:flex;align-items:center;gap:.8vw;min-width:0}
+.who{flex:0 0 clamp(220px,30vw,560px);display:flex;align-items:center;gap:.8vw;min-width:0}
 .who svg{flex:0 0 auto;height:calc(var(--row)*.78);width:auto;max-width:none}
-.who span{font-size:calc(var(--row)*.46);white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1}
+.who span{font-size:var(--namefs,calc(var(--row)*.46));white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1}
 .lane{flex:1 1 auto;position:relative;height:calc(var(--row)*.74);min-width:0}
 .bar{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--c);transition:width .9s steps(9,end);
   /* scan-line stripes, like a hi-res Apple II fill */
@@ -91,7 +91,7 @@ function render(){
       const el=document.createElement('div');el.className='row';
       el.style.transform=`translateY(${n*row}px)`;
       const colour=COLOURS[hash(p.name)%COLOURS.length];
-      el.innerHTML=`<div class="rank"></div><div class="who">${globalThis.animalIcon?animalIcon(p.name,3,true):''}<span>${esc(p.name.toUpperCase())}</span></div><div class="lane"><div class="bar" style="--c:${colour}"></div><div class="val">$0</div></div>`;
+      el.innerHTML=`<div class="rank"></div><div class="who">${globalThis.animalIcon?animalIcon(p.name.replace(/\s+\d+$/,''),3,true):''}<span>${esc(p.name.toUpperCase())}</span></div><div class="lane"><div class="bar" style="--c:${colour}"></div><div class="val">$0</div></div>`;
       chart.append(el);r={el,bar:el.querySelector('.bar'),val:el.querySelector('.val'),rank:el.querySelector('.rank'),shown:0,colour};rows.set(p.key,r);
       void el.offsetWidth;
     }
@@ -106,7 +106,17 @@ function render(){
     if(from!==to){clearInterval(r.count);let k=0;const steps=9;r.count=setInterval(()=>{k++;r.shown=k>=steps?to:Math.round(from+(to-from)*k/steps);r.val.textContent='$'+r.shown;if(k>=steps)clearInterval(r.count);},100);}
   });
 }
-function setPlayers(list){players=list;render();}
+// Shrink every name to the same size until the longest one fits its column in full.
+function fitNames(){
+  const chart=$('chart'),spans=[...chart.querySelectorAll('.who span')];if(!spans.length)return;
+  let size=Math.floor(parseFloat(getComputedStyle(spans[0]).fontSize))||20;
+  chart.style.removeProperty('--namefs');
+  size=Math.floor((parseFloat(chart.style.getPropertyValue('--row'))||40)*.46);
+  const fits=()=>spans.every(el=>el.scrollWidth<=el.clientWidth+1);
+  chart.style.setProperty('--namefs',size+'px');
+  while(size>9&&!fits()){size--;chart.style.setProperty('--namefs',size+'px');}
+}
+function setPlayers(list){players=list;render();fitNames();}
 async function poll(){
   try{
     const res=await fetch(`${API}/api/reports?code=${encodeURIComponent(code)}`,{cache:'no-store'});if(!res.ok)throw new Error(res.status);
@@ -123,10 +133,10 @@ async function poll(){
   }catch(e){$('status').innerHTML=`<span class="blink">NO LINK TO SERVER (${esc(e.message)}) · RETRYING</span>`;}
 }
 function demo(){
-  const names=['Grumpy Gorilla','Shrieking Seagull','Dizzy Dolphin','Lucky Llama','Mighty Meerkat','Sneaky Sloth','Plucky Penguin','Wobbly Walrus','Jolly Jellyfish','Quirky Quokka','Happy Hedgehog','Sleepy Otter','Bouncing Beaver','Cheeky Cheetah'];
+  const names=['Moonwalking Meerkat','Shrieking Seagull','Dizzy Dolphin','Cartwheeling Capybara 2','Mighty Meerkat','Sneaky Sloth','Plucky Penguin','Wobbly Walrus','Jolly Jellyfish','Quirky Quokka','Happy Hedgehog','Sleepy Otter','Bouncing Beaver','Cheeky Cheetah'];
   const list=names.map((name,i)=>({key:'P-'+i,name,score:0,pace:.3+Math.random()*.9}));
   $('class').innerHTML='CLASS <b>DEMO</b>';$('day').textContent=new Date().toLocaleDateString('en-CA');
-  setInterval(()=>{for(const p of list)if(Math.random()<p.pace*.6)p.score+=Math.random()<.7?10:5;if(Math.random()<.03){p.score=Math.max(0,p.score+(Math.random()<.5?-1:2)*Math.floor(p.score/3));}
+  setInterval(()=>{for(const p of list){if(Math.random()<p.pace*.6)p.score+=Math.random()<.7?10:5;if(Math.random()<.03)p.score=Math.max(0,p.score+(Math.random()<.5?-1:2)*Math.floor(p.score/3));}
     $('status').textContent=`DEMO · FAKE DATA · ${list.length} PLAYERS`;setPlayers(list.map(p=>({...p})));},1100);
   setPlayers(list.map(p=>({...p})));
 }
@@ -136,7 +146,7 @@ function start(){
   if(!API){$('status').textContent='NO RESULTS SERVER SET (results-config.js)';return;}
   poll();setInterval(poll,5000);
 }
-addEventListener('resize',render);
+addEventListener('resize',()=>{render();fitNames();});
 addEventListener('keydown',e=>{if(e.key==='f'||e.key==='F'){if(e.target.tagName==='INPUT')return;document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();}});
 if(!code&&!DEMO){
   $('setup').hidden=false;const input=$('code-in');input.focus();

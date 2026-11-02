@@ -482,9 +482,9 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 @keyframes px-f8{0%{visibility:visible}12.5%,100%{visibility:hidden}}
 
 /* Flags class: the flag is the question; real colours in every theme. */
-.revision-visual.flag-visual{width:auto;height:min(34vh,300px);max-width:min(100%,400px);object-fit:contain;border:2px solid var(--ink);image-rendering:pixelated}
+.revision-visual.flag-visual{width:auto;height:min(34vh,300px);max-width:min(100%,400px);object-fit:contain;border:2px solid var(--ink);image-rendering:auto}
 .flag-card{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;max-height:52vh;overflow:auto;margin:8px 0}
-.flag-card figure{margin:0;text-align:center}.flag-card-image{width:72px;height:54px;border:1px solid var(--ink);image-rendering:pixelated}.flag-card figcaption{font-size:14px;line-height:1.1}
+.flag-card figure{margin:0;text-align:center}.flag-card-image{width:72px;height:54px;border:1px solid var(--ink)}.flag-card figcaption{font-size:14px;line-height:1.1}
 
 /* Title cards (rule text or a table): centred on the screen, horizontally and vertically. Correction cards keep their own layout. */
 #rule-dialog:not(.statement-card)[open]>form{min-height:100%;display:flex;flex-direction:column;justify-content:center;text-align:center}

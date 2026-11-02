@@ -1,0 +1,64 @@
+/* Apple II look: an 80s idea of a futuristic learning platform (see styleguide.md).
+   Loaded after style.css. The font and the hard-edged details apply to every theme;
+   [data-theme="apple2"] adds the six hi-res colours. */
+
+/* Our own 5×7 dot-matrix font (scripts/build_font.py). size-adjust keeps it close
+   to the VT323 sizes style.css was tuned for; VT323 covers any missing character. */
+@font-face{font-family:'RC Dot Matrix';src:url('assets/RCDotMatrix.ttf') format('truetype');font-display:block;size-adjust:78%}
+*,*::before,*::after{font-family:'RC Dot Matrix','VT323',monospace!important;font-weight:400!important;font-style:normal!important;font-synthesis:none;-webkit-font-smoothing:none;text-rendering:optimizeSpeed}
+
+/* Hard edges: no rounded corners, glows or soft shadows. */
+*{border-radius:0!important;text-shadow:none!important}
+svg,img{shape-rendering:crispEdges;image-rendering:pixelated}
+
+/* Selection is inverse video, the way Apple II menus showed it. */
+#menu-actions button.selected,#menu-actions button:hover{background:var(--ink);color:var(--paper)}
+#menu-actions button.selected::before{content:none}
+.choice-group button[aria-pressed="true"],#practice-rows button:hover,#practice-rows button:focus-visible{background:var(--ink);color:var(--paper)}
+.menu-hint{animation:a2-flash 1.07s steps(1,end) infinite}
+@keyframes a2-flash{0%,49%{opacity:1}50%,100%{opacity:.35}}
+
+@media(prefers-reduced-motion:reduce){.menu-hint,#title-card .title-card-prompt{animation:none}}
+
+/* Title card shown before the main menu when the page loads (boot.js): the CLAUDE-O-VISION ident from the retro acids and
+   bases video, drawn on a small canvas and scaled up with hard pixels. The --tc-* colours are the video's own
+   (80s sunset chrome, purple extrusion, Claude crab) on the theme's paper; Paper and Apple II colour override them. */
+#title-card{position:fixed;inset:0;z-index:110;background:var(--paper);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:default;
+  --tc-paper:var(--paper);--tc-ramp:#ecf2ee #ffe45c #ffe45c #ffbd54 #ff963c #ff4050 #c83caa;--tc-extrude:#8c3cc8;
+  --tc-bar:#c83caa #ff4050 #ff963c #ffbd54 #ffe45c #ffbd54 #ff963c #ff4050 #c83caa;--tc-flash:#ecf2ee;--tc-sparkle:#ffe45c;
+  --tc-tag:var(--muted);--tc-cursor:var(--ink);--tc-crab:#d77757}
+#title-card .title-card-frame{position:relative;line-height:0}
+#title-card canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+/* CRT scanlines: the last quarter of every canvas pixel row is dimmer, as in the video. */
+#title-card .title-card-frame::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent 0 calc(var(--tc-px,4px)*.75),#0000004d calc(var(--tc-px,4px)*.75) var(--tc-px,4px))}
+:root[data-theme="paper"] #title-card{--tc-ramp:#3c1a78 #5a2a9c #8c3cc8 #c83caa #d8304a #e0602a #e08a1c;--tc-extrude:var(--ink);--tc-flash:var(--ink);--tc-sparkle:#e08a1c}
+:root[data-theme="paper"] #title-card .title-card-frame::after{content:none}
+:root[data-theme="apple2"] #title-card{--tc-ramp:#fff var(--a2-green) var(--a2-green) var(--a2-orange) var(--a2-orange) var(--a2-blue) var(--a2-blue);--tc-extrude:var(--a2-violet);
+  --tc-bar:var(--a2-violet) var(--a2-orange) var(--a2-orange) var(--a2-green) #fff var(--a2-green) var(--a2-orange) var(--a2-orange) var(--a2-violet);--tc-flash:#fff;--tc-sparkle:var(--a2-orange);--tc-tag:var(--a2-blue);--tc-cursor:var(--a2-green);--tc-crab:var(--a2-orange)}
+
+/* Apple II hi-res colours: black, white, green, violet, orange, blue. */
+:root[data-theme="apple2"]{--paper:#000;--ink:#fff;--muted:#14cffd;--hover:#3a0f3a;--line:#ff44fd;--veil:#000000e0;--a2-green:#14f53c;--a2-violet:#ff44fd;--a2-orange:#ff6a3c;--a2-blue:#14cffd;color-scheme:dark}
+:root[data-theme="apple2"] #menu-title{
+  color:transparent;-webkit-background-clip:text;background-clip:text;
+  background-image:linear-gradient(var(--a2-green) 0 25%,var(--a2-orange) 25% 50%,var(--a2-violet) 50% 75%,var(--a2-blue) 75%);
+}
+:root[data-theme="apple2"] h2,:root[data-theme="apple2"] #card-title,:root[data-theme="apple2"] .arcade-hud .brand{color:var(--a2-orange)}
+:root[data-theme="apple2"] .eyebrow,:root[data-theme="apple2"] .menu-hint,:root[data-theme="apple2"] #level{color:var(--a2-blue)}
+:root[data-theme="apple2"] #casino-score,:root[data-theme="apple2"] #roulette-bank{color:var(--a2-green)}
+:root[data-theme="apple2"] #menu-actions button{color:var(--a2-violet)}
+:root[data-theme="apple2"] #menu-actions button.selected,:root[data-theme="apple2"] #menu-actions button:hover{background:var(--a2-green);color:#000}
+:root[data-theme="apple2"] #game-screen #feedback{border-color:var(--a2-violet)}
+/* Right and wrong: green and orange, the nearest the palette has to green and red. */
+:root[data-theme="apple2"] .submitted-label,:root[data-theme="apple2"] .correct-label,:root[data-theme="apple2"] #roulette-points-change[data-direction="gain"]{color:var(--a2-green)}
+:root[data-theme="apple2"] .incorrect-letter,:root[data-theme="apple2"] .correction-grid section:first-child .correction-filled,:root[data-theme="apple2"] #roulette-points-change[data-direction="loss"]{color:var(--a2-orange)}
+:root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .pocket-red .wheel-sector{fill:var(--a2-orange)}
+:root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .pocket-green .wheel-sector{fill:var(--a2-green)}
+:root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .pocket-black .wheel-sector{fill:#000}
+:root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .wheel-rim{fill:var(--a2-blue);stroke:none}
+:root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .wheel-inner-ring{fill:var(--a2-violet)}
+:root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .wheel-inner{fill:#000;stroke:none}
+:root[data-theme="apple2"] #roulette-colour .bet-red{color:var(--a2-orange)}
+:root[data-theme="apple2"] #roulette-colour .bet-green{color:var(--a2-green)}
+#title-card .title-card-prompt{position:absolute;left:0;right:0;bottom:12vh;margin:0;text-align:center;color:var(--ink);font-size:clamp(18px,3vw,32px);animation:a2-flash 1.07s steps(1,end) infinite}
+:root[data-theme="apple2"] #title-card .title-card-prompt{color:var(--a2-green)}

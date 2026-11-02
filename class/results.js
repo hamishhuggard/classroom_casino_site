@@ -6,7 +6,8 @@
 (function(){
   // Two versions of the game: plain (index.html: pick a unit and practise, nothing is sent anywhere) and class
   // (class.html -> index.html?mode=class: join screen, class code, results sent to the backend, unit chosen by the link).
-  const classMode=new URLSearchParams(location.search).get('mode')==='class';
+  // The published /class/ copy sets CASINO_DEFAULT_MODE='class' in its results-config.js, so its plain URL is the class game.
+  const modeParam=new URLSearchParams(location.search).get('mode'),classMode=modeParam==='class'||(window.CASINO_DEFAULT_MODE==='class'&&modeParam!=='plain');
   if(!classMode){window.CasinoResults={record(){},send(){},report(){},player:'',name:'',code:'',enabled:false};return;}
   const api=String(new URLSearchParams(location.search).get('results-api')||window.CASINO_RESULTS_API||'').trim().replace(/\/+$/,'');
   const form=api?'':String(window.CASINO_RESULTS_FORM||'').trim();

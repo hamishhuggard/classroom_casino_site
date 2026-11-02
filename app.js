@@ -239,7 +239,7 @@ function render(){
   else if(simple){$('diagram').innerHTML=statement(current).replace(/<\/div>$/,`<span id="cloze-answer-slot"></span>${circuitType?'<div class="statement-link">circuit</div>':''}</div>`);}
   else $('diagram').innerHTML=`<div class="cloze-game">${['series','parallel','mixed'].includes(current.kind)?circuitAnswerDiagram(diagram(current),clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')):diagram(current)+clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')}</div>`;
   ($('diagram').firstElementChild||$('diagram')).appendChild(reminder);
-  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1'||current.source?.flag||selectedClass==='yr10');if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
+  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1'||current.source?.flag);if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
   globalThis.CasinoExam?.afterRender();
 }
 
@@ -871,7 +871,6 @@ function chooseUnit(id){
 }
 function syncClassUi(){
   const cls=CLASSES.find(c=>c.id===selectedClass);$('class').value=selectedClass;
-  // (Year 10 has no symbol pad: Hamish, 2 Nov 2026. It is hidden per question, in the line that shows each question.)
   try{const params=new URLSearchParams(location.search);params.set('class',selectedClass);if(selectedUnit===cls.defaultUnit)params.delete('unit');else params.set('unit',selectedUnit);history.replaceState(null,'','?'+params);}catch{}
   syncSettingChoices?.();
 }
@@ -1043,28 +1042,17 @@ function switchPracticeUnit(id){
 }
 const selectUnitTab=id=>selectPanelControl($('practice-dialog'),panelControls($('practice-dialog')).indexOf($('practice-units').querySelector(`[data-unit="${id}"]`)));
 function filterPractice(){practiceSearch=$('practice-search').value.trim().toLowerCase();practicePage=0;renderPractice();}
-// ?only= limits a practice run to chosen cards (class mode, one lesson's learning objectives): comma list of ids (FM- prefix optional),
-// ranges (DG01-DG14) and prefix wildcards (DS*). Cards without an id are dropped when the filter is set.
-function cardFilter(){
-  const spec=String(new URLSearchParams(location.search).get('only')||'').trim();if(!spec)return null;
-  const tests=spec.split(',').map(t=>t.trim().replace(/^FM-/,'')).filter(Boolean).map(t=>{
-    if(t.endsWith('*')){const p=t.slice(0,-1);return id=>id.startsWith(p);}
-    const range=t.match(/^([A-Za-z]+)(\d+)-(?:[A-Za-z]+)?(\d+)$/);
-    if(range){const [,p,a,b]=range;return id=>{const m=id.match(/^([A-Za-z]+)(\d+)$/);return !!m&&m[1]===p&&Number(m[2])>=Number(a)&&Number(m[2])<=Number(b);};}
-    return id=>id===t;});
-  return item=>{const id=String(item.id||'').replace(/^FM-/,'');return tests.some(test=>test(id));};
-}
 function beginPractice(code){
   if(globalThis.CasinoDiagnostic?.begin(code)||globalThis.CasinoQuiz?.begin(code))return;
   // A circuit tile runs as the circuit_extension unit; any other tile runs as the chooser's own unit.
   const target=isCircuitTile(code)?'circuit_extension':chooserUnit();
   if(selectedUnit!==target)chooseUnit(target);
-  const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all',only=cardFilter();
+  const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all';
   let picked;
   if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}`,unit.mixedName||'Everything mixed together',questions,!!unit.mixed)]:[];}
   else if(code.startsWith('topic:')){const name=code.slice(6),questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>item.unit===name);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${name}`,`All ${name.toLowerCase()}`,questions,!!unit.mixed)]:[];}
   else if(code.startsWith('level:'))picked=[levelForTopic(Number(code.slice(6)),topic)];
-  else{const name=code.slice(6),questions=(skillGroups(unit).get(name)||[]).filter(item=>(topic==='all'||item.unit===topic)&&(!only||only(item)));picked=questions.length?[practiceEntry(`skill|${name}|${topic}${only?'|only':''}`,name,questions)]:[];}
+  else{const name=code.slice(6),questions=(skillGroups(unit).get(name)||[]).filter(item=>topic==='all'||item.unit===topic);picked=questions.length?[practiceEntry(`skill|${name}|${topic}`,name,questions)]:[];}
   picked=picked.filter(index=>index!==null);if(!picked.length)return;
   enabled=picked;enabled.forEach(index=>levels[index].reset?.());
   position=0;current=levels[enabled[0]].make();questionLevel=enabled[0];highestLevel=enabled[0]+1;
@@ -1089,7 +1077,6 @@ function openPractice(code){
 }
 $('start-game').onclick=()=>{
   if(activeRun)return startGame();
-  if(globalThis.CasinoClass)return CasinoClass.restart();
   const code=PRACTICE_TILE_OF_UNIT[selectedUnit],unit=practiceUnit();
   if(unit?.diagnostic){const parent=curriculumUnits.find(u=>u.id===`${unit.class}_physics`);if(parent)chooseUnit(parent.id);}
   if(!practiceUnit())return startGame();

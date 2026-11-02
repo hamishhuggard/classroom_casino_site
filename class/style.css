@@ -446,11 +446,11 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 /* Practice grid: 5 columns x 3 rows per page, every tile the same height. */
 #practice-rows{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}#practice-rows button.practice-tile{height:180px;min-height:0;overflow:hidden}#practice-rows .practice-name{font-size:.9em;overflow-wrap:anywhere}
 @media(max-width:800px){#practice-rows{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:500px){#practice-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}#practice-rows button.practice-tile{height:160px}}
+@media(max-width:500px){#practice-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}#practice-rows button.practice-tile{height:178px}}
 /* Practice screen: exactly the viewport, no scrolling; the 3 tile rows share the free height. */
 #practice-dialog[open]{display:flex;flex-direction:column;overflow:hidden;width:100vw;height:100svh}#practice-dialog[open]>*{width:100%;flex:none}
-#practice-dialog[open]>#practice-rows{flex:1 1 0;min-height:0;grid-template-rows:repeat(3,minmax(0,1fr));margin:12px auto}#practice-rows button.practice-tile{height:auto}
-@media(max-width:800px){#practice-dialog[open]{overflow:auto}#practice-dialog[open]>#practice-rows{flex:none;grid-template-rows:none;grid-auto-rows:150px}}
+#practice-dialog[open]>#practice-rows{flex:1 1 0;min-height:0;grid-template-rows:repeat(3,minmax(190px,1fr));overflow-y:auto;margin:12px auto}#practice-rows button.practice-tile{height:auto}
+@media(max-width:800px){#practice-dialog[open]{overflow:auto}#practice-dialog[open]>#practice-rows{flex:none;grid-template-rows:none;grid-auto-rows:178px}}
 /* Roulette bet slider: blocky Apple II bar with ten notches and a square thumb. */
 #roulette-form #roulette-bet{-webkit-appearance:none;appearance:none;height:32px;margin:12px 0;background:transparent;border-radius:0}
 #roulette-bet::-webkit-slider-runnable-track{height:16px;border-radius:0;background:repeating-linear-gradient(90deg,var(--line) 0 calc(10% - 4px),var(--paper) calc(10% - 4px) 10%);box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
@@ -552,3 +552,6 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 
 /* Unit tabs on the practice chooser: tabs wrap to more lines rather than scroll, and shrink on small screens. */
 @media(max-width:800px){#practice-units,#practice-pager{gap:4px;margin-top:6px}#practice-units button,#practice-pager button{padding:3px 8px;font-size:.8em}#practice-units button{font-size:.7em}}
+
+/* Short or narrow screens: smaller doodle and name so skill titles are never clipped; grid scrolls instead of squeezing tiles */
+@media(max-height:760px),(max-width:1100px){#practice-rows .practice-name{font-size:.78em;letter-spacing:0;overflow-wrap:break-word;hyphens:auto}#practice-rows .practice-doodle{width:48px;height:48px}#practice-rows button.practice-tile{padding-top:22px}}

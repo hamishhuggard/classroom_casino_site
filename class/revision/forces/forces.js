@@ -117,6 +117,21 @@
    visual:forceSvg(h,{up:{n:8,label:at.up},down:{n:8,label:at.down},left:{n:5,label:at.left},right:{n:5,label:at.right}},{obj:'plane',alt:'Four forces on a plane, each arrow labelled with a letter'}),
    explanation:{up:'Lift pushes the plane up.',down:'Weight pulls the plane down.',left:'Drag acts backwards, against the motion.',right:'Thrust pushes the plane forwards.'}[k]};});
  card(S1,'FT20',1,(r,h)=>{const e=h.pick(PLANE,r);return {cloze:`The force on a plane that acts ${e[1]} is ${Q}`,answer:e[0],aliases:e[2],caseSensitive:false,choices:mc(h,r,e[0],PLANE.map(p=>p[0]).filter(x=>x!==e[0])),explanation:{thrust:'Thrust pushes the plane forwards.',drag:'Drag (air resistance) acts backwards.',lift:'Lift acts upwards.',weight:'Weight acts downwards.'}[e[0]]};});
+
+ // Lesson 1 objective 1 (draw labelled force arrows): name an arrow, and say which way a force acts.
+ card(S1,'FT21',1,(r,h)=>{
+  const L=h.shuffle(['A','B','C','D'],r),at={up:L[0],down:L[1],left:L[2],right:L[3]},k=h.pick(['up','down','left','right'],r),nm={up:'support',down:'weight',left:'friction',right:'engine force'};
+  return {cloze:`A car drives to the right.\nArrow ${at[k]} shows the ${Q} force`,answer:nm[k],choices:mc(h,r,nm[k],Object.values(nm).filter(x=>x!==nm[k])),
+   visual:forceSvg(h,{up:{n:6,label:at.up},down:{n:6,label:at.down},left:{n:3,label:at.left},right:{n:5,label:at.right}},{obj:'car',alt:'Four forces on a car, each arrow labelled with a letter'}),
+   explanation:{up:'The road pushes up on the car: the support force.',down:'Gravity pulls the car down: its weight.',left:'Friction acts backwards, against the motion.',right:'The engine force pushes the car forwards.'}[k]};});
+ card(S1,'FT22',1,(r,h)=>{const dir=h.pick(['left','right'],r),o=h.pick(['plane','boat','car','cyclist'],r),ask=h.pick(['drag','thrust'],r);
+  return {cloze:`A ${o} moves to the ${dir}.\nThe ${ask==='drag'?'drag (resistance)':'thrust (forward push)'} on it acts to the ${Q}`,answer:ask==='drag'?OPP[dir]:dir,choices:['left','right'],meta:{kind:'dragdir',dir,ask},
+   explanation:ask==='drag'?`Drag acts against the motion. The ${o} moves ${dir}, so drag acts ${OPP[dir]}.`:`Thrust pushes in the direction of the motion: ${dir}.`};});
+ card(S1,'FT23',2,(r,h)=>{
+  const L=h.shuffle(['A','B','C','D'],r),at={up:L[0],down:L[1],left:L[2],right:L[3]},k=h.pick(['up','down','left','right'],r),nm={up:'lift',down:'weight',left:'drag',right:'thrust'};
+  return {cloze:`A plane is in level flight, moving to the right.\nThe arrow that shows ${nm[k]} is ${Q}`,answer:at[k],choices:['A','B','C','D'],meta:{kind:'arrowf',at,k},
+   visual:forceSvg(h,{up:{n:8,label:at.up},down:{n:8,label:at.down},left:{n:5,label:at.left},right:{n:5,label:at.right}},{obj:'plane',alt:'Four forces on a plane, each arrow labelled with a letter'}),
+   explanation:{up:'Lift acts upwards.',down:'Weight acts downwards.',left:'Drag acts backwards, against the motion.',right:'Thrust acts forwards.'}[k]};});
  const CON=[['the push of a hand','contact'],['friction','contact'],['tension in a rope','contact'],['air resistance','contact'],['the support force from the ground','contact'],['gravity','non-contact'],['the force between two magnets','non-contact'],['the pull of a rubbed balloon on small pieces of paper','non-contact']];
  const conCard=(code,items)=>card(S1,code,2,(r,h)=>{const [name,kind]=h.pick(items,r);return {cloze:`${name[0].toUpperCase()+name.slice(1)} is a ${Q} force`,answer:kind,choices:['contact','non-contact'],explanation:kind==='contact'?`${name[0].toUpperCase()+name.slice(1)} needs the objects to touch: a contact force.`:`${name[0].toUpperCase()+name.slice(1)} acts across a gap: a non-contact force.`};});
  conCard('FT08',[CON[0],CON[5]]);conCard('FT09',[CON[1],CON[6]]);conCard('FT10',[CON[2],CON[7]]);conCard('FT11',[CON[3],CON[5]]);
@@ -210,6 +225,16 @@
   explanation:`Up and down only: ${Math.max(f.U,f.D)} − ${Math.min(f.U,f.D)} = ${Math.abs(f.vnet)} N, ${f.vnet>0?'up':'down'}. Sideways forces do not change this.`};});
  sidewaysCard('NG01',1,{vbal:true});sidewaysCard('NG02',1,{vbal:true});verticalCard('NG03',1,{hbal:true});verticalCard('NG04',1,{hbal:true});sidewaysCard('NG05',1,{vbal:true});
  sidewaysCard('NG06',2,{});sidewaysCard('NG07',2,{});verticalCard('NG08',2,{});verticalCard('NG09',2,{});sidewaysCard('NG10',2,{});verticalCard('NG11',2,{});
+
+ // Lesson 1 objective 2, in the style of 2025 test Q6: four forces on a plane or car, thrust/engine and drag/friction sideways, lift/support and weight equal.
+ const PN=[{o:'plane',f:'thrust',b:'drag',u:'lift',d:'weight'},{o:'car',f:'engine force',b:'friction',u:'support force',d:'weight'}];
+ function pset(r,h,mode){const p=h.pick(PN,r),V=h.pick([200,300,400,500],r),big=h.pick([600,800,1000],r),small=h.pick([200,300,400,500],r);
+  const T=mode==='fwd'?big:mode==='back'?small:big,D=mode==='fwd'?small:mode==='back'?big:big;
+  return {p,V,T,D,svg:forceSvg(h,{up:{n:V,label:p.u+' '+V+' N'},down:{n:V,label:p.d+' '+V+' N'},right:{n:T,label:p.f+' '+T+' N'},left:{n:D,label:p.b+' '+D+' N'}},{obj:p.o,alt:'Four forces on a '+p.o+'; each arrow is labelled with its size'})};}
+ const pNet=(code,tier,mode)=>card(S3,code,tier,(r,h)=>{const x=pset(r,h,mode),n=Math.abs(x.T-x.D);
+  return {cloze:`A ${x.p.o} is moving forwards.\nNet force = ${Q} N`,answer:String(n),answerUnit:'N',visual:x.svg,meta:{kind:'planenet',T:x.T,D:x.D,Lf:x.V,W:x.V},
+   explanation:n?`${x.p.u} and ${x.p.d} are equal, so they cancel. ${Math.max(x.T,x.D)} − ${Math.min(x.T,x.D)} = ${n} N, ${x.T>x.D?'forwards':'backwards'}.`:`${x.p.f} equals ${x.p.b} and ${x.p.u} equals ${x.p.d}, so the net force is 0 N.`};});
+ pNet('NG19',2,'fwd');pNet('NG20',2,'back');
  card(S3,'NG12',3,(r,h)=>{const f=four(r,h),o=h.pick(objs4,r);const d=f.hnet>0?'right':'left';return {cloze:`The sideways net force acts to the ${Q}`,answer:d,aliases:['to the '+d],caseSensitive:false,visual:fourSvg(h,f,o),meta:{kind:'four',f,ask:'hdir'},explanation:`Right ${f.Rt} N and left ${f.Lf} N: the bigger force is to the ${d}.`};});
  card(S3,'NG13',3,(r,h)=>{const f=four(r,h),o=h.pick(objs4,r);const d=f.vnet>0?'up':'down';return {cloze:`The up and down net force acts ${Q}`,answer:d,aliases:[d==='up'?'upwards':'downwards'],caseSensitive:false,visual:fourSvg(h,f,o),meta:{kind:'four',f,ask:'vdir'},explanation:`Up ${f.U} N and down ${f.D} N: the bigger force is ${d}.`};});
  const fourMC=code=>card(S3,code,3,(r,h)=>{
@@ -223,6 +248,14 @@
   return {cloze:'The net force on the object is zero: '+Q,answer:case_==='both'?'true':'false',choices:['true','false'],visual:fourSvg(h,f,o),meta:{kind:'four',f,ask:'zero'},
    explanation:case_==='both'?'Left equals right and up equals down, so the net force is zero.':case_==='h'?'Up equals down, but left and right are not equal. The net force is not zero.':'Left equals right, but up and down are not equal. The net force is not zero.'};});
  zeroCard('NG17');zeroCard('NG18');
+
+ pNet('NG22',3,'bal');
+ card(S3,'NG21',3,(r,h)=>{const mode=h.pick(['fwd','back'],r),x=pset(r,h,mode),n=Math.abs(x.T-x.D),dir=x.T>x.D?'forwards':'backwards',ans=`${n} N ${dir}`;
+  return {cloze:`A ${x.p.o} is moving forwards.\nThe net force is `+Q,answer:ans,choices:mc(h,r,ans,[`${n} N ${dir==='forwards'?'backwards':'forwards'}`,`${x.T+x.D} N ${dir}`,'0 N']),visual:x.svg,meta:{kind:'planenetmc',T:x.T,D:x.D},
+   explanation:`${x.p.u} and ${x.p.d} cancel. ${Math.max(x.T,x.D)} − ${Math.min(x.T,x.D)} = ${n} N, in the direction of the bigger force: ${dir}.`};});
+ card(S3,'NG23',3,(r,h)=>{const mode=h.pick(['fwd','back','bal'],r),x=pset(r,h,mode),dir=x.T>x.D?'forwards':x.T<x.D?'backwards':'no net force';
+  return {cloze:`The ${x.p.o} is moving forwards.\nThe net force on it acts `+Q,answer:dir,choices:['forwards','backwards','no net force'],visual:x.svg,meta:{kind:'planedir',T:x.T,D:x.D},
+   explanation:dir==='no net force'?`${x.p.f} equals ${x.p.b} and ${x.p.u} equals ${x.p.d}: balanced, so there is no net force.`:`The bigger sideways force is ${dir==='forwards'?x.p.f:x.p.b} (${Math.max(x.T,x.D)} N), so the net force acts ${dir}.`};});
 
  // =====================================================================
  // 4. Balanced forces at constant speed
@@ -257,6 +290,10 @@
    visual:forceSvg(h,{up:{n:Lf,label:'lift '+Lf+' N'},down:{n:W,label:'weight '+W+' N'},right:{n:T,label:'thrust '+T+' N'},left:{n:D,label:'drag '+D+' N'}},{obj:'plane',alt:'Four forces on a plane in level flight'}),
    meta:{kind:'planebal',T,D,Lf,W},
    explanation:bal?'Thrust equals drag and lift equals weight, so there is no net force. The speed and direction do not change: the forces are balanced.':'Drag is bigger than thrust, so there is a net force backwards and the plane slows down: the forces are unbalanced.'};});
+ card(S4,'BF19',2,(r,h)=>{const e=h.pick(BN,r),ans=`the ${e.a} equals the ${e.b}, so the forces cancel out`;
+  return {cloze:`A ${e.o} moves at a constant speed in a straight line.\nThe forces on it are balanced because ${Q}`,answer:ans,choices:mc(h,r,ans,[`the ${e.a} is bigger than the ${e.b}`,`the ${e.b} is bigger than the ${e.a}`,'there are no forces acting on it']),explanation:'At a constant speed the forward and backward forces are equal and opposite, so they cancel. Balanced does not mean there are no forces.'};});
+ card(S4,'BF20',2,(r,h)=>{const e=h.pick([['The thrust equals the '+Q,'drag',['air resistance']],['The lift equals the '+Q,'weight',['gravity']],['The weight equals the '+Q,'lift',[]]],r);
+  return {cloze:'A plane flies at a constant speed and height.\n'+e[0],answer:e[1],aliases:e[2],caseSensitive:false,explanation:'Constant speed: thrust = drag. Constant height: lift = weight. Both pairs are balanced.'};});
  card(S4,'BF13',3,(r,h)=>{const ans='no force is needed to keep it moving';return {cloze:h.pick(['A puck slides at constant speed on very smooth ice.','A hockey puck glides at constant speed across smooth ice.','A curling stone slides at constant speed on very smooth ice.'],r)+'\nIt keeps moving because '+Q,answer:ans,choices:mc(h,r,ans,['the push it was given is still acting on it','a forward force is always needed to keep it moving','gravity pulls it forward']),explanation:'No net force is needed to keep an object moving at a constant speed. A push does not stay "inside" an object.'};});
  card(S4,'BF14',3,(r,h)=>{
   const good=h.pick(['a cyclist riding at a steady speed in a straight line','a lift moving up at a steady speed','a parachutist falling at a steady speed','a book resting on a shelf'],r);
@@ -267,6 +304,15 @@
  card(S4,'BF16',3,(r,h)=>{const n=h.pick([2000,3000,4000,5000],r),ans=`${n} N backwards`;
   return {cloze:`A ship moves at constant speed in a straight line.\nThe engine force forwards is ${n} N.\nThe water resistance is `+Q,answer:ans,choices:mc(h,r,ans,[`less than ${n} N backwards`,`more than ${n} N backwards`,'0 N']),explanation:`Constant speed means balanced forces, so the resistance is equal and opposite: ${n} N backwards.`};});
  card(S4,'BF17',3,(r,h)=>{return {cloze:h.pick(['A spacecraft is far from any planet. Its engines are off and it is moving.','A probe in deep space has its engines off and is moving.','A satellite far from any planet drifts with its engines off.'],r)+'\nIts speed will '+Q,answer:'stay the same',choices:['stay the same','slow down and stop','keep speeding up'],explanation:'There is no net force, so it keeps the same speed in a straight line.'};});
+
+ // Lesson 1 objective 3, in the style of 2025 test Q5: why balanced forces at constant speed.
+ const BN=[{o:'car',a:'engine force',b:'friction'},{o:'plane',a:'thrust',b:'drag'},{o:'cyclist',a:'pedalling force',b:'air resistance'},{o:'boat',a:'engine force',b:'water resistance'}];
+ card(S4,'BF21',3,(r,h)=>{const e=h.pick(BN,r),ans=`at a constant speed the ${e.a} equals the ${e.b}`;
+  return {cloze:`A student says: "The ${e.o} keeps moving at a constant speed, so the ${e.a} must be bigger than the ${e.b}."\nThe student is wrong because `+Q,answer:ans,choices:mc(h,r,ans,[`the ${e.b} is not a force`,'a moving object always has unbalanced forces',`the ${e.b} must be bigger than the ${e.a}`]),explanation:'A bigger forward force would make the speed increase. At a constant speed the forces are balanced, so they are equal.'};});
+ card(S4,'BF22',3,(r,h)=>{const o=h.pick(['plane','car','boat','cyclist'],r);
+  return {cloze:`The ${o}'s speed and direction are not changing.\nThe net force on it is ${Q}`,answer:'zero',aliases:['0','0 N','no net force','nothing'],caseSensitive:false,choices:['zero','pointing forwards','pointing backwards'],explanation:'No change in speed or direction means there is no net force: it is zero and the forces are balanced.'};});
+ card(S4,'BF23',3,(r,h)=>{const ans='balanced, because the speed and direction are not changing so there is no net force';
+  return {cloze:'A plane is travelling at a constant speed and altitude.\nThe forces on it are '+Q,answer:ans,choices:mc(h,r,ans,['unbalanced, because the plane is moving forwards','unbalanced, because thrust is bigger than drag','balanced, because there are no forces acting on the plane']),explanation:'Constant speed and altitude: thrust = drag and lift = weight. There is no net force, so the forces are balanced.'};});
 
  // =====================================================================
  // 5. Speed, distance and time

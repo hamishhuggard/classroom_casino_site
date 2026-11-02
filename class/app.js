@@ -1092,7 +1092,7 @@ function filterPractice(){practiceSearch=$('practice-search').value.trim().toLow
 // ?lesson= is a named ?only= list for a revision lesson (so links stay short): forces1 = Forces revision 1 (types of force, net force, balanced forces),
 // forces3 = Forces revision 3 (distance–time graphs, average speed). Cards chosen from the 2025 Year 10 test's style and the lesson's objectives.
 const LESSON_CARDS={
-  forces1:'FT01-FT07,FT14,FT18-FT20,NF01-NF14,NG01-NG11,NG14,BF01-BF12,BF14,BF15,BF18',
+  forces1:'FT01-FT07,FT14,FT18-FT23,NF01-NF14,NG01-NG11,NG14,NG19-NG23,BF01-BF12,BF14,BF15,BF18-BF23',
   forces3:'TG*,DG01-DG12,DG17,GA01-GA04,DS01-DS12,DS14'
 };
 function cardFilter(){

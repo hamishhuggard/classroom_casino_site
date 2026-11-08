@@ -16,7 +16,7 @@
   nutrition:()=>pic(stick(90,200,120)+stick(210,200,160)+apple(260,60)+line(30,200,270,200,3)+sameGenes,'Identical twins: the twin with the better diet is taller'),
   light:()=>pic(sun(60,34)+sprite('pea',20,92,6,'bright')+fillRect(170,14,110,14,.32)+rect(170,14,110,14,2)+sprite('pea',188,140,4,'dim')+line(10,212,290,212,3)+text(225,52,'shade',21)+sameGenes,
    'Two cuttings from the same plant: the one in the sun is bigger and greener than the one in the shade'),
-  sunlight:()=>pic(sun(268,30,14)+stick(80,200,140,'pale')+stick(200,200,140,'dark')+wave(150,212,100)+line(20,200,140,200,3)+sameGenes,'Identical twins: the twin who surfs in the sun has darker skin')};
+  exercise:()=>pic(stick(90,200,140)+stick(210,200,140)+dumbbell(250,60)+line(30,200,270,200,3)+sameGenes,'Identical twins: the twin who lifts weights every week has stronger muscles')};
  const SURVPIC={
   disease:()=>pic(virus(60,30)+virus(150,24)+virus(240,32)+['bright','dim','bright','bright','dim'].map((sh,i)=>sprite('kakapo',6+i*58,100,3,sh)).join('')+text(150,190,'variation',21),
    'A population of kākāpō that varies, with a new disease arriving'),
@@ -25,7 +25,7 @@
   drought:()=>{let b=sun(40,34)+line(10,110,290,110,3)+text(220,40,'dry soil',21);
    [[80,40],[140,95],[200,60],[260,115]].forEach(([x,d])=>{b+=line(x-10,110,x-16,80,3)+line(x,110,x,74,3)+line(x+10,110,x+16,80,3)+line(x,110,x,110+d,2)+line(x,110+d*.5,x-12,110+d*.7,2)+line(x,110+d*.5,x+12,110+d*.7,2);});
    return pic(b,'Grass plants with roots of different depths in dry soil');}};
- const CMPENV={height:apple,'body mass':(x,y)=>dumbbell(x,y),'skin colour':(x,y)=>sun(x,y,14),'running speed':(x,y)=>dumbbell(x,y)};
+ const CMPENV={height:apple,'body mass':(x,y)=>dumbbell(x,y),'muscle strength':(x,y)=>dumbbell(x,y),'running speed':(x,y)=>dumbbell(x,y)};
  const cmpPic=c=>pic(dna(50,4,78,14,1.2)+text(50,102,'genes',21)+CMPENV[c.trait](236,40)+text(226,102,'environment',21)
   +arrow(64,110,96,134,3,9)+arrow(214,110,190,134,3,9)+miniBars(80,136,140,62,[1,3,6,8,5,2],false,c.trait),`Genes and the environment both influence ${c.trait}, which varies continuously`);
  const genePic=c=>pic(dna(50,14,226,18,2.4)+`<path d="M78 80 H92 V150 H78" fill="none" stroke="currentColor" stroke-width="3"/>`+text(104,120,'gene',18,'start')
@@ -53,10 +53,10 @@
   contexts:[
    {label:'identical twins, height (nutrition)',stem:'Identical twins have the same genes, but the one with a healthier diet is 8 cm taller.',pair:'twins',factor:'nutrition',how:'the taller twin had better [nutrition] while growing'},
    {label:'plant cuttings, sun and shade',stem:'Two cuttings from one plant have the same genes, but the one in full sun grows bigger.',pair:'cuttings',factor:'light',how:'the plant in the sun received more [light]'},
-   {label:'identical twins, skin colour (sunlight)',stem:'Identical twins have the same genes, but the twin who surfs every day has darker skin.',pair:'twins',factor:'sunlight',how:'more [sunlight] made the surfer’s skin darker'}],
+   {label:'identical twins, muscle strength (exercise)',stem:'Identical twins have the same genes, but the twin who lifts weights every week has stronger muscles.',pair:'twins',factor:'exercise',how:'more [exercise] made the weightlifter’s muscles stronger'}],
   stem:c=>`${c.stem}\nExplain how the environment can influence phenotype.`,
   model:c=>`The ${c.pair} have the same [genes], so something else must cause the difference. It is caused by the [environment]: ${c.how}. This shows that an organism’s [phenotype] can change even when its [genotype] is the same.`,
-  aliases:{nutrition:['diet','food'],light:['sunlight','sun'],sunlight:['sun','uv','uv light','light'],genes:['dna','genotype']},
+  aliases:{nutrition:['diet','food'],light:['sunlight','sun'],exercise:['training','weights','weight training','lifting','activity'],genes:['dna','genotype']},
   pic:c=>ENVPIC[c.factor](),
   ideas:c=>[/same gene|identical gene|genes are the same|same dna|same genotype|genetically identical/,new RegExp('environment|'+c.factor+'|diet|food|sun|light')]});
 
@@ -67,8 +67,8 @@
    {pic:'cold',label:'sheep, a very cold winter',stem:'A very cold winter hits a flock of sheep that vary in wool thickness.',change:'a very cold winter',trait:'thicker wool'},
    {pic:'drought',label:'a grass species, a drought',stem:'A long drought hits a grass species whose roots vary in depth.',change:'a drought',trait:'deeper roots'}],
   stem:c=>`${c.stem}\nExplain why variation is important for the population’s survival.`,
-  model:c=>`Variation means the individuals in a population have different characteristics. When the environment changes, for example ${c.change}, some individuals may have a characteristic such as ${c.trait} that helps them survive. These survivors are more likely to [reproduce] and pass on the [alleles] for that characteristic, so it becomes more [common] in the population. If every individual were the same, they could all die.`,
-  aliases:{alleles:['genes','allele','gene'],reproduce:['breed']},
+  model:c=>`Variation means the individuals in a population have [different] characteristics. When the [environment] changes, for example ${c.change}, some individuals may have a characteristic such as ${c.trait} that helps them [survive]. These survivors are more likely to [reproduce] and pass on the [alleles] for that characteristic, so it becomes more [common] in the population. If every individual were the same, they could all [die].`,
+  aliases:{alleles:['genes','allele','gene'],reproduce:['breed'],different:['varied','unique'],environment:['conditions','surroundings'],die:['be wiped out','perish'],survive:['live','cope']},
   pic:c=>SURVPIC[c.pic](),
   ideas:()=>[/variation|differ|not (all )?the same|vary/,/surviv/,/reproduc|offspring|pass (it |the )?on|breed/]});
 
@@ -77,7 +77,7 @@
   contexts:[
    {label:'height',trait:'height',gene:'tall people tend to have tall children',env:'a good diet and health while growing'},
    {label:'body mass',trait:'body mass',gene:'some families tend to have a larger body build',env:'diet and how much exercise a person does'},
-   {label:'skin colour',trait:'skin colour',gene:'a child’s natural skin colour is similar to their family’s',env:'sunlight makes skin darker'},
+   {label:'muscle strength',trait:'muscle strength',gene:'some families tend to have strong muscles',env:'weight training builds muscle'},
    {label:'running speed',trait:'running speed',gene:'leg length and muscle type run in families',env:'training makes a runner faster'}],
   stem:c=>`Students in a Year 10 class vary in ${c.trait}.\nCompare how genes and the environment influence ${c.trait}.`,
   model:c=>`${c.trait.charAt(0).toUpperCase()+c.trait.slice(1)} is influenced by both genes and the environment. Genes are inherited from parents and give the [potential] for ${c.trait}: for example, ${c.gene}. The environment changes the characteristic during an organism’s [lifetime]: for example, ${c.env}. Genetic influences can be passed on to offspring, but environmental effects cannot.`,

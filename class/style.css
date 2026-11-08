@@ -593,3 +593,56 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 
 /* Locked class link (lock.js): no class picker, no unit chooser, no practice menu. app.js also refuses these actions. */
 html[data-locked] #practice-dialog,html[data-locked] #settings-dialog,html[data-locked] #settings,html[data-locked] [data-setting="class"],html[data-locked] [aria-label="Class"]{display:none!important}
+
+/* Table and paragraph blanks (genetics gtable/gpara): the active blank is a solid highlighted box with a blinking block cursor,
+   as the old answer line had. Typed cells use a native block caret; choice cells blink the box itself. */
+.gcell-input,.gtable-input{border:2px dashed var(--ink);padding:0 .3em}
+.gcell-input:focus,.gcell-input:focus-visible,.gtable-input:focus,.gtable-input:focus-visible{outline:0;background:var(--ink);color:var(--paper);border-style:solid;caret-color:var(--paper);caret-shape:block}
+.gcell-input::selection{background:var(--paper);color:var(--ink)}
+.gcell.gactive .gslot,td.gactive .gslot{animation:cursor-block 1s steps(1,end) infinite}
+@media(prefers-reduced-motion:reduce){.gcell.gactive .gslot,td.gactive .gslot{animation:none}}
+/* Choice blank: the cursor is one solid block filling the whole box inside its border, sized to the longest option. */
+.gslot{box-sizing:content-box;padding:0;line-height:1.3;vertical-align:middle}
+.gcell.gactive .gslot,td.gactive .gslot{animation:gslot-block 1s steps(1,end) infinite;border:2px solid var(--ink)}
+@keyframes gslot-block{0%,49%{background:var(--ink)}50%,100%{background:transparent}}
+@media(prefers-reduced-motion:reduce){.gcell.gactive .gslot,td.gactive .gslot{animation:none;background:var(--ink)}}
+/* No dashed outline round the current cell: the block cursor marks it. */
+.gtable td.gactive,.gpara .gcell.gactive{outline:0!important}
+/* Every open blank is a solid block of highlight. The focused one carries the blinking cursor: a block caret in a typed blank,
+   and in a choice blank a block spanning the whole blank. */
+.gcell-input,.gtable-input,.gslot{background:var(--ink);color:var(--paper);border:2px solid var(--ink);caret-color:var(--paper);caret-shape:block}
+.gcell-input::placeholder{color:var(--paper);opacity:.6}
+.gslot{animation:none!important}
+.gcell.gactive .gslot,td.gactive .gslot{animation:gslot-block 1s steps(1,end) infinite!important}
+@media(prefers-reduced-motion:reduce){.gcell.gactive .gslot,td.gactive .gslot{animation:none!important}}
+/* Explain questions: the diagram sits to the left of the bullet points. */
+.gpara-side{display:flex;gap:clamp(12px,2vw,24px);align-items:center}
+.gpara-side .gpic{flex:0 0 auto;width:clamp(140px,16vw,210px)}
+.gpara-side .gpara-answer{flex:1 1 0;min-width:0}
+.gpara-side .gpara-stem{display:none}
+@media(max-width:700px){.gpara-side{flex-direction:column}}
+/* Genetics cloze questions: the diagram to the left of the statement. */
+.gcloze-side{display:flex!important;flex-direction:row;gap:clamp(12px,2vw,28px);align-items:center;justify-content:center;text-align:left}
+.gcloze-side .gpic{flex:0 0 auto;width:clamp(200px,34vw,440px)}
+.gcloze-side .gpic svg,.gcloze-side .gpic .revision-visual{display:block;width:100%;height:auto;max-height:min(46vh,360px)}
+.gcloze-side .gcloze-text{flex:1 1 0;min-width:0}
+@media(max-width:700px){.gcloze-side{flex-direction:column}}
+/* No box round the bullet points. */
+.gpara-answer{border:0;padding:0}
+/* Table cells with few choices (1.2.1 Variation / Not variation): the buttons sit inside the cell. */
+.gcell.mc:has(.gopts) .gslot{display:none}
+.gcell .gopts{display:inline-flex;margin:0;gap:.4em;vertical-align:middle}
+.gcell .gopts button{font-size:.8em;padding:.1em .6em}
+/* Blank feedback: green flash when right, red flash when wrong. */
+@keyframes gflash-right{0%,60%{background:#2ecc71;color:#000}100%{background:transparent}}
+@keyframes gflash-wrong{0%,60%{background:var(--bad,#ff6a5c);color:#000}100%{background:transparent}}
+.gcell.flash-right,.gcell.right .gfilled{animation:gflash-right .6s steps(1,end)}
+.gcell.flash-wrong{animation:gflash-wrong .5s steps(1,end)}
+@media(prefers-reduced-motion:reduce){.gcell.flash-right,.gcell.flash-wrong,.gcell.right .gfilled{animation:none}}
+#gcell-dialog h2{text-transform:none}
+/* Multiple-choice blanks: every option sits side by side inside the blank. The active blank's selected option is filled; the others are outlined. */
+.gchoices{display:inline-flex;flex-wrap:wrap;gap:.35em;vertical-align:middle}
+.gchoice{font-size:.8em;padding:.1em .6em;min-height:0;text-transform:none;background:transparent;color:var(--ink);border:2px solid var(--ink)}
+.gchoice:hover{background:var(--hover,#30220e)}
+.gcell.gactive .gchoice.selected,.gcell.gactive .gchoice:focus-visible{background:var(--ink);color:var(--paper)}
+.gcell:not(.gactive) .gchoice{opacity:.75}

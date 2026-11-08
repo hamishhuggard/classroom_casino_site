@@ -7,6 +7,8 @@
   const KEY='casino-lock',params=new URLSearchParams(location.search);
   const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   let lock=null;
+  // Preview pages (results tooltip, genetics design sheet) are teacher tools: a saved lock must not hijack them.
+  if(params.has('preview')){window.CASINO_LOCK=null;return;}
   try{
     if(params.get('unlock')==='1'){localStorage.removeItem(KEY);localStorage.removeItem('casino-class-code');}
     else{

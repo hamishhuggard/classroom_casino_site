@@ -166,25 +166,32 @@
 
  // ---------- Explain / compare answers, four levels (Hamish, 9 Nov 2026) ----------
  // The model answer (E-level, concise) is written with [key words]. L1 every key word is blank, chosen from a word bank;
- // L2 the key words are typed; L3 every word is blank and typed one at a time (Space or ENTER moves on); L4 the whole
- // answer from memory, marked on its key ideas. Each blank is marked as soon as it is answered.
+ // L2 the key words are typed; L3 the key words and about half the other content words are blank; L4 every word is blank except
+ // the small grammar words (Space or ENTER moves on). Each blank is marked as soon as it is answered.
  // spec: {key, group, test, li, sc, title, skillName, level, contexts:[{label, …}], stem:c=>string,
  //        model:c=>'text with [key words]' ([answer|wrong|wrong] gives that blank its own choices at level 1), aliases?:{answer:[…]}, ideas:c=>[regex, …] (all must match the L4 answer), explanation?:c=>string, pic:c=>svg (the picture beside the stem)}
- const XNAMES=['','choose the missing words','type the missing words','word by word','from memory'];
- const XINSTR=['','Complete the answer: choose the missing words:','Complete the answer: type the missing words:','Write the answer one word at a time:','Write the whole answer from memory:'];
+ const XNAMES=['','choose the missing words','type the missing words','more missing words','only the small words left'];
+ const XINSTR=['','Complete the answer: choose the missing words:','Complete the answer: type the missing words:','Complete the answer: more words are missing:','Complete the answer: only the small words are left:'];
  root.GENETICS_T.explain=spec=>{
   for(let L=1;L<=4;L++)root.GENETICS_T.add({id:`${spec.key}-${L}`,test:spec.test||'',group:spec.group,skill:spec.key,skillName:spec.skillName,tier:L,
    title:`${spec.title} ${L}: ${XNAMES[L]}`,li:spec.li,sc:spec.sc,level:spec.level||'M/E',
-   template:`Explain question in the test's style; the model answer ${L<=2?'with its key words blank':L===3?'with every word blank':'written from memory'}.`,
+   template:`Explain question in the test's style; the model answer ${L<=2?'with its key words blank':L===3?'with its key words and about half the other content words blank':'with every word blank except the small grammar words'}.`,
    slots:{context:spec.contexts.map(c=>c.label).join('; ')},
    gen(r){const c=P(r,spec.contexts),m=spec.model(c),plain=m.replace(/\[([^\]|]*)(\|[^\]]*)?\]/g,'$1'),stem=spec.stem(c),parts=[],cells=[];
     // Shown as bullet points (Hamish, 9 Nov 2026): one sentence per bullet; {bullet:true} starts each one.
     const sentences=s=>s.split(/(?<=[.!?])\s+/).filter(Boolean);
     if(L<=2){const keys=[];for(const sen of sentences(m)){parts.push({bullet:true});for(const tok of sen.split(/(\[[^\]]+\])/))if(/^\[.*\]$/.test(tok)){const [w,...wrong]=tok.slice(1,-1).split('|');parts.push({cell:cells.length,ch:Math.max(4,w.length+2)});cells.push({answer:w,aliases:spec.aliases?.[w]||[],...(wrong.length?{own:S(r,[w,...wrong])}:{})});if(!wrong.length)keys.push(w);}else if(tok)parts.push(tok);}
      if(L===1){const bank=S(r,[...new Set(keys)]);cells.forEach(x=>x.options=x.own||bank);}cells.forEach(x=>delete x.own);}
-    else if(L===3){for(const sen of sentences(plain)){parts.push({bullet:true});for(const tok of sen.match(/[\p{L}\p{N}’'-]+|[^\p{L}\p{N}’'-]+/gu))if(/[\p{L}\p{N}]/u.test(tok)){parts.push({cell:cells.length,ch:tok.length+1});cells.push({answer:tok});}else parts.push(tok);}}
-    else{const ideas=spec.ideas(c);parts.push({cell:0,area:true,label:'your answer',placeholder:'Write your answer as bullet points, one idea per line'});cells.push({answer:plain,check:v=>{const x=String(v||'').toLowerCase();return x.trim().split(/\s+/).length>=8&&ideas.every(re=>re.test(x));}});}
-    return {instruction:XINSTR[L],cloze:'Answer = ____',answer:cells.map(x=>x.answer).join(' '),cells,visual:{type:'gpara',stem,parts,svg:spec.pic?.(c)},
+    else{ // L3 / L4: the key words stay blank and more words are blanked, until only grammar words (the, a, of, is, and …) are left
+     const FUNC=new Set('a an the and or but so if then than that this these those it its they them their he she his her we you i me my our your of in on at to for from by with as into onto over under about between through during before after is are was were be been being am do does did has have had can could will would may might must should not no nor too very also just only which who whom whose what when where while there here such each every both some any all more most other another same'.split(' '));
+     const items=[];sentences(m).forEach((sen,si)=>{for(const tok of sen.split(/(\[[^\]]+\])/)){if(!tok)continue;
+      if(/^\[.*\]$/.test(tok))items.push({si,key:true,t:tok.slice(1,-1).split('|')[0]});
+      else for(const w of tok.match(/[\p{L}\p{N}’'-]+|[^\p{L}\p{N}’'-]+/gu)||[])items.push({si,t:w,word:/[\p{L}\p{N}]/u.test(w)});}});
+     const extra=items.filter(x=>!x.key&&x.word&&!FUNC.has(x.t.toLowerCase()));
+     const pick=new Set(L===4?extra:S(r,extra).slice(0,Math.ceil(extra.length/2)));
+     let last=-1;for(const x of items){if(x.si!==last){parts.push({bullet:true});last=x.si;}
+      if(x.key||pick.has(x)){parts.push({cell:cells.length,ch:x.t.length+(x.key?2:1)});cells.push({answer:x.t,aliases:x.key?(spec.aliases?.[x.t]||[]):[]});}else parts.push(x.t);}}
+    return {instruction:stem.replace(/\n/g,' '),cloze:'Answer = ____',answer:cells.map(x=>x.answer).join(' '),cells,visual:{type:'gpara',stem:'',parts,svg:spec.pic?.(c)},
      explanation:spec.explanation?spec.explanation(c):'Model answer:\n'+sentences(plain).map(x=>'• '+x).join('\n'),chosen:{context:c.label}};}});
  };
 })(typeof window!=='undefined'?window:globalThis);

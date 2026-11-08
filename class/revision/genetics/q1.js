@@ -35,27 +35,28 @@
  const ENV=['Scar from a basketball injury','Scar from a rugby injury','A tattoo','Pierced ears','The language a person speaks','A suntan','A sunburn','Dyed hair','A broken arm',
   'Braces on teeth','A haircut','Calluses from playing guitar','Being able to ride a bike','Being able to swim','Being able to play the piano','A New Zealand accent','Painted nails','A chipped tooth'];
  // Both: genes set the potential or tendency, and the environment changes it.
- const BOTH=['Height','Body mass','Skin colour','Freckles','Running speed','Muscle strength','Tooth decay','Acne'];
+ const BOTH=['Height','Body mass','Freckles','Running speed','Muscle strength','Tooth decay','Acne'];
  add({id:'1b',test:'1(b)',group:'Q1',title:'Inherited and environmental factors',li:1,sc:'Distinguish between inherited and environmental characteristics; recognise that genes and the environment both influence traits',level:'A',
-  template:'At Glenfield College, variation is caused by inherited genes, environmental factors, or both.\nCharacteristic | I, E or B table, 7 rows: choose I, E or B for every row (each marked at once).',
+  template:'At Glenfield College, variation is caused by inherited genes, environmental factors, or both.\nCharacteristic | Inherited, Environmental or Both table, 7 rows: choose Inherited, Environmental or Both for every row (each marked at once).',
   slots:{'inherited (I)':INH.join(', '),'environmental (E)':ENV.join(', '),'both (B)':BOTH.join(', '),table:'7 rows: 2–3 I, 1–2 B, the rest E; new characteristics and a new order every draw'},
   gen(r){const nI=2+Math.floor(r()*2),nB=1+Math.floor(r()*2);
-   const rows=S(r,[...S(r,INH).slice(0,nI).map(c=>[c,'I']),...S(r,BOTH).slice(0,nB).map(c=>[c,'B']),...S(r,ENV).slice(0,7-nI-nB).map(c=>[c,'E'])]);
+   const rows=S(r,[...S(r,INH).slice(0,nI).map(c=>[c,'Inherited']),...S(r,BOTH).slice(0,nB).map(c=>[c,'Both']),...S(r,ENV).slice(0,7-nI-nB).map(c=>[c,'Environmental'])]);
    const list=k=>rows.filter(x=>x[1]===k).map(x=>x[0].replace(/ \(.*\)$/,'').toLowerCase()).join(', ');
-   return {instruction:'Write I (inherited genes), E (environmental factors) or B (both) for each characteristic:',cloze:'I, E or B for each row = ____',
-    answer:rows.map(x=>x[1]).join(' | '),cells:rows.map(x=>({answer:x[1],options:['I','E','B']})),
-    visual:{type:'gtable',headers:['Characteristic','I, E or B'],rows:rows.map(([c],i)=>[c,{cell:i,label:'I, E or B'}]),svg:pics.genesEnv('sun',['genes: I','environment: E'])},
-    explanation:`Inherited: ${list('I')}. Environmental: ${list('E')}. Both (genes set the potential, the environment changes it): ${list('B')}.`,
+   return {instruction:'Is each characteristic inherited (genes), environmental, or both?',cloze:'Inherited, Environmental or Both for each row = ____',
+    answer:rows.map(x=>x[1]).join(' | '),cells:rows.map(x=>({answer:x[1],options:['Inherited','Environmental','Both']})),
+    visual:{type:'gtable',headers:['Characteristic','Inherited, environmental or both?'],rows:rows.map(([c],i)=>[c,{cell:i,label:'Inherited, Environmental or Both'}]),svg:pics.genesEnv('sun',['genes','environment'])},
+    explanation:`Inherited: ${list('Inherited')}. Environmental: ${list('Environmental')}. Both (genes set the potential, the environment changes it): ${list('Both')}.`,
     chosen:{rows:rows.map(x=>x[0]+' = '+x[1]).join('; ')}};}});
 
  // ---------- 1(c) Inherited, environmental or both? Explain, four levels (core.js explain) ----------
- // Model answer: the schedule's Merit exemplar, tightened. Only each person's sport is stated about them; the rest is hypothetical, as in the test.
+ // Model answer: the schedule's Merit exemplar, tightened. Made-up people and skills, so each draw is a variation on the test's question, not the test question.
  GENETICS_T.explain({key:'1c',group:'Q1',test:'1(c)',li:1,sc:'Recognise that genes and the environment both influence traits; compare genetic and environmental influences on traits',
   title:'Inherited, environmental or both?',skillName:'Inherited, environmental or both?',level:'A/M',
-  contexts:[{label:'Lionel Messi, footballer',name:'Lionel Messi',role:'footballer',inh:'speed and coordination'},
-   {label:'Valerie Adams, shot putter',name:'Valerie Adams',role:'shot putter',inh:'height and strength'},
-   {label:'Steven Adams, basketballer',name:'Steven Adams',role:'basketballer',inh:'height and coordination'},
-   {label:'Beauden Barrett, rugby player',name:'Beauden Barrett',role:'rugby player',inh:'speed and coordination'}],
+  contexts:[{label:'Ana, violinist',name:'Ana',role:'violinist',inh:'hearing and finger coordination'},
+   {label:'Caleb, sprinter',name:'Caleb',role:'sprinter',inh:'leg muscle and reaction speed'},
+   {label:'Bella, netball player',name:'Bella',role:'netball player',inh:'height and agility'},
+   {label:'Mere, mathematician',name:'Mere',role:'mathematician',inh:'memory and logical reasoning'},
+   {label:'Tama, chess player',name:'Tama',role:'chess player',inh:'memory and concentration'}],
   stem:c=>`Will ${c.name}’s children automatically become great ${c.role}s?\nIs being a world-class ${c.role} inherited, environmental, or both? Explain.`,
   model:c=>`Being a world-class ${c.role} is influenced by [both inherited and environmental|inherited|environmental|star sign] factors. A person’s ${c.inh} are partly set by the [genes] they receive from their parents. But environmental factors such as [training], coaching and good nutrition are needed to develop these abilities. So the children of ${c.name} may have the [potential], but it is not [guaranteed] that they will become world-class.`,
   pic:c=>pics.genesEnv('train',['inherit','training']),

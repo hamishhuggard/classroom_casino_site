@@ -64,7 +64,7 @@ let selectedUnit='electricity_magnetism';
 let returnToPreferences=false;
 const menuIds=['start-game','menu-leaderboard','menu-settings','finish-run'];
 // Question numbers are a debugging aid: shown only with ?show_number=true.
-const showNumber=new URLSearchParams(location.search).get('show_number')==='true';
+const showNumber=new URLSearchParams(location.search).get('show_number')==='true'||new URLSearchParams(location.search).get('preview')==='full';   // the genetics design sheet shows its own numbers (1.4.1)
 function questionNumber(){
   if(!current?.source?.id)return '';
   if(current.source.questionNumber)return current.source.questionNumber;
@@ -94,7 +94,8 @@ function makeRevisionQuestion(base,mixed){const item=typeof base.gen==='function
 // FINISH RUN clears it. Discarded if the question list has changed since (different lengths or unknown questions).
 const SAVE_PREFIX='casino-save-v1|';
 const cardKey=item=>String(item?.id||item?.cloze||item?.prompt||'');
-const saveKey=()=>SAVE_PREFIX+selectedUnit+'|'+enabled.map(i=>levels[i].skill||levels[i].name).join('+');
+// In class mode the class code is part of the key, so each new class code starts with a fresh bank (the plain game has no code).
+const saveKey=()=>SAVE_PREFIX+selectedUnit+'|'+enabled.map(i=>levels[i].skill||levels[i].name).join('+')+(globalThis.CasinoResults?.code?'|'+globalThis.CasinoResults.code:'');
 function saveProgress(){
   if(!activeRun||!enabled.length)return;
   try{
@@ -257,12 +258,12 @@ function unitTableMarkup(visual){
 // {field:i, wide?} (one of several typed boxes, source.fields, marked at the end), or {cell:i, pre?, post?, wide?}: an answer cell
 // marked as soon as it is answered (source.cells[i] = {answer, aliases?, caseSensitive?, options? (multiple choice), check?}).
 function gcellSpan(c,cells){const spec=cells?.[c.cell]||{};
-  const box=spec.options?'<span class="gslot">?</span>':c.area?`<textarea class="gcell-input wide area" rows="4" spellcheck="false" aria-label="${escapeMarkup(c.label||'answer')}"${c.placeholder?` placeholder="${escapeMarkup(c.placeholder)}"`:''}></textarea>`
+  const box=spec.options?`<span class="gchoices" role="group" aria-label="${escapeMarkup(c.label||'choices')}">${spec.options.map(o=>`<button type="button" class="gchoice" data-gopt="${escapeMarkup(o)}">${escapeMarkup(o)}</button>`).join('')}</span>`:c.area?`<textarea class="gcell-input wide area" rows="4" spellcheck="false" aria-label="${escapeMarkup(c.label||'answer')}"${c.placeholder?` placeholder="${escapeMarkup(c.placeholder)}"`:''}></textarea>`
    :`<input class="gcell-input${c.wide?' wide':''}${c.ch?' word':''}"${c.ch?` style="width:${c.ch}ch"`:''} autocomplete="off" spellcheck="false" aria-label="${escapeMarkup(c.label||'answer')}">`;
   return `<span class="gcell${spec.options?' mc':' typed'}${c.ch?' wordcell':''}" data-cell="${c.cell}">${box}<span class="gmark"></span></span>`;}
 // Paragraph answer (visual.type 'gpara', explain/compare questions): the question stem, then the answer text with answer cells in it.
 // parts: strings and {cell:i, ch?, area?} (cells as for gtable).
-function gparaMarkup(v,cells){const stem=v.stem?`<div class="gpara-stem">${escapeMarkup(v.stem).replace(/\n/g,'<br>')}</div>`:'';return `<div class="gpara">${v.svg?`<div class="gpara-top"><div class="gpic">${v.svg}</div>${stem}</div>`:stem}<div class="gpara-answer">${gparaBody(v.parts,cells)}</div></div>`;}
+function gparaMarkup(v,cells){const stem=v.stem?`<div class="gpara-stem">${escapeMarkup(v.stem).replace(/\n/g,'<br>')}</div>`:'';return `<div class="gpara">${v.svg?`<div class="gpara-side"><div class="gpic">${v.svg}</div>${stem}<div class="gpara-answer">${gparaBody(v.parts,cells)}</div></div>`:`${stem}<div class="gpara-answer">${gparaBody(v.parts,cells)}</div>`}</div>`;}
 /* {bullet:true} parts split the answer into bullet points, one sentence each. */
 function gparaBody(parts,cells){const item=p=>typeof p==='string'?escapeMarkup(p):gcellSpan(p,cells);if(!parts.some(p=>p?.bullet))return parts.map(item).join('');const items=[];for(const p of parts)if(p?.bullet)items.push([]);else(items.at(-1)||items[items.push([])-1]).push(item(p));return `<ul class="gpara-list">${items.map(x=>`<li>${x.join('').trim()}</li>`).join('')}</ul>`;}
 function gtableMarkup(v,live,cells){
@@ -298,7 +299,7 @@ function render(){
   else if(current.kind==='revision'&&current.source?.id==='G4')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div>Natural selection depends on</div><div class="large-science">survival</div><div>and</div><div class="large-science"><span id="cloze-answer-slot"></span></div></div>`;
   else if(current.kind==='revision'&&current.source?.id==='G1')$('diagram').innerHTML=`<div class="cloze-game">${casinoDiagram({...current.source.visual,answerMarkup:clozeSentence('This section of DNA is a ____','<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&['L2-1','L2-3','L2-11'].includes(current.source?.id))$('diagram').innerHTML=`<div class="cloze-game">${revisionVisual(current)}${clozeSentence({'G1':'This section of DNA is a ____','L2-1':'electrons = ____','L2-3':'formula = ____','L2-11':'v = ____'}[current.source.id],'<span id="cloze-answer-slot"></span>')}</div>`;
-  else if(current.kind==='revision'&&['gtable','gpara'].includes(current.source?.visual?.type))$('diagram').innerHTML=`<div class="cloze-game phys-cloze gtable-cloze">${current.source.visual.type==='gpara'?gparaMarkup(current.source.visual,current.source.cells):gtableMarkup(current.source.visual,true,current.source.cells)}${current.source.cells?'<div id="gopts" class="connection-choices gopts" role="group" aria-label="Answer choices"></div>':''}</div>`;
+  else if(current.kind==='revision'&&['gtable','gpara'].includes(current.source?.visual?.type))$('diagram').innerHTML=`<div class="cloze-game phys-cloze gtable-cloze">${current.source.visual.type==='gpara'?gparaMarkup(current.source.visual,current.source.cells):gtableMarkup(current.source.visual,true,current.source.cells)}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='unittable')$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${unitTableMarkup(current.source.visual)}</div>`;
   else if(current.kind==='revision'&&current.source?.phys)$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}${clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.recall)$('diagram').innerHTML=`<div class="cloze-game recall-cloze">${clozeSentence(current.prompt,'<span id="cloze-answer-slot"></span>')}</div>`;
@@ -309,6 +310,7 @@ function render(){
   else if(current.kind==='revision'&&['A1','F1','F3','C4'].includes(current.source?.id))$('diagram').innerHTML=`<div class="cloze-game">${current.source.id==='C4'?'':revisionVisual(current)}${clozeSentence({A1:'neutrons = ____',F1:'F = ____',F3:'v = ____',C4:current.prompt}[current.source.id],'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='C1')$('diagram').innerHTML=`<div class="cloze-game ph-cloze"><div class="ph-link">A solution with a pH of</div><div class="ph-value">${current.source.visual.value}</div><div class="ph-link">is</div><div class="ph-answer"><span id="cloze-answer-slot"></span></div></div>`;
   else if(current.kind==='revision'&&['C2','C3'].includes(current.source?.id))$('diagram').innerHTML=`<div class="cloze-game reaction-cloze"><div class="reaction-reactants">${current.source.visual.left}</div><div class="reaction-arrow" aria-hidden="true">↓</div>${clozeSentence(current.source.id==='C3'?'salt + water + ____':'salt + ____','<span id="cloze-answer-slot"></span>')}</div>`;
+  else if(current.kind==='revision'&&String(current.source?.id||'').startsWith('GT-'))$('diagram').innerHTML=`<div class="cloze-game gcloze-side"><div class="gpic">${revisionVisual(current)}</div><div class="gcloze-text">${clozeSentence(removeProvidedUnit(current,current.prompt),current.source?.fields?((_,i)=>componentField(current.source.fields[i],i)):'<span id="cloze-answer-slot"></span>')}</div></div>`;   // genetics: diagram to the left of the statement
   else if(current.kind==='revision')$('diagram').innerHTML=`<div class="cloze-game">${revisionVisual(current)}${clozeSentence(removeProvidedUnit(current,current.prompt),current.source?.fields?((_,i)=>componentField(current.source.fields[i],i)):'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(circuitType){$('diagram').innerHTML=`<div class="cloze-game">${circuitAnswerDiagram(diagram(current),clozeSentence('The circuit is ____.','<span id="cloze-answer-slot"></span>'))}</div>`;}
   else if(simple){$('diagram').innerHTML=statement(current).replace(/<\/div>$/,`<span id="cloze-answer-slot"></span>${circuitType?'<div class="statement-link">circuit</div>':''}</div>`);}
@@ -419,7 +421,7 @@ function millisecondHint(value){
 }
 // Shows the correct answer in symbols a student can type: N·m → N m, m/s² → m/s^2.
 function typeableUnits(s){return String(s).replace(/[·⋅]/g,' ').replace(/²/g,'^2').replace(/³/g,'^3').replace(/⁻¹/g,'^-1').replace(/⁻²/g,'^-2').replace(/⁻³/g,'^-3');}
-function fail(timeout=false,hint=''){playEffect('wrong');reportAnswer(false);stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(`${hint?hint+' ':''}${typeableUnits(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`)}`,timeout?'Time’s up':'Try again');}
+function fail(timeout=false,hint=''){playEffect('wrong');reportAnswer(false,timeout?'timeout':'wrong');stop();attempts++;if(reviewDeck){reviewDeck.answer(false);advanceAfterCorrection=true;}else{correct=0;wrong++;}hud();showRule(`${hint?hint+' ':''}${typeableUnits(current.worked||`${current.prompt} Answer: ${current.answer}${current.unit?' '+current.unit:''}.`)}`,timeout?'Time’s up':'Try again');}
 let correctFlashTimer;
 function cashPop(amount){
   try{ // cosmetic only: never let it interrupt answering
@@ -434,7 +436,7 @@ function flashCorrect(){
 }
 
 // Optional listeners (results.js, mastery.js); called before attempts changes, so they can tell a first try.
-function reportAnswer(ok){globalThis.CasinoQuiz?.record(ok);globalThis.CasinoResults?.record(ok);globalThis.CasinoMastery?.record(ok);}
+function reportAnswer(ok,how){globalThis.CasinoQuiz?.record(ok);globalThis.CasinoResults?.record(ok);globalThis.CasinoResults?.answer?.(ok,how);globalThis.CasinoMastery?.record(ok);}
 function completedLevel(completed,advance){if(advance)position++;next();}
 // Roulette opens after a short pause so the tick, cha-ching and count-up are seen first.
 let pendingRoulette=false,rouletteSpinTimer,rouletteFinishSpin;const ROULETTE_DELAY_MS=1100;
@@ -893,7 +895,7 @@ function openRoulette(proceed){const flyFrom=$('casino-score').getBoundingClient
 function spinRoulette(){
   if(rouletteSpinning||roulettePlayed||!$('roulette-dialog').open)return;
   const target=Math.floor(Math.random()*rouletteWheel.length),stopAngle=Math.random()*360,steps=74+target,bankBefore=score,slice=rouletteWheel[target];let frame=0;
-  rouletteSpinning=true;roulettePlayed=true;score=applyRouletteSlice(slice,bankBefore);hud();
+  rouletteSpinning=true;roulettePlayed=true;score=applyRouletteSlice(slice,bankBefore);globalThis.CasinoResults?.event?.('roulette',{slice:slice.label,before:bankBefore,after:score,win:rouletteGood(slice)});hud();
   $('roulette-result').textContent='SPINNING…';$('roulette-result').removeAttribute?.('data-direction');playEffect('rouletteStart');
   function spin(){paintRoulette(frame,steps,stopAngle,target);if(frame<steps&&(frame%2===0||frame>=steps-15))playEffect('rouletteTick');if(frame===steps){const win=rouletteGood(slice);playRouletteResult(win);rouletteSpinning=false;animateRoulettePoints(bankBefore,score);$('roulette-result').innerHTML=`<span class="roulette-outcome">${slice.label}</span><span class="roulette-sum">$${bankBefore} → $${score}</span>`;$('roulette-result').setAttribute?.('data-direction',win?'gain':'loss');$('roulette-fast').hidden=true;$('roulette-continue').hidden=false;$('roulette-continue').textContent='Continue ↵';rouletteFinishSpin=undefined;return;}frame++;rouletteSpinTimer=setTimeout(spin,frame<steps-15?25:35+(frame-(steps-15))*12);}
   // Skip spin: jump straight to the last frame, which settles as usual.
@@ -931,9 +933,16 @@ function mixedQuestionPicker(questions,ordered=false){
   const shuffled=items=>{if(ordered)return [...items];const pool=[...items],out=[];while(pool.length){const chosen=pick(pool);out.push(chosen);pool.splice(pool.indexOf(chosen),1);}return out;};
   const nextItem=()=>{
     if(!deck.length){
+      if(questions.length&&questions.every(item=>item.scKey)){   // level 1 of every success criterion, then level 2 of each, …; a criterion that runs out repeats its last level
+        const sc=new Map();for(const item of questions){if(!sc.has(item.scKey))sc.set(item.scKey,[]);sc.get(item.scKey).push(item);}
+        const lists=[...sc.values()].map(list=>list.slice().sort((a,b)=>a.lv-b.lv)),top=Math.max(...lists.map(l=>l.length));
+        for(let level=0;level<top;level++)for(const list of lists)deck.push(list[Math.min(level,list.length-1)]);
+        if(deck.length>1&&deck[0].id===previous)deck.push(deck.shift());
+      }else{
       const groups=[...new Set(questions.map(item=>item.unit))].map(unit=>shuffled(questions.filter(item=>item.unit===unit)));
       for(let round=0;round<Math.max(...groups.map(g=>g.length));round++)deck.push(...shuffled(groups).map(g=>g[round]).filter(Boolean));
       if(deck[0].id===previous)[deck[0],deck[1]]=[deck[1],deck[0]];
+      }
     }
     const item=deck.shift();previous=item.id;return item;
   };
@@ -1059,9 +1068,10 @@ const DOODLES=[
   [/xx|chromosome/,'xx'],
   [/allele|genotype/,'bb'],
   [/dominant|recessive/,'dom'],
-  [/pure breeding|selective breeding/,'breed'],
+  [/breeding/,'breed'],
   [/mutation/,'mutation'],
   [/dna|gene|inheritance/,'dna'],
+  [/variation in populations/,'bars'],
   [/trait|variation|natural selection|heredity/,'plant'],
   [/earthquake|plate|monitoring/,'quake'],
   [/tsunami|response/,'wave'],
@@ -1289,13 +1299,17 @@ function selectConnection(value){$('answer').value=value;document.querySelectorA
 // right locks it (✓); wrong shows ✗ and strikes that option; a second miss reveals the answer. When every cell is done the
 // question is submitted: right if every cell was right first time.
 function gcellEls(){return [...document.querySelectorAll('#diagram .gcell')];}
-function gcellInit(){current.gstate={active:-1,done:new Set(),wrong:{},struck:{},anyWrong:false,sel:0};gcellActivate(0);}
+function gcellChoices(i){   // every option of a multiple-choice blank shows inside the blank; reshuffled after a miss
+  const st=current.gstate,spec=current.source.cells[i],el=gcellEls()[i],box=el?.querySelector('.gchoices');if(!box||!spec.options)return;
+  const opts=st.order?.[i]||spec.options;
+  box.innerHTML=opts.map((o,k)=>`<button type="button" class="gchoice${st.active===i&&k===st.sel?' selected':''}" data-gopt="${escapeMarkup(o)}">${escapeMarkup(o)}</button>`).join('');
+}
+function gcellInit(){current.gstate={active:-1,done:new Set(),wrong:{},struck:{},streak:{},anyWrong:false,sel:0};gcellActivate(0);}
 function gcellActivate(i){
   const st=current.gstate,els=gcellEls();if(!st||!els.length)return;i=(i+els.length)%els.length;st.active=i;
   els.forEach((el,k)=>{const host=el.closest('td')||el;host.classList.toggle('gactive',k===i);});
-  const spec=current.source.cells[i],bar=$('gopts'),done=st.done.has(i);
-  if(bar){const opts=spec.options&&!done?spec.options:[];const struck=st.struck[i]||[];st.sel=Math.max(0,opts.findIndex(o=>!struck.includes(o)));
-    bar.innerHTML=opts.map((o,k)=>`<button type="button" data-gopt="${escapeMarkup(o)}" class="${k===st.sel?'selected':''}${struck.includes(o)?' struck':''}"${struck.includes(o)?' disabled':''}>${escapeMarkup(o)}</button>`).join('');}
+  const spec=current.source.cells[i],done=st.done.has(i);
+  st.sel=0;els.forEach((_,k)=>gcellChoices(k));
   const input=els[i].querySelector('input,textarea');if(input&&!done)setTimeout(()=>input.focus(),0);else document.activeElement?.blur?.();
   els[i].scrollIntoView?.({block:'nearest'});
 }
@@ -1305,20 +1319,51 @@ function gcellRight(spec,value){
   return [spec.answer,...(spec.aliases||[])].some(a=>spec.caseSensitive?String(a).replace(/\s/g,'')===v.replace(/\s/g,''):normalize(String(a))===normalize(v));
 }
 function gcellLock(i,shown,ok){const el=gcellEls()[i];el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
+function gcellShuffle(st,i,spec){const o=[...(st.order?.[i]||spec.options)];for(let k=o.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[o[k],o[j]]=[o[j],o[k]];}(st.order ||= {})[i]=o;}
+// Feedback (Hamish, 9 Nov 2026): a right answer flashes green with the right sound and moves on at once (a typed blank is accepted
+// the moment it matches); a wrong one flashes red with the wrong sound, empties the blank and returns to it. The second wrong
+// attempt opens a retro dialog giving the answer, which must then be entered. A wrong multiple-choice pick reshuffles the options
+// and needs the right one three times in a row.
+function gcellFlash(el,kind){el.classList.remove('flash-wrong','flash-right');void el.offsetWidth;el.classList.add(kind);}
+function gcellTell(i){   // the answer dialog, after the second wrong attempt
+  const st=current.gstate,spec=current.source.cells[i],dlg=$('gcell-dialog');if(!dlg?.showModal)return;
+  $('gcell-answer').textContent=spec.answer;
+  dlg.addEventListener('close',()=>{const input=gcellEls()[i]?.querySelector('input,textarea');if(input&&!st.done.has(i))input.focus();},{once:true});
+  dlg.showModal();
+}
 function gcellCommit(i,value){
   const st=current.gstate,spec=current.source.cells[i];if(!st||st.done.has(i))return;
-  if(gcellRight(spec,value)){gcellLock(i,typeof spec.check==='function'?value:spec.answer,true);   /* right shows ✓ even after a miss; the miss still counts against the question */playEffect('rouletteBet');}
+  const ok=gcellRight(spec,value),mc=!!spec.options,el=gcellEls()[i];
+  if(mc&&st.wrong[i]){   // after a miss on a multiple-choice blank: the right option three times in a row (options reshuffle each time)
+    if(ok){st.streak[i]=(st.streak[i]||0)+1;playEffect('correct');}
+    else{st.streak[i]=0;st.wrong[i]++;playEffect('wrong');}
+    if(st.streak[i]>=3){gcellLock(i,spec.answer,true);}
+    else{gcellShuffle(st,i,spec);gcellFlash(el,ok?'flash-right':'flash-wrong');el.querySelector('.gmark').textContent=ok?`✓ ${st.streak[i]}/3`:'✗ 0/3';gcellActivate(i);return;}
+  }
+  else if(ok){gcellLock(i,typeof spec.check==='function'?value:spec.answer,true);   /* right shows ✓ even after a miss; the miss still counts against the question */playEffect('correct');}
   else{
-    st.wrong[i]=(st.wrong[i]||0)+1;st.anyWrong=true;playEffect('wrong');
-    if(spec.options)(st.struck[i] ||= []).push(value);
-    if(st.wrong[i]>=2){gcellLock(i,spec.answer,false);}
-    else{const el=gcellEls()[i];el.classList.remove('miss');void el.offsetWidth;el.classList.add('miss');el.querySelector('.gmark').textContent='✗';gcellActivate(i);return;}
+    st.wrong[i]=(st.wrong[i]||0)+1;st.anyWrong=true;playEffect('wrong');gcellFlash(el,'flash-wrong');
+    if(mc){st.streak[i]=0;gcellShuffle(st,i,spec);el.querySelector('.gmark').textContent='✗ 0/3';gcellActivate(i);if(st.wrong[i]===2)gcellTell(i);return;}   // a miss reshuffles the options; nothing is struck out
+    const input=el.querySelector('input,textarea');if(input)input.value='';el.querySelector('.gmark').textContent='✗';gcellActivate(i);
+    if(st.wrong[i]===2)gcellTell(i);return;
   }
   const n=gcellEls().length,next=[...Array(n).keys()].map(k=>(i+1+k)%n).find(k=>!st.done.has(k));
   if(next===undefined){$('answer').value='table';setTimeout(()=>$('answer-form').requestSubmit(),350);}else gcellActivate(next);
 }
+// A typed blank is accepted as soon as it matches, unless a longer accepted answer starts with what is typed (then wait for ENTER).
+function gcellAutoAccept(input){
+  const st=current?.gstate;if(!st)return;const cell=input.closest('.gcell');if(!cell||input.tagName!=='INPUT')return;
+  const i=+cell.dataset.cell,spec=current.source.cells[i];if(!spec||spec.options||typeof spec.check==='function'||st.done.has(i)||st.active!==i)return;
+  const v=input.value;if(!v.trim()||!gcellRight(spec,v))return;
+  const typed=normalize(v);if([spec.answer,...(spec.aliases||[])].some(a=>{const n=normalize(String(a));return n!==typed&&n.startsWith(typed);}))return;
+  gcellCommit(i,v);
+}
+document.addEventListener('input',e=>{if(e.target.closest?.('#diagram .gcell'))gcellAutoAccept(e.target);});
 function gcellKey(event){
-  const st=current.gstate;if(!st)return;const i=st.active,spec=current.source.cells[i],bar=$('gopts');
+  const st=current.gstate;if(!st)return;const i=st.active,spec=current.source.cells[i],bar=gcellEls()[i];
+  if($('gcell-dialog')?.open)return;
+  if(event.key==='Tab'){event.preventDefault();const el=gcellEls()[i],v=el?.querySelector('input,textarea')?.value||'';
+    if(!st.done.has(i)&&!spec.options&&v.trim())gcellCommit(i,v);else{const n=gcellEls().length,k=[...Array(n).keys()].map(k=>(i+1+k)%n).find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);}return;}
   if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();gcellActivate(i+(event.key==='ArrowDown'?1:-1));return;}
   if(event.key==='Enter'){event.preventDefault();if(st.done.has(i)){const n=gcellEls().length,k=[...Array(n).keys()].find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);return;}
     if(spec.options){const b=bar?.querySelectorAll('[data-gopt]')[st.sel];if(b&&!b.disabled)gcellCommit(i,b.dataset.gopt);}
@@ -1328,9 +1373,12 @@ function gcellKey(event){
     let k=st.sel;do{k=(k+(event.key==='ArrowRight'?1:-1)+bs.length)%bs.length;}while(bs[k].disabled&&k!==st.sel);st.sel=k;bs.forEach((b,j)=>b.classList.toggle('selected',j===k));}
 }
 $('game-screen').addEventListener('click',event=>{
-  if(!current?.gstate)return;const opt=event.target.closest('#gopts [data-gopt]');
-  if(opt&&!opt.disabled){gcellCommit(current.gstate.active,opt.dataset.gopt);return;}
-  const el=event.target.closest('#diagram .gcell, #diagram td.gcell-td');if(el){const c=el.classList.contains('gcell')?el:el.querySelector('.gcell');if(c)gcellActivate(+c.dataset.cell);}
+  if(!current?.gstate)return;const opt=event.target.closest('#diagram .gchoice');
+  if(opt&&!opt.disabled){const cell=opt.closest('.gcell'),to=+cell.dataset.cell;if(!current.gstate.done.has(to)){current.gstate.active=to;gcellCommit(to,opt.dataset.gopt);}return;}
+  const el=event.target.closest('#diagram .gcell, #diagram td.gcell-td');if(el){const c=el.classList.contains('gcell')?el:el.querySelector('.gcell');
+    if(c){const to=+c.dataset.cell,st=current.gstate;
+      if(to!==st.active&&!st.done.has(st.active)&&!current.source.cells[st.active].options){const v=gcellEls()[st.active]?.querySelector('input,textarea')?.value||'';if(v.trim()){gcellCommit(st.active,v);if(!st.done.has(st.active)||st.done.has(to))return;}}   // leaving a filled blank checks it first
+      gcellActivate(to);}}
 });
 function routeAnswerKey(event){
   if(globalThis.CasinoExam?.ownsKey(event))return;
@@ -1451,7 +1499,8 @@ $('symbol-pad').addEventListener('click',event=>{
 const previewMode=new URLSearchParams(location.search).get('preview');
 if(previewMode==='1'||previewMode==='full'){
   saveProgress=function(){};
-  focus=function(){};   // never focus the answer box, so there's no blinking cursor
+  const LIVE=new URLSearchParams(location.search).get('live')==='1';   // the design sheet: a playable preview
+  if(!LIVE)focus=function(){};   // never focus the answer box, so there's no blinking cursor
   document.documentElement.dataset.preview='1';
   // Only the parts that belong to the question: no top bar, bank, ENTER button, hint line or symbol pad.
   if(previewMode==='1'){const st=document.createElement('style');st.textContent='header.arcade-hud,#player-badge,.answer-footer,#answer-result,#symbol-pad,#deck-progress,#unit-reminder{display:none!important}body::after{display:none!important}*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}#answer-slots{visibility:hidden}';document.head.append(st);}
@@ -1470,13 +1519,18 @@ if(previewMode==='1'||previewMode==='full'){
   const findItem=(unit,id)=>{let fallback=null;
     for(let i=0;i<levels.length;i++){const item=(levels[i].questions||[]).find(x=>x.id===id);if(item){if(levels[i].unit===unit)return [i,item];fallback=fallback||[i,item];}}
     return fallback;};
-  const showQuestion=(unit,id)=>{const hit=findItem(unit,id);if(!hit)return false;const [index,item]=hit;
+  const showQuestion=(unit,id,number)=>{const hit=findItem(unit,id);if(!hit)return false;const [index,item]=hit;if(number)item.questionNumber=number;
     try{selectedClass=unitClass(levels[index].unit)||selectedClass;}catch{}
     document.querySelectorAll('dialog[open]').forEach(d=>d.close());
     screen='game';document.documentElement.dataset.screen='game';$('game-screen').hidden=false;$('menu-screen').hidden=true;
-    questionLevel=index;current=makeRevisionQuestion(item,true);render();stop();document.activeElement?.blur?.();return true;};   // blur: a still picture, no blinking cursor
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data?.preview)return;const {unit,id}=e.data.preview;
-    let ok=false;try{ok=showQuestion(unit,id);}catch(err){console.warn('preview',err);}
+    questionLevel=index;current=makeRevisionQuestion(item,true);render();stop();if(!LIVE)document.activeElement?.blur?.();else activeRun=true;return true;};   // blur: a still picture, no blinking cursor
+  // Design sheet "Show answers": fills every open cell with its answer (marked right, nothing is scored or submitted);
+  // a plain one-answer question gets its answer typed into the answer line.
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data?.showAnswers||!current)return;
+    if(current.gstate){gcellEls().forEach((el,i)=>{if(!current.gstate.done.has(i)){const spec=current.source.cells[i];gcellLock(i,spec.answer,true);}});document.querySelectorAll('#diagram .gactive').forEach(x=>x.classList.remove('gactive'));document.activeElement?.blur?.();}
+    else{const input=$('answer');if(input){input.value=String(current.answer??'');input.dispatchEvent(new Event('input',{bubbles:true}));}}});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data?.preview)return;const {unit,id,number}=e.data.preview;
+    let ok=false;try{ok=showQuestion(unit,id,number);}catch(err){console.warn('preview',err);}
     // Let layout (and any answer-box sizing) settle before measuring.
     const src=e.source;requestAnimationFrame(()=>requestAnimationFrame(()=>{const box=ok?questionBox():null;src?.postMessage({previewShown:{unit,id,ok:!!box,box}},location.origin);}));});
   parent!==window&&parent.postMessage({previewReady:true},location.origin);

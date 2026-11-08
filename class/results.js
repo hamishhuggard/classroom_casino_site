@@ -8,7 +8,7 @@
   // (class.html -> index.html?mode=class: join screen, class code, results sent to the backend, unit chosen by the link).
   // The published /class/ copy sets CASINO_DEFAULT_MODE='class' in its results-config.js, so its plain URL is the class game.
   const modeParam=new URLSearchParams(location.search).get('mode'),classMode=!!window.CASINO_LOCK||modeParam==='class'||(window.CASINO_DEFAULT_MODE==='class'&&modeParam!=='plain');
-  if(!classMode){window.CasinoResults={record(){},send(){},report(){},player:'',name:'',code:'',enabled:false};return;}
+  if(!classMode){window.CasinoResults={record(){},send(){},report(){},event(){},answer(){},questionShown(){},player:'',name:'',code:'',enabled:false};return;}
   const api=String(new URLSearchParams(location.search).get('results-api')||window.CASINO_RESULTS_API||'').trim().replace(/\/+$/,'');
   const form=api?'':String(window.CASINO_RESULTS_FORM||'').trim();
   const KEY='casino-results-v1';
@@ -92,16 +92,114 @@
   const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   let code=window.CASINO_LOCK?.code||tidy(new URLSearchParams(location.search).get('code'));
   try{if(window.CASINO_LOCK?.code){/* locked: the link's code wins */}else if(CODE_RE.test(code))localStorage.setItem('casino-class-code',code);else code=localStorage.getItem('casino-class-code')||'';}catch{}
-  let dirty=count()>0;
+  let dirty=true; // report soon after joining (even before an answer) so the leaderboard shows the bank on screen
   function report(beacon){
-    if(!api||!code||!dirty||!count())return;
+    if(!api||!code||!dirty)return;
     const body=JSON.stringify({id:player,name,code,payload:payload(),written:Object.values(state.written||{})});dirty=false;
     if(beacon&&navigator.sendBeacon){navigator.sendBeacon(api+'/api/report',new Blob([body],{type:'text/plain'}));return;}
     // text/plain keeps this a simple request (no CORS preflight).
     fetch(api+'/api/report',{method:'POST',headers:{'Content-Type':'text/plain'},body,keepalive:true}).catch(()=>{dirty=true;});
   }
-  window.CasinoResults={record,payload,send,report,player,name,get code(){return code;},enabled:!!(form||api)};
+
+  // ---- Event log (needs the API): everything the student does, batched to POST /api/events (backend/server.py). ----
+  // Every event carries a client timestamp, a per-session sequence number (the server ignores repeats, so resending is safe),
+  // the bank and the unit. The queue survives a closed tab (localStorage) and is resent next time.
+  const EVKEY='casino-events-v1',SESSION=Math.random().toString(36).slice(2,10).padEnd(8,'0');
+  let seq=0,queue=[],flushing=false,qstate=null,hiddenSince=document.visibilityState==='hidden'?Date.now():0;
+  try{const old=JSON.parse(localStorage.getItem(EVKEY)||'[]');if(Array.isArray(old))queue=old.filter(e=>e&&e.code&&e.s);}catch{}
+  const trim=(v,n)=>String(v??'').replace(/\s+/g,' ').trim().slice(0,n);
+  function ev(type,data){
+    if(!api)return;
+    try{
+      queue.push({s:SESSION,code,seq:++seq,t:Date.now(),type,bank:typeof score==='number'?Math.round(score):null,unit:typeof selectedUnit==='string'?selectedUnit:'',...data});
+      if(queue.length>3000)queue.splice(0,queue.length-3000);
+    }catch{}
+  }
+  function saveQueue(){try{localStorage.setItem(EVKEY,JSON.stringify(queue.slice(-2000)));}catch{}}
+  async function flush(beacon){
+    if(!api||(flushing&&!beacon))return;
+    for(const e of queue)if(!e.code&&e.s===SESSION&&code)e.code=code; // events before the class code was entered join its class
+    const ready=queue.filter(e=>e.code);if(!ready.length)return;
+    const first=ready[0],batch=ready.filter(e=>e.s===first.s&&e.code===first.code).slice(0,beacon?100:300);
+    const body=JSON.stringify({id:player,code:first.code,session:first.s,events:batch.map(({s,code:c,...rest})=>rest)});
+    if(beacon&&navigator.sendBeacon){navigator.sendBeacon(api+'/api/events',new Blob([body],{type:'text/plain'}));saveQueue();return;}
+    flushing=true;
+    try{
+      const res=await fetch(api+'/api/events',{method:'POST',headers:{'Content-Type':'text/plain'},body,keepalive:true});
+      if(res.ok){const done=new Set(batch);queue=queue.filter(e=>!done.has(e));saveQueue();}
+    }catch{}finally{flushing=false;}
+  }
+  // A question was (re)shown: start the per-question counters and log what the student sees.
+  function questionShown(){
+    if(!api||typeof current==='undefined'||!current)return;
+    try{
+      qstate={at:Date.now(),hidden:0,keys:0,inputs:0,first:0,pastes:0,shadow:null};
+      const src=current.source,seen=trim((document.getElementById('prompt')?.innerText||'')+' '+(document.querySelector('.choice-question')?.innerText||''),600);
+      ev('question_shown',{qid:questionKey(),level:levels[questionLevel]?.name||'',kind:current.kind||'',text:seen||trim(current.prompt,600),prompt:trim(current.prompt,600),
+        expected:trim(current.answer+(current.unit?' '+current.unit:''),200),attempt:attempts+1,
+        review:typeof currentReview!=='undefined'&&currentReview?{seen:!!currentReview.review,stage:currentReview.stage}:null,
+        timed:!!document.getElementById('timed')?.checked,secs:typeof seconds==='number'?seconds:null,src:src?.id||''});
+    }catch{}
+  }
+  // The student got feedback on an answer (right, wrong or timed out). how: 'submitted' | 'timeout'.
+  function answer(ok,how){
+    if(!api||typeof current==='undefined'||!current)return;
+    try{
+      const st=qstate||{at:Date.now(),hidden:0,keys:0,inputs:0,first:0,pastes:0,shadow:null};
+      const box=document.getElementById('answer'),val=box?box.value:'',hid=st.hidden+(hiddenSince?Date.now()-hiddenSince:0);
+      const written=current.source?.selfMark&&document.querySelector('.exam-written');
+      ev('answer',{qid:questionKey(),ok:!!ok,how:how==='timeout'?'timeout':'submitted',attempt:attempts+1,
+        entered:trim(written&&written.value.trim()?written.value:val,2000),expected:trim(current.answer+(current.unit?' '+current.unit:''),200),
+        ms:Math.max(0,Date.now()-st.at-hid),hiddenMs:hid,firstKeyMs:st.first?st.first-st.at:null,keys:st.keys,inputs:st.inputs,len:val.length,
+        mismatch:st.shadow!==null&&st.shadow!==val,pastes:st.pastes,timed:!!document.getElementById('timed')?.checked,
+        secs:typeof seconds==='number'?seconds:null,review:typeof currentReview!=='undefined'&&currentReview?{seen:!!currentReview.review,stage:currentReview.stage}:null});
+    }catch{}
+  }
+  window.CasinoResults={record,payload,send,report,event:ev,answer,questionShown,player,name,get code(){return code;},enabled:!!(form||api)};
   if(api){
+    // Typing signals, and no pasting: a blocked paste or drop is logged instead (the join screen's class-code field may be pasted into).
+    const isField=t=>!!t&&t.id!=='class-code'&&(!!t.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=range]),textarea')||!!t.isContentEditable);
+    const blockPaste=(e,how)=>{
+      if(!isField(e.target))return;
+      let text='';try{text=(e.clipboardData||e.dataTransfer)?.getData('text')||'';}catch{}
+      e.preventDefault();if(qstate)qstate.pastes++;
+      ev('paste_blocked',{how,len:text.length,text:trim(text,200),field:e.target.id||e.target.className||e.target.tagName});
+    };
+    document.addEventListener('paste',e=>blockPaste(e,'paste'),true);
+    document.addEventListener('drop',e=>blockPaste(e,'drop'),true);
+    document.addEventListener('beforeinput',e=>{if(/^insertFrom(Paste|Drop|PasteAsQuotation)$/.test(e.inputType))blockPaste(e,e.inputType);},true);
+    document.addEventListener('keydown',e=>{
+      if(!qstate||!e.isTrusted||!isField(e.target))return;
+      if(e.key.length===1||e.key==='Backspace'||e.key==='Delete'){qstate.keys++;if(!qstate.first)qstate.first=Date.now();}
+    },true);
+    document.addEventListener('input',e=>{
+      if(!qstate)return;
+      if(e.target?.id==='answer')qstate.shadow=e.target.value;   // what the input events say the box holds
+      if(e.isTrusted){qstate.inputs++;if(!qstate.first)qstate.first=Date.now();}
+    },true);
+    // Everything else the student does: clicks (not inside text fields), changes to controls, dialogs opening and closing, tab visibility.
+    document.addEventListener('click',e=>{
+      const el=e.target?.closest?.('button,a,[data-practice],[data-unit],[data-skill],[role=button],label,summary');if(!el||isField(e.target))return;
+      ev('click',{id:el.id||'',cls:trim(el.className&&el.className.baseVal!==undefined?el.className.baseVal:el.className,60),text:trim(el.innerText||el.getAttribute('aria-label'),40),data:{...el.dataset}});
+    },true);
+    document.addEventListener('change',e=>{
+      const t=e.target;if(!t||!t.matches?.('select,input[type=checkbox],input[type=radio],input[type=range]'))return;
+      ev('change',{id:t.id||t.name||'',value:t.type==='checkbox'||t.type==='radio'?!!t.checked:trim(t.value,60)});
+    },true);
+    const dialogs=new MutationObserver(list=>{for(const m of list)if(m.attributeName==='open'&&m.target.tagName==='DIALOG')ev('dialog',{id:m.target.id||'',open:m.target.open});});
+    document.querySelectorAll('dialog').forEach(d=>dialogs.observe(d,{attributes:true,attributeFilter:['open']}));
+    document.addEventListener('visibilitychange',()=>{
+      const hidden=document.visibilityState==='hidden';
+      if(hidden){hiddenSince=Date.now();}else if(hiddenSince){if(qstate)qstate.hidden+=Date.now()-hiddenSince;hiddenSince=0;}
+      ev('visibility',{state:document.visibilityState});
+      if(hidden){flush(true);saveQueue();}
+    });
+    window.addEventListener('pagehide',()=>{flush(true);saveQueue();});
+    setInterval(()=>flush(false),3000);
+    // Re-showing a question (first time, or after a wrong answer) starts its counters: wrap the app's render().
+    if(typeof render==='function'){const original=render;render=function(){const r=original.apply(this,arguments);questionShown();return r;};}
+    ev('session_start',{ver:window.CASINO_VERSION||'dev',ua:trim(navigator.userAgent,200),w:innerWidth,h:innerHeight,dpr:window.devicePixelRatio||1,touch:navigator.maxTouchPoints||0,
+      lang:navigator.language||'',tz:new Date().getTimezoneOffset(),locked:!!window.CASINO_LOCK});
     // Show the student their leaderboard name on the main menu.
     const hint=document.querySelector('#menu-screen .menu-hint');
     let tag=null;
@@ -123,17 +221,19 @@
       const screen=document.createElement('section');screen.id='class-code-screen';screen.setAttribute('aria-labelledby','class-code-title');
       screen.style.cssText='position:fixed;inset:0;z-index:120;background:var(--paper);color:var(--ink);display:grid;place-items:center;text-align:center;padding:24px;overflow:auto';
       const art=globalThis.animalIcon?.(name,1,true)||'';
-      screen.innerHTML=`<form style="display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,22px)"><p class="menu-hint" style="margin:0;animation:none;opacity:1">YOU ARE</p><div id="join-art" style="line-height:0">${art}</div><h1 id="class-code-title" style="font-size:clamp(30px,8vh,76px);margin:0;color:var(--a2-green,var(--ink))">${name.toUpperCase()}</h1>${unitName?`<p class="menu-hint" style="margin:0;animation:none;opacity:1">TODAY: ${unitName}</p>`:''}<label for="class-code" class="menu-hint" style="margin:clamp(4px,2vh,24px) 0 0;animation:none;opacity:1">ENTER YOUR CLASS CODE</label><input id="class-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" value="${code}" style="font:inherit;font-size:clamp(30px,7vh,56px);width:7em;max-width:90vw;text-align:center;text-transform:uppercase;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:8px"><p id="class-code-error" class="menu-hint" style="min-height:1.5em;margin:0" aria-live="polite">PRESS ENTER TO START</p></form>`;
+      // A valid ?code= in the link means no code field: just the character, name, unit and a START button.
+      const linked=!window.CASINO_LOCK?.code&&CODE_RE.test(tidy(new URLSearchParams(location.search).get('code')));
+      screen.innerHTML=`<form style="display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,22px)"><p class="menu-hint" style="margin:0;animation:none;opacity:1">YOU ARE</p><div id="join-art" style="line-height:0">${art}</div><h1 id="class-code-title" style="font-size:clamp(30px,8vh,76px);margin:0;color:var(--a2-green,var(--ink))">${name.toUpperCase()}</h1>${unitName?`<p class="menu-hint" style="margin:0;animation:none;opacity:1">TODAY: ${unitName}</p>`:''}${linked?`<button type="submit" id="class-start" style="font-size:clamp(26px,6vh,48px);letter-spacing:.08em;padding:10px 36px;margin-top:clamp(8px,3vh,32px);background:var(--ink);color:var(--paper);border:2px solid var(--ink);box-shadow:4px 4px 0 var(--a2-green,var(--line))">START</button>`:`<label for="class-code" class="menu-hint" style="margin:clamp(4px,2vh,24px) 0 0;animation:none;opacity:1">ENTER YOUR CLASS CODE</label><input id="class-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" value="${code}" style="font:inherit;font-size:clamp(30px,7vh,56px);width:7em;max-width:90vw;text-align:center;text-transform:uppercase;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:8px"><p id="class-code-error" class="menu-hint" style="min-height:1.5em;margin:0" aria-live="polite">PRESS ENTER TO START</p>`}</form>`;
       // Locked link with a code: no join screen, boot.js starts the unit straight away.
       if(window.CASINO_LOCK?.code)screen.hidden=true;else document.body.append(screen);
       const svg=screen.querySelector('#join-art svg');if(svg){const size=Math.max(96,Math.min(innerHeight*.34,320));svg.setAttribute('width',size);svg.setAttribute('height',size);}
-      const input=screen.querySelector('#class-code');
+      const input=screen.querySelector('#class-code'),startBtn=screen.querySelector('#class-start');
       // Start (or restart, from the menu's START) the unit chosen by the link: the Everything mixed tile unless ?tile= names another.
       const begin=()=>{const before=enabled;beginPractice(tile);if(enabled===before)openPractice(tile);};
       window.CasinoClass={restart:begin};
       screen.addEventListener('keydown',e=>e.stopPropagation());
-      screen.querySelector('form').onsubmit=e=>{e.preventDefault();const v=tidy(input.value);if(!CODE_RE.test(v)){screen.querySelector('#class-code-error').textContent='2 TO 12 LETTERS OR NUMBERS';return;}code=v;try{localStorage.setItem('casino-class-code',code);}catch{}screen.remove();showTag();dirty=true;begin();};
-      if(!screen.hidden)input.focus();
+      screen.querySelector('form').onsubmit=e=>{e.preventDefault();const v=linked?code:tidy(input.value);if(!CODE_RE.test(v)){screen.querySelector('#class-code-error').textContent='2 TO 12 LETTERS OR NUMBERS';return;}code=v;try{localStorage.setItem('casino-class-code',code);}catch{}ev('join',{code});screen.remove();showTag();dirty=true;begin();};
+      if(!screen.hidden)(startBtn||input).focus();
     }
     // The bank also changes in the roulette without any answer being recorded, so notice that too.
     let lastBank=null;

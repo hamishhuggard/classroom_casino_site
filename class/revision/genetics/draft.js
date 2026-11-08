@@ -1,19 +1,24 @@
 /* DRAFT genetics test-style templates in the real game, for review only (8 Nov 2026).
    Loaded by index.html only with ?draft=genetics; without it the game is unchanged.
-   Replaces the genetics unit's skills with one skill per test question (Q1, Q2, Q3, Extra); each template is one card.
+   Replaces the genetics unit's skills with one skill per learning outcome (LO1–5); each template is one card.
    The design sheet (revision/genetics-templates.html) shows each template through index.html?preview=full&draft=genetics. */
 (function(){
  const T=globalThis.GENETICS_T;
  const unit=typeof REVISION_UNITS!=='undefined'?REVISION_UNITS.find(u=>u.id==='genetics'):null;
  if(!T||!unit)return;
- const NAMES={Q1:'Traits and variation',LI2:'Variation',Q2:'DNA, genes and chromosomes',Q3:'Inheritance',Extra:'Bonus questions'};
- // One skill per test question; a template with a skill key (e.g. 1a's six levels) gets its own ordered skill, played by tier.
- const SKILLNAMES={};
- unit.skills=[];
- for(const g of Object.keys(NAMES)){const ts=T.templates.filter(t=>t.group===g);
-  for(const k of [...new Set(ts.filter(t=>t.skill).map(t=>t.skill))]){const n=ts.find(t=>t.skill===k).skillName||SKILLNAMES[k]||k;unit.skills.push({id:'genetics-'+k,name:n,summary:n,example:'',ordered:true,
-   questions:ts.filter(t=>t.skill===k).sort((a,b)=>a.tier-b.tier).map(t=>({id:'GT-'+t.id,unit:n,skill:n,tier:t.tier,gen:r=>t.gen(r)}))});}
-  const rest=ts.filter(t=>!t.skill);if(rest.length)unit.skills.push({id:'genetics-'+g.toLowerCase(),name:NAMES[g],summary:NAMES[g],example:'',
-   questions:rest.map(t=>({id:'GT-'+t.id,unit:NAMES[g],skill:NAMES[g],tier:1,gen:r=>t.gen(r)}))});}
+ // One skill per learning outcome, named for its content, not its question type (Hamish, 9 Nov 2026).
+ const NAMES={1:'Traits and variation',2:'Variation in populations',3:'DNA, genes and chromosomes',4:'Alleles and inheritance',5:'Natural selection and breeding'};
+ const ORDER=['Q1','LI2','Q2','Q3','Extra'];
+ // Play order (Hamish, 9 Nov 2026): level 1 of each success criterion, then level 2 of each, and so on; a criterion that runs out
+ // of levels repeats its last one. scKey/lv on each question; mixedQuestionPicker in app.js reads them.
+ const firstSC=t=>t.sc.split(';')[0].trim();
+ const bySC=new Map();
+ T.templates.slice().sort((a,b)=>a.li-b.li||ORDER.indexOf(a.group)-ORDER.indexOf(b.group)).forEach(t=>{const k=t.li+'|'+firstSC(t);if(!bySC.has(k))bySC.set(k,[]);bySC.get(k).push(t);});
+ const LV=new Map();
+ for(const [k,list] of bySC){const tiered=list.filter(t=>t.tier).sort((a,b)=>a.tier-b.tier),rest=list.filter(t=>!t.tier);[...tiered,...rest].forEach((t,i)=>LV.set(t,{scKey:k,lv:i+1}));}
+ unit.skills=Object.keys(NAMES).map(Number).map(li=>{const n=NAMES[li];
+  const ts=T.templates.filter(t=>t.li===li).sort((a,b)=>ORDER.indexOf(a.group)-ORDER.indexOf(b.group)||(a.tier||0)-(b.tier||0));
+  return {id:'genetics-lo'+li,name:n,summary:n,example:'',questions:ts.map(t=>({id:'GT-'+t.id,unit:n,skill:n,tier:t.tier||1,scKey:LV.get(t).scKey,lv:LV.get(t).lv,gen:r=>t.gen(r)}))};
+ }).filter(s=>s.questions.length);
  unit.mixedName='All genetics';unit.generated=true;unit.draft=true;
 })();

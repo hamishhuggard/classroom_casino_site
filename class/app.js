@@ -181,6 +181,11 @@ function correctionLayout(model){
   const entry=copy.querySelector('#entry-wrap');
   if(entry){const value=model?current.answer+(expectedAnswerUnit(current)?' '+expectedAnswerUnit(current):''):$('answer').value;entry.innerHTML='<span class="correction-filled">'+scienceMarkup(value||'—')+' <span class="answer-mark">'+(model?'✓':'✗')+'</span></span>';}
   copy.querySelector('#gopts')?.remove();
+  if(current.gstate&&current.source?.cells){   // table/paragraph cells: drop the repeat rows; the left side shows each miss as first answered
+    const st=current.gstate;
+    copy.querySelectorAll('.gcell').forEach(c=>{const i=+c.dataset.cell;if(current.source.cells[i]?.repeat){(c.closest('tr')||c).remove();return;}
+      if(!model&&st.first?.[i]!==undefined){c.className='gcell wrong';c.innerHTML='<span class="gfilled">'+escapeMarkup(st.first[i]||'—')+'</span> <span class="gmark">✗</span>';}});
+  }
   if(model)copy.querySelectorAll('.gcell').forEach(c=>{c.className='gcell right';c.innerHTML='<span class="gfilled">'+escapeMarkup(current.source.cells[+c.dataset.cell].answer)+'</span> <span class="gmark">✓</span>';});
   copy.querySelectorAll('.gactive').forEach(td=>td.classList.remove('gactive'));
   copy.querySelectorAll('.shell-input').forEach((field,i)=>{const span=document.createElement('span');span.className='correction-filled';span.innerHTML=scienceMarkup(model?parts[i]:field.value||'—')+' <span class="answer-mark">'+(model?'✓':'✗')+'</span>';field.replaceWith(span);});
@@ -266,15 +271,16 @@ function gcellSpan(c,cells){const spec=cells?.[c.cell]||{};
 function gparaMarkup(v,cells){const stem=v.stem?`<div class="gpara-stem">${escapeMarkup(v.stem).replace(/\n/g,'<br>')}</div>`:'';return `<div class="gpara">${v.svg?`<div class="gpara-side"><div class="gpic">${v.svg}</div>${stem}<div class="gpara-answer">${gparaBody(v.parts,cells)}</div></div>`:`${stem}<div class="gpara-answer">${gparaBody(v.parts,cells)}</div>`}</div>`;}
 /* {bullet:true} parts split the answer into bullet points, one sentence each. */
 function gparaBody(parts,cells){const item=p=>typeof p==='string'?escapeMarkup(p):gcellSpan(p,cells);if(!parts.some(p=>p?.bullet))return parts.map(item).join('');const items=[];for(const p of parts)if(p?.bullet)items.push([]);else(items.at(-1)||items[items.push([])-1]).push(item(p));return `<ul class="gpara-list">${items.map(x=>`<li>${x.join('').trim()}</li>`).join('')}</ul>`;}
+function gtableCellHtml(c,live,cells){
+  if(c==null)return '';if(typeof c!=='object')return escapeMarkup(c);
+  if(c.cell!=null)return (c.pre?escapeMarkup(c.pre):'')+gcellSpan(c,cells)+(c.post?escapeMarkup(c.post):'');
+  if(c.field!=null)return `<input class="shell-input gtable-input${c.wide?' wide':''}" data-shell="${c.field}" form="answer-form" aria-label="${escapeMarkup(c.label||'answer')}" autocomplete="off" spellcheck="false">`;
+  return (c.pre?escapeMarkup(c.pre):'')+(c.blank?(live?'<span id="cloze-answer-slot"></span>':'<span class="gtable-ask">?</span>'):'')+(c.post?escapeMarkup(c.post):'');
+}
+function gtableCellClass(c){return c&&typeof c==='object'&&(c.blank||c.field!=null||c.cell!=null)?` class="blank${c.pre||c.post?' inline':''}${c.cell!=null?' gcell-td':''}"`:'';}
+function gtableRowHtml(r,rowIndex,live,cells){return `<tr data-row="${rowIndex}">${r.map(c=>`<td${gtableCellClass(c)}>${gtableCellHtml(c,live,cells)}</td>`).join('')}</tr>`;}
 function gtableMarkup(v,live,cells){
-  const cell=c=>{
-    if(c==null)return '';if(typeof c!=='object')return escapeMarkup(c);
-    if(c.cell!=null)return (c.pre?escapeMarkup(c.pre):'')+gcellSpan(c,cells)+(c.post?escapeMarkup(c.post):'');
-    if(c.field!=null)return `<input class="shell-input gtable-input${c.wide?' wide':''}" data-shell="${c.field}" form="answer-form" aria-label="${escapeMarkup(c.label||'answer')}" autocomplete="off" spellcheck="false">`;
-    return (c.pre?escapeMarkup(c.pre):'')+(c.blank?(live?'<span id="cloze-answer-slot"></span>':'<span class="gtable-ask">?</span>'):'')+(c.post?escapeMarkup(c.post):'');
-  };
-  const cls=c=>c&&typeof c==='object'&&(c.blank||c.field!=null||c.cell!=null)?` class="blank${c.pre||c.post?' inline':''}${c.cell!=null?' gcell-td':''}"`:'';
-  const tbl=`<table class="phys-table gtable">${v.headers?`<thead><tr>${v.headers.map(h=>`<th>${escapeMarkup(h)}</th>`).join('')}</tr></thead>`:''}<tbody>${v.rows.map(r=>`<tr>${r.map(c=>`<td${cls(c)}>${cell(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const tbl=`<table class="phys-table gtable">${v.headers?`<thead><tr>${v.headers.map(h=>`<th>${escapeMarkup(h)}</th>`).join('')}</tr></thead>`:''}<tbody>${v.rows.map((r,i)=>gtableRowHtml(r,i,live,cells)).join('')}</tbody></table>`;
   return v.svg?`<div class="gtable-wrap"><div class="gpic">${v.svg}</div>${tbl}</div>`:tbl; /* svg: the picture beside the table */
 }
 function questionInstruction(){
@@ -1308,13 +1314,17 @@ function selectConnection(value){$('answer').value=value;document.querySelectorA
 // answered from the option bar under the table (← → and ENTER, or click), a typed cell with ENTER. Each cell is marked at once:
 // right locks it (✓); wrong shows ✗ and strikes that option; a second miss reveals the answer. When every cell is done the
 // question is submitted: right if every cell was right first time.
-function gcellEls(){return [...document.querySelectorAll('#diagram .gcell')];}
+function gcellEls(){return [...document.querySelectorAll('#diagram .gcell')].sort((a,b)=>+a.dataset.cell-+b.dataset.cell);}   // by cell index
+function gcellOrder(){return [...document.querySelectorAll('#diagram .gcell')].map(e=>+e.dataset.cell);}   // cell indices in on-screen order (repeat rows sit mid-table)
+function gcellStep(i,d){const o=gcellOrder(),n=o.length;return o[(o.indexOf(i)+d+n)%n];}
+function gcellNextOpen(i){const st=current.gstate,o=gcellOrder(),p=o.indexOf(i),n=o.length;return [...Array(n).keys()].map(k=>o[(p+1+k)%n]).find(k=>!st.done.has(k));}
 function gcellChoices(i){   // every option of a multiple-choice blank shows inside the blank; reshuffled after a miss
   const st=current.gstate,spec=current.source.cells[i],el=gcellEls()[i],box=el?.querySelector('.gchoices');if(!box||!spec.options)return;
   const opts=st.order?.[i]||spec.options;
   box.innerHTML=opts.map((o,k)=>`<button type="button" class="gchoice${st.active===i&&k===st.sel?' selected':''}" data-gopt="${escapeMarkup(o)}">${escapeMarkup(o)}</button>`).join('');
 }
-function gcellInit(){current.gstate={active:-1,done:new Set(),wrong:{},struck:{},streak:{},anyWrong:false,sel:0};gcellActivate(0);}
+function gcellInit(){current.source={...current.source,cells:current.source.cells.map(c=>({...c}))};   // per-question copy: repeat rows add cells
+  current.gstate={active:-1,done:new Set(),wrong:{},struck:{},streak:{},anyWrong:false,sel:0};gcellActivate(gcellOrder()[0]??0);}
 function gcellActivate(i){
   const st=current.gstate,els=gcellEls();if(!st||!els.length)return;i=(i+els.length)%els.length;st.active=i;
   els.forEach((el,k)=>{const host=el.closest('td')||el;host.classList.toggle('gactive',k===i);});
@@ -1329,12 +1339,25 @@ function gcellRight(spec,value){
   return [spec.answer,...(spec.aliases||[])].some(a=>spec.caseSensitive?String(a).replace(/\s/g,'')===v.replace(/\s/g,''):normalize(String(a))===normalize(v));
 }
 // Points for every correct blank: $2 for one right first time, $1 for one right after a miss (a question with several blanks pays several times).
-function gcellLock(i,shown,ok,award=true){const el=gcellEls()[i];if(ok&&award&&current.gstate&&!current.gstate.done.has(i)){const pts=current.gstate.wrong[i]?1:2;score+=pts;hud();cashPop(pts);}el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
+function gcellLock(i,shown,ok,award=true){const el=gcellEls()[i];if(ok&&award&&current.gstate&&!current.gstate.done.has(i)&&!current.source.cells[i].repeat){const pts=current.gstate.wrong[i]?1:2;score+=pts;hud();cashPop(pts);}el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
+// After a blank (multiple choice or typed) is missed and then answered right, the same question comes back as a new row two rows down.
+function gcellRepeat(i){
+  const spec=current.source.cells[i],el=gcellEls()[i],tr=el?.closest('tr'),tbody=tr?.parentElement,vis=current.source.visual;
+  if(!tr||!tbody||vis?.type!=='gtable')return;
+  const src=vis.rows[+tr.dataset.row];if(!src)return;
+  const ni=current.source.cells.length;current.source.cells.push({...spec,repeat:true,origCell:spec.origCell??i});
+  const row=src.map(c=>{if(!c||typeof c!=='object'||c.cell==null)return c;if(c.cell===(spec.origCell??i))return {...c,cell:ni};   // the missed cell comes back blank; other answered cells show their answers
+    const o=current.source.cells[c.cell];return (c.pre||'')+o.answer+(c.post||'');});
+  const holder=document.createElement('tbody');holder.innerHTML=gtableRowHtml(row,tr.dataset.row,false,current.source.cells);
+  const rows=[...tbody.rows],at=rows.indexOf(tr)+2,newRow=holder.firstElementChild;
+  if(at<rows.length)tbody.insertBefore(newRow,rows[at]);else tbody.appendChild(newRow);
+  gcellChoices(ni);
+}
 function gcellShuffle(st,i,spec){const o=[...(st.order?.[i]||spec.options)];for(let k=o.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[o[k],o[j]]=[o[j],o[k]];}(st.order ||= {})[i]=o;}
 // Feedback (Hamish, 9 Nov 2026): a right answer flashes green with the right sound and moves on at once (a typed blank is accepted
 // the moment it matches); a wrong one flashes red with the wrong sound, empties the blank and returns to it. The second wrong
-// attempt opens a retro dialog giving the answer, which must then be entered. A wrong multiple-choice pick reshuffles the options
-// and needs the right one three times in a row.
+// attempt opens a retro dialog giving the answer, which must then be entered. A wrong multiple-choice pick reshuffles the options;
+// once it is then answered right, the question is added again as a new row two rows down (no points for the repeat).
 function gcellFlash(el,kind){el.classList.remove('flash-wrong','flash-right');void el.offsetWidth;el.classList.add(kind);}
 function gcellTell(i){   // the answer dialog, after the second wrong attempt
   const st=current.gstate,spec=current.source.cells[i],dlg=$('gcell-dialog');if(!dlg?.showModal)return;
@@ -1345,20 +1368,15 @@ function gcellTell(i){   // the answer dialog, after the second wrong attempt
 function gcellCommit(i,value){
   const st=current.gstate,spec=current.source.cells[i];if(!st||st.done.has(i))return;
   const ok=gcellRight(spec,value),mc=!!spec.options,el=gcellEls()[i];
-  if(mc&&st.wrong[i]){   // after a miss on a multiple-choice blank: the right option three times in a row (options reshuffle each time)
-    if(ok){st.streak[i]=(st.streak[i]||0)+1;playEffect('correct');}
-    else{st.streak[i]=0;st.wrong[i]++;playEffect('wrong');}
-    if(st.streak[i]>=3){gcellLock(i,spec.answer,true);}
-    else{gcellShuffle(st,i,spec);gcellFlash(el,ok?'flash-right':'flash-wrong');el.querySelector('.gmark').textContent=ok?`✓ ${st.streak[i]}/3`:'✗ 0/3';gcellActivate(i);return;}
-  }
+  if(st.wrong[i]&&ok){gcellLock(i,typeof spec.check==='function'?value:spec.answer,true);playEffect('correct');gcellRepeat(i);}   // right after a miss: locked, and the question returns as a new row two rows down
   else if(ok){gcellLock(i,typeof spec.check==='function'?value:spec.answer,true);   /* right shows ✓ even after a miss; the miss still counts against the question */playEffect('correct');}
   else{
-    st.wrong[i]=(st.wrong[i]||0)+1;st.anyWrong=true;playEffect('wrong');gcellFlash(el,'flash-wrong');
-    if(mc){st.streak[i]=0;gcellShuffle(st,i,spec);el.querySelector('.gmark').textContent='✗ 0/3';gcellActivate(i);if(st.wrong[i]===2)gcellTell(i);return;}   // a miss reshuffles the options; nothing is struck out
+    st.wrong[i]=(st.wrong[i]||0)+1;st.anyWrong=true;(st.first||={})[i]??=String(value||'').trim();playEffect('wrong');gcellFlash(el,'flash-wrong');
+    if(mc){gcellShuffle(st,i,spec);el.querySelector('.gmark').textContent='✗';gcellActivate(i);if(st.wrong[i]===2)gcellTell(i);return;}   // a miss reshuffles the options; nothing is struck out
     const input=el.querySelector('input,textarea');if(input)input.value='';el.querySelector('.gmark').textContent='✗';gcellActivate(i);
     if(st.wrong[i]===2)gcellTell(i);return;
   }
-  const n=gcellEls().length,next=[...Array(n).keys()].map(k=>(i+1+k)%n).find(k=>!st.done.has(k));
+  const next=gcellNextOpen(i);
   if(next===undefined){$('answer').value='table';setTimeout(()=>$('answer-form').requestSubmit(),350);}else gcellActivate(next);
 }
 // A typed blank is accepted as soon as it matches, unless a longer accepted answer starts with what is typed (then wait for ENTER).
@@ -1374,9 +1392,9 @@ function gcellKey(event){
   const st=current.gstate;if(!st)return;const i=st.active,spec=current.source.cells[i],bar=gcellEls()[i];
   if($('gcell-dialog')?.open)return;
   if(event.key==='Tab'){event.preventDefault();const el=gcellEls()[i],v=el?.querySelector('input,textarea')?.value||'';
-    if(!st.done.has(i)&&!spec.options&&v.trim())gcellCommit(i,v);else{const n=gcellEls().length,k=[...Array(n).keys()].map(k=>(i+1+k)%n).find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);}return;}
-  if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();gcellActivate(i+(event.key==='ArrowDown'?1:-1));return;}
-  if(event.key==='Enter'){event.preventDefault();if(st.done.has(i)){const n=gcellEls().length,k=[...Array(n).keys()].find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);return;}
+    if(!st.done.has(i)&&!spec.options&&v.trim())gcellCommit(i,v);else{const k=gcellNextOpen(i);if(k!==undefined)gcellActivate(k);}return;}
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();gcellActivate(gcellStep(i,event.key==='ArrowDown'?1:-1));return;}
+  if(event.key==='Enter'){event.preventDefault();if(st.done.has(i)){const k=gcellOrder().find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);return;}
     if(spec.options){const b=bar?.querySelectorAll('[data-gopt]')[st.sel];if(b&&!b.disabled)gcellCommit(i,b.dataset.gopt);}
     else gcellCommit(i,gcellEls()[i].querySelector('input,textarea')?.value);return;}
   if(event.key===' '&&gcellEls()[i]?.classList.contains('wordcell')&&!st.done.has(i)){event.preventDefault();gcellCommit(i,gcellEls()[i].querySelector('input')?.value);return;}

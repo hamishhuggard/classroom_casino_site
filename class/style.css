@@ -652,3 +652,12 @@ html[data-locked] #practice-dialog,html[data-locked] #settings-dialog,html[data-
 /* The active blank is marked on the table cell (td) in tables and on the blank itself in paragraphs. */
 .gactive .gchoice.selected,.gactive .gchoice:focus-visible{background:var(--ink);color:var(--paper)}
 .gchoice{opacity:.75}.gactive .gchoice{opacity:1}
+/* A repeat row added to a table blinks three times so students notice it. */
+@keyframes row-added{0%,49%{background:var(--ink);color:var(--paper)}50%,100%{background:transparent;color:var(--ink)}}
+tr.row-added>td{animation:row-added .9s steps(1,end) 3}
+/* Correction screen: a table with a picture stacks the picture above the table and fits one column. */
+.correction-grid>section{min-width:0}
+.correction-grid .gtable-wrap{flex-direction:column;gap:12px}
+.correction-grid .gtable-wrap .gpic{width:clamp(120px,14vw,190px);max-width:100%}
+.correction-grid .gtable-wrap .gpic svg{display:block;width:100%;height:auto;max-height:150px}
+.correction-grid .phys-table.gtable{min-width:0;width:100%;max-width:100%;font-size:clamp(12px,1.2vw,17px)}

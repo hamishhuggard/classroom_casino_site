@@ -32,7 +32,7 @@
  // ---------- 1(b) Inherited and environmental factors: the whole I or E column ----------
  const INH=['Eye colour','Natural hair colour','Blood group','Rhesus blood factor (+ or −)','Earlobe shape (attached or free)','Natural hair texture (curly or straight)',
   'Dimples','Colour blindness','Albinism','Widow’s peak hairline','Cleft chin','Being able to taste a bitter chemical (PTC)'];
- const ENV=['Scar from a basketball injury','Scar from a rugby injury','A tattoo','Pierced ears','The language a person speaks','A suntan','A sunburn','Dyed hair','A broken arm',
+ const ENV=['Scar from a basketball injury','Scar from a rugby injury','A tattoo','Pierced ears','The language a person speaks','A suntan','A grazed knee','Dyed hair','A broken arm',
   'Braces on teeth','A haircut','Calluses from playing guitar','Being able to ride a bike','Being able to swim','Being able to play the piano','A New Zealand accent','Painted nails','A chipped tooth'];
  // Both: genes set the potential or tendency, and the environment changes it.
  const BOTH=['Height','Body mass','Freckles','Running speed','Muscle strength','Tooth decay','Acne'];

@@ -183,6 +183,7 @@ function correctionLayout(model){
   copy.querySelector('#gopts')?.remove();
   if(current.gstate&&current.source?.cells){   // table/paragraph cells: drop the repeat rows; the left side shows each miss as first answered
     const st=current.gstate;
+    copy.querySelectorAll('.gcell[data-real]').forEach(c=>{const f=c.querySelector('.gfilled');if(f)f.textContent=c.dataset.real;});
     copy.querySelectorAll('.gcell').forEach(c=>{const i=+c.dataset.cell;if(current.source.cells[i]?.repeat){(c.closest('tr')||c).remove();return;}
       if(!model&&st.first?.[i]!==undefined){c.className='gcell wrong';c.innerHTML='<span class="gfilled">'+escapeMarkup(st.first[i]||'—')+'</span> <span class="gmark">✗</span>';}});
   }
@@ -1332,6 +1333,7 @@ function gcellActivate(i){
   st.sel=0;els.forEach((_,k)=>gcellChoices(k));
   const input=els[i].querySelector('input,textarea');if(input&&!done)setTimeout(()=>input.focus(),0);else document.activeElement?.blur?.();
   els[i].scrollIntoView?.({block:'nearest'});
+  gcellMask();
 }
 function gcellRight(spec,value){
   if(typeof spec.check==='function')return !!spec.check(value);
@@ -1340,6 +1342,14 @@ function gcellRight(spec,value){
 }
 // Points for every correct blank: $2 for one right first time, $1 for one right after a miss (a question with several blanks pays several times).
 function gcellLock(i,shown,ok,award=true){const el=gcellEls()[i];if(ok&&award&&current.gstate&&!current.gstate.done.has(i)&&!current.source.cells[i].repeat){const pts=current.gstate.wrong[i]?1:2;score+=pts;hud();cashPop(pts);}el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
+// While a repeat cell is focused, or is the next one still to answer, the earlier answers to the same question show "???" so they can't be copied.
+function gcellMask(){
+  const st=current?.gstate;if(!st)return;const cells=current.source.cells,root=k=>cells[k].origCell??k,hide=new Set();
+  if(st.done.size<cells.length){
+    for(const t of [st.done.has(st.active)?undefined:st.active,gcellNextOpen(st.active)])if(t!==undefined&&cells[t]?.repeat)cells.forEach((_,k)=>{if(k!==t&&root(k)===root(t)&&st.done.has(k))hide.add(k);});
+  }
+  gcellEls().forEach((el,k)=>{const f=el.querySelector('.gfilled');if(!f)return;if(el.dataset.real===undefined)el.dataset.real=f.textContent;f.textContent=hide.has(k)?'???':el.dataset.real;});
+}
 // After a blank (multiple choice or typed) is missed and then answered right, the same question comes back as a new row two rows down.
 function gcellRepeat(i){
   const spec=current.source.cells[i],el=gcellEls()[i],tr=el?.closest('tr'),tbody=tr?.parentElement,vis=current.source.visual;
@@ -1351,6 +1361,7 @@ function gcellRepeat(i){
   const holder=document.createElement('tbody');holder.innerHTML=gtableRowHtml(row,tr.dataset.row,false,current.source.cells);
   const rows=[...tbody.rows],at=rows.indexOf(tr)+2,newRow=holder.firstElementChild;
   if(at<rows.length)tbody.insertBefore(newRow,rows[at]);else tbody.appendChild(newRow);
+  newRow.classList.add('row-added');newRow.scrollIntoView?.({block:'nearest'});
   gcellChoices(ni);
 }
 function gcellShuffle(st,i,spec){const o=[...(st.order?.[i]||spec.options)];for(let k=o.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[o[k],o[j]]=[o[j],o[k]];}(st.order ||= {})[i]=o;}

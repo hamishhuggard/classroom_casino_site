@@ -37,10 +37,10 @@
  // Both: genes set the potential or tendency, and the environment changes it.
  const BOTH=['Height','Body mass','Freckles','Running speed','Muscle strength','Tooth decay','Acne'];
  add({id:'1b',test:'1(b)',group:'Q1',title:'Inherited and environmental factors',li:1,sc:'Distinguish between inherited and environmental characteristics; recognise that genes and the environment both influence traits',level:'A',
-  template:'At Glenfield College, variation is caused by inherited genes, environmental factors, or both.\nCharacteristic | Inherited, Environmental or Both table, 7 rows: choose Inherited, Environmental or Both for every row (each marked at once).',
-  slots:{'inherited (I)':INH.join(', '),'environmental (E)':ENV.join(', '),'both (B)':BOTH.join(', '),table:'7 rows: 2–3 I, 1–2 B, the rest E; new characteristics and a new order every draw'},
-  gen(r){const nI=2+Math.floor(r()*2),nB=1+Math.floor(r()*2);
-   const rows=S(r,[...S(r,INH).slice(0,nI).map(c=>[c,'Inherited']),...S(r,BOTH).slice(0,nB).map(c=>[c,'Both']),...S(r,ENV).slice(0,7-nI-nB).map(c=>[c,'Environmental'])]);
+  template:'At Glenfield College, variation is caused by inherited genes, environmental factors, or both.\nCharacteristic | Inherited, Environmental or Both table, 12 rows: choose Inherited, Environmental or Both for every row (each marked at once).',
+  slots:{'inherited (I)':INH.join(', '),'environmental (E)':ENV.join(', '),'both (B)':BOTH.join(', '),table:'12 rows: 3–4 Inherited, 2–3 Both, the rest Environmental; new characteristics and a new order every draw'},
+  gen(r){const nI=3+Math.floor(r()*2),nB=2+Math.floor(r()*2);
+   const rows=S(r,[...S(r,INH).slice(0,nI).map(c=>[c,'Inherited']),...S(r,BOTH).slice(0,nB).map(c=>[c,'Both']),...S(r,ENV).slice(0,12-nI-nB).map(c=>[c,'Environmental'])]);
    const list=k=>rows.filter(x=>x[1]===k).map(x=>x[0].replace(/ \(.*\)$/,'').toLowerCase()).join(', ');
    return {instruction:'Is each characteristic inherited (genes), environmental, or both?',cloze:'Inherited, Environmental or Both for each row = ____',
     answer:rows.map(x=>x[1]).join(' | '),cells:rows.map(x=>({answer:x[1],options:['Inherited','Environmental','Both']})),
@@ -57,7 +57,7 @@
    {label:'Bella, netball player',name:'Bella',role:'netball player',inh:'height and agility'},
    {label:'Mere, mathematician',name:'Mere',role:'mathematician',inh:'memory and logical reasoning'},
    {label:'Tama, chess player',name:'Tama',role:'chess player',inh:'memory and concentration'}],
-  stem:c=>`Will ${c.name}’s children automatically become great ${c.role}s?\nIs being a world-class ${c.role} inherited, environmental, or both? Explain.`,
+  stem:c=>`${c.name} is a world-class ${c.role}. Will ${c.name}’s children automatically become great ${c.role}s?\nIs being a world-class ${c.role} inherited, environmental, or both? Explain.`,
   model:c=>`Being a world-class ${c.role} is influenced by [both inherited and environmental|inherited|environmental|star sign] factors. A person’s ${c.inh} are partly set by the [genes] they receive from their parents. But environmental factors such as [training], coaching and good nutrition are needed to develop these abilities. So the children of ${c.name} may have the [potential], but it is not [guaranteed] that they will become world-class.`,
   pic:c=>pics.genesEnv('train',['inherit','training']),
   aliases:{genes:['dna','alleles'],training:['practice','exercise'],potential:['ability','chance'],guaranteed:['certain','sure','automatic'],'both inherited and environmental':['both','both environmental and inherited','inherited and environmental','environmental and inherited','both genetic and environmental']},

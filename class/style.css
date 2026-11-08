@@ -646,3 +646,9 @@ html[data-locked] #practice-dialog,html[data-locked] #settings-dialog,html[data-
 .gchoice:hover{background:var(--hover,#30220e)}
 .gcell.gactive .gchoice.selected,.gcell.gactive .gchoice:focus-visible{background:var(--ink);color:var(--paper)}
 .gcell:not(.gactive) .gchoice{opacity:.75}
+/* Tables with many rows (1.3.1 has twelve): choices on one line and tighter rows so the table fits the screen. */
+.gtable .gchoices{flex-wrap:nowrap;white-space:nowrap}
+.gtable td{padding-top:.15em;padding-bottom:.15em}
+/* The active blank is marked on the table cell (td) in tables and on the blank itself in paragraphs. */
+.gactive .gchoice.selected,.gactive .gchoice:focus-visible{background:var(--ink);color:var(--paper)}
+.gchoice{opacity:.75}.gactive .gchoice{opacity:1}

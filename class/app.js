@@ -450,7 +450,7 @@ $('answer-form').addEventListener('submit',e=>{
   $('unit-reminder').hidden=true;
   if(!matches($('answer').value)){fail(false,millisecondHint($('answer').value));return;}
   reportAnswer(true);
-  playEffect('correct');flashCorrect();stop();score+=attempts?5:10;correct++;wrong=0;rouletteCorrectCount++;hud();
+  playEffect('correct');flashCorrect();stop();score+=current.source?.cells?0:(attempts?5:10);correct++;wrong=0;rouletteCorrectCount++;hud();
   if(reviewDeck)reviewDeck.answer(true);
   const levelFinished=!reviewDeck&&correct===(levels[questionLevel].correctTarget||3),completed=questionLevel,advance=position<enabled.length-1;
   if(levelFinished){correct=0;needsLevelCard=false;}
@@ -1001,10 +1001,20 @@ const practiceUnit=()=>curriculumUnits.find(u=>u.id===chooserUnit());
 const isCircuitTile=code=>code.startsWith('level:')&&Number(code.slice(6))<circuitLevelCount;
 const PRACTICE_TILE_OF_UNIT={yr12_diagnostic:'diagnostic',yr12_physics_type:'physics-type',circuit_extension:'level:0'};
 const practiceChoosable=()=>{const unit=practiceUnit();return !!unit&&unit.skills.length>0&&!unit.diagnostic;};
+// Order for a set whose questions carry scKey/lv (genetics): level 1 of every success criterion, then level 2 of each, and so on;
+// a criterion that runs out of levels repeats its last one (as a copy with a new id, so the deck can hold both). Marked scOrdered
+// so the review deck keeps this order instead of shuffling.
+function scSequence(questions){
+  if(!questions.length||!questions.every(item=>item.scKey))return questions;
+  const sc=new Map();for(const item of questions){if(!sc.has(item.scKey))sc.set(item.scKey,[]);sc.get(item.scKey).push(item);}
+  const lists=[...sc.values()].map(list=>list.slice().sort((a,b)=>a.lv-b.lv)),top=Math.max(...lists.map(l=>l.length)),out=[];
+  for(let level=0;level<top;level++)for(const list of lists){const item=list[Math.min(level,list.length-1)];out.push(level<list.length?item:{...item,id:item.id+'~'+(level+1)});}
+  out.scOrdered=true;return out;
+}
 function practiceEntry(key,name,questions,mixed=true){
   if(!practiceEntries.has(key)){
     const next=mixedQuestionPicker(questions);
-    levels.push({name:name.toUpperCase(),rule:`Practice: ${name}.`,example:'Read each question carefully. Use working for calculations and units as requested.',reset:()=>next.reset(),correctTarget:3,questions,skill:key,unit:'practice',focus:true,make:()=>makeRevisionQuestion(next(),mixed)});
+    levels.push({name:name.toUpperCase(),rule:`Practice: ${name}.`,example:'Read each question carefully. Use working for calculations and units as requested.',reset:()=>next.reset(),correctTarget:3,questions,ordered:!!questions.scOrdered,skill:key,unit:'practice',focus:true,make:()=>makeRevisionQuestion(next(),mixed)});
     practiceEntries.set(key,levels.length-1);
   }
   return practiceEntries.get(key);
@@ -1172,7 +1182,7 @@ function beginPractice(code){
   if(selectedUnit!==target)chooseUnit(target);
   const unit=practiceUnit(),topic=unit.physics12?practiceTopic:'all',only=cardFilter();
   let picked;
-  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>(topic==='all'||item.unit===topic)&&(!only||only(item)));picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}${only?'|only':''}`,unit.mixedName||'Everything mixed together',questions,!!unit.mixed)]:[];}
+  if(code==='mixed'){const questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>(topic==='all'||item.unit===topic)&&(!only||only(item)));picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${topic}${only?'|only':''}`,unit.mixedName||'Everything mixed together',scSequence(questions),!!unit.mixed)]:[];}
   else if(code.startsWith('topic:')){const name=code.slice(6),questions=ownLevels().flatMap(index=>levels[index].questions).filter(item=>item.unit===name);picked=questions.length?[practiceEntry(`mixed|${selectedUnit}|${name}`,`All ${name.toLowerCase()}`,questions,!!unit.mixed)]:[];}
   else if(code.startsWith('level:'))picked=[levelForTopic(Number(code.slice(6)),topic)];
   else{const name=code.slice(6),questions=(skillGroups(unit).get(name)||[]).filter(item=>(topic==='all'||item.unit===topic)&&(!only||only(item)));picked=questions.length?[practiceEntry(`skill|${name}|${topic}${only?'|only':''}`,name,questions)]:[];}
@@ -1318,7 +1328,8 @@ function gcellRight(spec,value){
   const v=String(value||'').trim();if(!v)return false;
   return [spec.answer,...(spec.aliases||[])].some(a=>spec.caseSensitive?String(a).replace(/\s/g,'')===v.replace(/\s/g,''):normalize(String(a))===normalize(v));
 }
-function gcellLock(i,shown,ok){const el=gcellEls()[i];el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
+// Points for every correct blank: $2 for one right first time, $1 for one right after a miss (a question with several blanks pays several times).
+function gcellLock(i,shown,ok,award=true){const el=gcellEls()[i];if(ok&&award&&current.gstate&&!current.gstate.done.has(i)){const pts=current.gstate.wrong[i]?1:2;score+=pts;hud();cashPop(pts);}el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
 function gcellShuffle(st,i,spec){const o=[...(st.order?.[i]||spec.options)];for(let k=o.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[o[k],o[j]]=[o[j],o[k]];}(st.order ||= {})[i]=o;}
 // Feedback (Hamish, 9 Nov 2026): a right answer flashes green with the right sound and moves on at once (a typed blank is accepted
 // the moment it matches); a wrong one flashes red with the wrong sound, empties the blank and returns to it. The second wrong
@@ -1527,7 +1538,7 @@ if(previewMode==='1'||previewMode==='full'){
   // Design sheet "Show answers": fills every open cell with its answer (marked right, nothing is scored or submitted);
   // a plain one-answer question gets its answer typed into the answer line.
   window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data?.showAnswers||!current)return;
-    if(current.gstate){gcellEls().forEach((el,i)=>{if(!current.gstate.done.has(i)){const spec=current.source.cells[i];gcellLock(i,spec.answer,true);}});document.querySelectorAll('#diagram .gactive').forEach(x=>x.classList.remove('gactive'));document.activeElement?.blur?.();}
+    if(current.gstate){gcellEls().forEach((el,i)=>{if(!current.gstate.done.has(i)){const spec=current.source.cells[i];gcellLock(i,spec.answer,true,false);}});document.querySelectorAll('#diagram .gactive').forEach(x=>x.classList.remove('gactive'));document.activeElement?.blur?.();}
     else{const input=$('answer');if(input){input.value=String(current.answer??'');input.dispatchEvent(new Event('input',{bubbles:true}));}}});
   window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data?.preview)return;const {unit,id,number}=e.data.preview;
     let ok=false;try{ok=showQuestion(unit,id,number);}catch(err){console.warn('preview',err);}

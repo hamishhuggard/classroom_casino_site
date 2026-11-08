@@ -638,6 +638,16 @@
   const tiersSeen=new Set();
   for(const c of S9.questions){c.unit=c.skill=S9.name;c.checkpoint=c.tier>1&&!tiersSeen.has(c.tier);tiersSeen.add(c.tier);}}
 
+ // Lesson objectives for the distance–time graphs lesson (Forces Revision 2, y10.csv), used by the results dashboard to group questions.
+ // DG10–DG16 (one section's speed from its gradient, its distance, or how long it is stopped) aren't one of the lesson's three objectives; they get LO4 so they don't show as 'Other'.
+ {const LO={
+   1:'LO1: Use the slope to say which section is stopped, slowest or fastest',
+   2:'LO2: Average speed for a whole journey = total distance ÷ total time',
+   3:'LO3: Draw a distance–time graph from a description (curves for speeding up and slowing down)',
+   4:'LO4: Read one section off the graph: its speed (gradient), distance or time stopped'};
+  const which=id=>/^FM-(DG0[1-9]|TG0[1-7]|DG17|DS1[23])$/.test(id)?1:/^FM-(GA0\d|TG(0[89]|1[01]))$/.test(id)?2:/^FM-(DS(0\d|1[01]|14)|CG0\d)$/.test(id)?3:/^FM-DG1[0-6]$/.test(id)?4:0;
+  for(const c of S9.questions){const n=which(c.id);if(n)c.lo=LO[n];}}
+
  // ---------- install into the forces_motion unit ----------
  const old=typeof REVISION_UNITS!=='undefined'?REVISION_UNITS.find(u=>u.id==='forces_motion'):null;
  if(!old)return;

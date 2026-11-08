@@ -7,7 +7,7 @@
   // Two versions of the game: plain (index.html: pick a unit and practise, nothing is sent anywhere) and class
   // (class.html -> index.html?mode=class: join screen, class code, results sent to the backend, unit chosen by the link).
   // The published /class/ copy sets CASINO_DEFAULT_MODE='class' in its results-config.js, so its plain URL is the class game.
-  const modeParam=new URLSearchParams(location.search).get('mode'),classMode=modeParam==='class'||(window.CASINO_DEFAULT_MODE==='class'&&modeParam!=='plain');
+  const modeParam=new URLSearchParams(location.search).get('mode'),classMode=!!window.CASINO_LOCK||modeParam==='class'||(window.CASINO_DEFAULT_MODE==='class'&&modeParam!=='plain');
   if(!classMode){window.CasinoResults={record(){},send(){},report(){},player:'',name:'',code:'',enabled:false};return;}
   const api=String(new URLSearchParams(location.search).get('results-api')||window.CASINO_RESULTS_API||'').trim().replace(/\/+$/,'');
   const form=api?'':String(window.CASINO_RESULTS_FORM||'').trim();
@@ -90,8 +90,8 @@
   // Class code (e.g. KEA7) keeps each class's data separate. From ?code=, else typed on a full-screen prompt at the start.
   const CODE_RE=/^[A-Z0-9]{2,12}$/;
   const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  let code=tidy(new URLSearchParams(location.search).get('code'));
-  try{if(CODE_RE.test(code))localStorage.setItem('casino-class-code',code);else code=localStorage.getItem('casino-class-code')||'';}catch{}
+  let code=window.CASINO_LOCK?.code||tidy(new URLSearchParams(location.search).get('code'));
+  try{if(window.CASINO_LOCK?.code){/* locked: the link's code wins */}else if(CODE_RE.test(code))localStorage.setItem('casino-class-code',code);else code=localStorage.getItem('casino-class-code')||'';}catch{}
   let dirty=count()>0;
   function report(beacon){
     if(!api||!code||!dirty||!count())return;
@@ -124,7 +124,8 @@
       screen.style.cssText='position:fixed;inset:0;z-index:120;background:var(--paper);color:var(--ink);display:grid;place-items:center;text-align:center;padding:24px;overflow:auto';
       const art=globalThis.animalIcon?.(name,1,true)||'';
       screen.innerHTML=`<form style="display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,22px)"><p class="menu-hint" style="margin:0;animation:none;opacity:1">YOU ARE</p><div id="join-art" style="line-height:0">${art}</div><h1 id="class-code-title" style="font-size:clamp(30px,8vh,76px);margin:0;color:var(--a2-green,var(--ink))">${name.toUpperCase()}</h1>${unitName?`<p class="menu-hint" style="margin:0;animation:none;opacity:1">TODAY: ${unitName}</p>`:''}<label for="class-code" class="menu-hint" style="margin:clamp(4px,2vh,24px) 0 0;animation:none;opacity:1">ENTER YOUR CLASS CODE</label><input id="class-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" value="${code}" style="font:inherit;font-size:clamp(30px,7vh,56px);width:7em;max-width:90vw;text-align:center;text-transform:uppercase;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:8px"><p id="class-code-error" class="menu-hint" style="min-height:1.5em;margin:0" aria-live="polite">PRESS ENTER TO START</p></form>`;
-      document.body.append(screen);
+      // Locked link with a code: no join screen, boot.js starts the unit straight away.
+      if(window.CASINO_LOCK?.code)screen.hidden=true;else document.body.append(screen);
       const svg=screen.querySelector('#join-art svg');if(svg){const size=Math.max(96,Math.min(innerHeight*.34,320));svg.setAttribute('width',size);svg.setAttribute('height',size);}
       const input=screen.querySelector('#class-code');
       // Start (or restart, from the menu's START) the unit chosen by the link: the Everything mixed tile unless ?tile= names another.
@@ -132,7 +133,7 @@
       window.CasinoClass={restart:begin};
       screen.addEventListener('keydown',e=>e.stopPropagation());
       screen.querySelector('form').onsubmit=e=>{e.preventDefault();const v=tidy(input.value);if(!CODE_RE.test(v)){screen.querySelector('#class-code-error').textContent='2 TO 12 LETTERS OR NUMBERS';return;}code=v;try{localStorage.setItem('casino-class-code',code);}catch{}screen.remove();showTag();dirty=true;begin();};
-      input.focus();
+      if(!screen.hidden)input.focus();
     }
     // The bank also changes in the roulette without any answer being recorded, so notice that too.
     let lastBank=null;

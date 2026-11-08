@@ -50,7 +50,10 @@ function wiredComponent(x,y,type){
 function diagram(q){if(q.kind==='revision')return `<div class="revision-question">${revisionVisual(q)}<div>${scienceMarkup(removeProvidedUnit(q,q.prompt))}</div></div>`;let s='';const text=(x,y,t)=>`<text x="${x}" y="${y}" text-anchor="middle">${scienceSvgMarkup(t)}</text>`;if(q.kind==='symbol')s=text(400,210,q.symbol);else if(q.kind==='component')s=wiredComponent(400,190,q.component);else {s='<path d="M130 100H392 M408 100H670V330H130V100"/>'+component(400,100,'cell')+(q.supply?text(400,60,q.supply):'');if(q.kind==='parallel'||q.kind==='mixed'){s+='<path d="M130 220H670"/>';[220,330].forEach((y,i)=>{s+=component(400,y,q.resistor?'resistor':'lamp')+text(400,y+48,q.labels[i]||'');});if(q.kind==='mixed')s+=component(550,100,'resistor')+text(565,65,q.labels[2]);}else{const n=q.count||2;for(let i=0;i<n;i++){const x=130+(i+1)*540/(n+1);s+=component(x,330,q.resistor?'resistor':'lamp')+text(x,383,q.labels[i]||`Lamp ${i+1}`);}if(q.count===1&&q.labels[1])s+=text(400,280,q.labels[1]);}}return `<svg viewBox="0 0 800 440" role="img" aria-label="${q.kind} circuit"><g stroke="#111" stroke-width="3" fill="none">${s}</g></svg>`;}
 let enabled=levels.map((_,i)=>i),position=0,current,correct=0,wrong=0,score=0,attempts=0,seconds=30,timer;
 let screen='menu',activeRun=false,highestLevel=1;
-let rouletteCorrectCount=0,rouletteTarget=3;
+// Roulette on a variable-ratio schedule (Hamish, 9 Nov 2026; Ferster & Skinner's highest, steadiest response rates): after a random
+// number of correct answers, mean 10 (3–17); the first spin of a run after 1–5. No progress bar, so the next spin can't be predicted.
+const nextRouletteTarget=first=>first?1+Math.floor(Math.random()*5):3+Math.floor(Math.random()*15);
+let rouletteCorrectCount=0,rouletteTarget=nextRouletteTarget(true);
 let lastQuestionKey=null,questionLevel=0,needsLevelCard=false;
 let reviewDeck=null,currentReview=null,advanceAfterCorrection=false;
 let menuIndex=0;
@@ -69,7 +72,7 @@ function questionNumber(){
   const items=unit?.skills.flatMap(skill=>skill.questions)||[];
   const index=items.findIndex(item=>item.id===current.source.id);return index>=0?index+1:'';
 }
-function renderCasinoProgress(){const target=rouletteTarget;const progress=$('casino-progress');progress.hidden=!activeRun||!$('roulette-enabled').checked;$('casino-progress-bar').max=target;$('casino-progress-bar').value=rouletteCorrectCount;$('casino-progress-label').textContent=`${Math.max(0,target-rouletteCorrectCount)} questions until you can gamble`; }
+function renderCasinoProgress(){const target=rouletteTarget;const progress=$('casino-progress');progress.hidden=true;/* variable ratio: no countdown to the next spin */$('casino-progress-bar').max=target;$('casino-progress-bar').value=rouletteCorrectCount;$('casino-progress-label').textContent=`${Math.max(0,target-rouletteCorrectCount)} questions until you can gamble`; }
 // Rolling count-up: the balance ticks up to its new value (cosmetic; falls back to an instant update).
 let shownScore=0,countToken=0;
 function showScore(){
@@ -125,7 +128,7 @@ function restoreSave(){
     }
   }
   score=Math.max(0,snap.score|0);correct=snap.correct|0;wrong=snap.wrong|0;
-  rouletteCorrectCount=snap.rouletteCorrectCount|0;rouletteTarget=snap.rouletteTarget>0?snap.rouletteTarget|0:3;
+  rouletteCorrectCount=snap.rouletteCorrectCount|0;rouletteTarget=snap.rouletteTarget>0?snap.rouletteTarget|0:nextRouletteTarget(true);
   if(Number.isFinite(snap.highestLevel))highestLevel=snap.highestLevel;
   return true;
 }
@@ -176,6 +179,9 @@ function correctionLayout(model){
   const copy=$('diagram').cloneNode(true),parts=current.answer.split(',');
   const entry=copy.querySelector('#entry-wrap');
   if(entry){const value=model?current.answer+(expectedAnswerUnit(current)?' '+expectedAnswerUnit(current):''):$('answer').value;entry.innerHTML='<span class="correction-filled">'+scienceMarkup(value||'—')+' <span class="answer-mark">'+(model?'✓':'✗')+'</span></span>';}
+  copy.querySelector('#gopts')?.remove();
+  if(model)copy.querySelectorAll('.gcell').forEach(c=>{c.className='gcell right';c.innerHTML='<span class="gfilled">'+escapeMarkup(current.source.cells[+c.dataset.cell].answer)+'</span> <span class="gmark">✓</span>';});
+  copy.querySelectorAll('.gactive').forEach(td=>td.classList.remove('gactive'));
   copy.querySelectorAll('.shell-input').forEach((field,i)=>{const span=document.createElement('span');span.className='correction-filled';span.innerHTML=scienceMarkup(model?parts[i]:field.value||'—')+' <span class="answer-mark">'+(model?'✓':'✗')+'</span>';field.replaceWith(span);});
   copy.querySelectorAll('[data-connection]').forEach(button=>{const selected=button.dataset.connection===(model?current.answer:$('answer').value);button.classList.toggle('selected',selected);if(selected)button.textContent+=' '+(model?'✓':'✗');button.disabled=true;});
   copy.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
@@ -246,11 +252,35 @@ function unitTableMarkup(visual){
   if(visual.orient==='row')return `<table class="phys-table row-table"><thead><tr>${visual.rows.map(row=>`<th>${scienceMarkup(row.label)}</th>`).join('')}</tr></thead><tbody><tr>${visual.rows.map(row=>`<td${row.blank?' class="blank"':''}>${body(row)}</td>`).join('')}</tr></tbody></table>`;
   return `<table class="phys-table"><tbody>${visual.rows.map(row=>`<tr><th scope="row">${scienceMarkup(row.label)}</th><td${row.blank?' class="blank"':''}>${body(row)}</td></tr>`).join('')}</tbody></table>`;
 }
+// Generic table (visual.type 'gtable', genetics templates): headers + rows of cells. A cell is text, or
+// {blank:true, pre?, post?} (the answer box, or a '?' box in multiple choice, between optional text),
+// {field:i, wide?} (one of several typed boxes, source.fields, marked at the end), or {cell:i, pre?, post?, wide?}: an answer cell
+// marked as soon as it is answered (source.cells[i] = {answer, aliases?, caseSensitive?, options? (multiple choice), check?}).
+function gcellSpan(c,cells){const spec=cells?.[c.cell]||{};
+  const box=spec.options?'<span class="gslot">?</span>':c.area?`<textarea class="gcell-input wide area" rows="4" spellcheck="false" aria-label="${escapeMarkup(c.label||'answer')}"${c.placeholder?` placeholder="${escapeMarkup(c.placeholder)}"`:''}></textarea>`
+   :`<input class="gcell-input${c.wide?' wide':''}${c.ch?' word':''}"${c.ch?` style="width:${c.ch}ch"`:''} autocomplete="off" spellcheck="false" aria-label="${escapeMarkup(c.label||'answer')}">`;
+  return `<span class="gcell${spec.options?' mc':' typed'}${c.ch?' wordcell':''}" data-cell="${c.cell}">${box}<span class="gmark"></span></span>`;}
+// Paragraph answer (visual.type 'gpara', explain/compare questions): the question stem, then the answer text with answer cells in it.
+// parts: strings and {cell:i, ch?, area?} (cells as for gtable).
+function gparaMarkup(v,cells){const stem=v.stem?`<div class="gpara-stem">${escapeMarkup(v.stem).replace(/\n/g,'<br>')}</div>`:'';return `<div class="gpara">${v.svg?`<div class="gpara-top"><div class="gpic">${v.svg}</div>${stem}</div>`:stem}<div class="gpara-answer">${gparaBody(v.parts,cells)}</div></div>`;}
+/* {bullet:true} parts split the answer into bullet points, one sentence each. */
+function gparaBody(parts,cells){const item=p=>typeof p==='string'?escapeMarkup(p):gcellSpan(p,cells);if(!parts.some(p=>p?.bullet))return parts.map(item).join('');const items=[];for(const p of parts)if(p?.bullet)items.push([]);else(items.at(-1)||items[items.push([])-1]).push(item(p));return `<ul class="gpara-list">${items.map(x=>`<li>${x.join('').trim()}</li>`).join('')}</ul>`;}
+function gtableMarkup(v,live,cells){
+  const cell=c=>{
+    if(c==null)return '';if(typeof c!=='object')return escapeMarkup(c);
+    if(c.cell!=null)return (c.pre?escapeMarkup(c.pre):'')+gcellSpan(c,cells)+(c.post?escapeMarkup(c.post):'');
+    if(c.field!=null)return `<input class="shell-input gtable-input${c.wide?' wide':''}" data-shell="${c.field}" form="answer-form" aria-label="${escapeMarkup(c.label||'answer')}" autocomplete="off" spellcheck="false">`;
+    return (c.pre?escapeMarkup(c.pre):'')+(c.blank?(live?'<span id="cloze-answer-slot"></span>':'<span class="gtable-ask">?</span>'):'')+(c.post?escapeMarkup(c.post):'');
+  };
+  const cls=c=>c&&typeof c==='object'&&(c.blank||c.field!=null||c.cell!=null)?` class="blank${c.pre||c.post?' inline':''}${c.cell!=null?' gcell-td':''}"`:'';
+  const tbl=`<table class="phys-table gtable">${v.headers?`<thead><tr>${v.headers.map(h=>`<th>${escapeMarkup(h)}</th>`).join('')}</tr></thead>`:''}<tbody>${v.rows.map(r=>`<tr>${r.map(c=>`<td${cls(c)}>${cell(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  return v.svg?`<div class="gtable-wrap"><div class="gpic">${v.svg}</div>${tbl}</div>`:tbl; /* svg: the picture beside the table */
+}
 function questionInstruction(){
   if(current.source?.noInstruction)return '';
   const type=current.source?.visual?.type;
   const instructions={punnett:current.source?.fields?'Fill in the Punnett square:':current.source?.id==='G3'?'Fill in the missing genotype in the Punnett square:':'Use the Punnett square to complete the statement:',graph:'Use the distance–time graph to find the speed:',weight:'Calculate the weight:',journey:'Calculate the average speed:',forces:'Use the forces shown to complete the statement:',reaction:'Complete the reaction:',circuit:'Find the missing current or voltage:',atom:'Use the isotope cell to complete the statement:',unittable:'Fill in the missing cell:',shells:'Complete the electron arrangement:',particle:'State the particle’s charge:'};
-  return `${showNumber?(questionNumber()||questionLevel+1)+') ':''}${instructions[type]||'Complete the statement:'}`;
+  return `${showNumber?(questionNumber()||questionLevel+1)+') ':''}${current.source?.instruction||instructions[type]||'Complete the statement:'}`;
 }
 function render(){
   const reminder=$('unit-reminder');reminder.hidden=true;reminder.classList.remove('unit-missing');$('game-screen').appendChild(reminder);
@@ -259,7 +289,7 @@ function render(){
   $('game-screen').classList.toggle('large-circuit-question',current.source?.visual?.type==='circuit');
   $('answer-suffix').hidden=true;$('game-screen').classList.toggle('statement-question',simple);$('game-screen').classList.toggle('cloze-question',true);
   $('prompt').textContent=questionInstruction();$('prompt').classList.toggle('sr-only',false);$('prompt').hidden=!$('prompt').textContent;
-  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder||current.source.fixedChoices?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices${current.source.stackChoices?' stacked-choices':''}" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
+  if(current.source?.choices){const choices=current.source.choices;const shuffled=current.choiceOrder||[...choices];for(let i=current.choiceOrder||current.source.fixedChoices?0:shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}current.choiceOrder=shuffled;$('diagram').innerHTML=`<div class="cloze-game stacked-cloze${current.source.phys?' phys-choice':''}"><div class="choice-question">${scienceMarkup(choiceText(current)).replace(/\n/g,'<br>')}</div>${current.source.visual?.type==='gtable'?gtableMarkup(current.source.visual,false):current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}<div class="connection-choices${current.source.stackChoices?' stacked-choices':''}${current.source.keepCase?' keep-case':''}" role="group" aria-label="Answer choices">${shuffled.map(value=>`<button type="button" data-connection="${escapeMarkup(value)}">${escapeMarkup(value)}</button>`).join('')}</div></div>`;}
   else if(current.kind==='revision'&&current.source?.visual?.type==='circuit')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,answerMarkup:clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&current.source?.id==='F2')$('diagram').innerHTML=`<div class="cloze-game diagram-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true})}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='punnett')$('diagram').innerHTML=`<div class="cloze-game punnett-cloze">${casinoDiagram({...current.source.visual,inlineAnswer:true,fields:current.source.fields,answerMarkup:current.source.id==='G3'||current.source.fields?'':clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')})}</div>`;
@@ -268,6 +298,7 @@ function render(){
   else if(current.kind==='revision'&&current.source?.id==='G4')$('diagram').innerHTML=`<div class="cloze-game stacked-cloze"><div>Natural selection depends on</div><div class="large-science">survival</div><div>and</div><div class="large-science"><span id="cloze-answer-slot"></span></div></div>`;
   else if(current.kind==='revision'&&current.source?.id==='G1')$('diagram').innerHTML=`<div class="cloze-game">${casinoDiagram({...current.source.visual,answerMarkup:clozeSentence('This section of DNA is a ____','<span id="cloze-answer-slot"></span>')})}</div>`;
   else if(current.kind==='revision'&&['L2-1','L2-3','L2-11'].includes(current.source?.id))$('diagram').innerHTML=`<div class="cloze-game">${revisionVisual(current)}${clozeSentence({'G1':'This section of DNA is a ____','L2-1':'electrons = ____','L2-3':'formula = ____','L2-11':'v = ____'}[current.source.id],'<span id="cloze-answer-slot"></span>')}</div>`;
+  else if(current.kind==='revision'&&['gtable','gpara'].includes(current.source?.visual?.type))$('diagram').innerHTML=`<div class="cloze-game phys-cloze gtable-cloze">${current.source.visual.type==='gpara'?gparaMarkup(current.source.visual,current.source.cells):gtableMarkup(current.source.visual,true,current.source.cells)}${current.source.cells?'<div id="gopts" class="connection-choices gopts" role="group" aria-label="Answer choices"></div>':''}</div>`;
   else if(current.kind==='revision'&&current.source?.visual?.type==='unittable')$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${unitTableMarkup(current.source.visual)}</div>`;
   else if(current.kind==='revision'&&current.source?.phys)$('diagram').innerHTML=`<div class="cloze-game phys-cloze">${current.source.visual?.type==='svg'?casinoDiagram(current.source.visual):''}${clozeSentence(removeProvidedUnit(current,current.prompt),'<span id="cloze-answer-slot"></span>')}</div>`;
   else if(current.kind==='revision'&&current.source?.recall)$('diagram').innerHTML=`<div class="cloze-game recall-cloze">${clozeSentence(current.prompt,'<span id="cloze-answer-slot"></span>')}</div>`;
@@ -283,7 +314,8 @@ function render(){
   else if(simple){$('diagram').innerHTML=statement(current).replace(/<\/div>$/,`<span id="cloze-answer-slot"></span>${circuitType?'<div class="statement-link">circuit</div>':''}</div>`);}
   else $('diagram').innerHTML=`<div class="cloze-game">${['series','parallel','mixed'].includes(current.kind)?circuitAnswerDiagram(diagram(current),clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')):diagram(current)+clozeSentence(displayCloze(current),'<span id="cloze-answer-slot"></span>')}</div>`;
   ($('diagram').firstElementChild||$('diagram')).appendChild(reminder);
-  if(current.source?.choices||current.source?.fields||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1'||current.source?.flag||selectedClass==='yr10');if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
+  if(current.source?.choices||current.source?.fields||current.source?.cells||['A2','E1'].includes(current.source?.id)){entry.hidden=true;}else{$('cloze-answer-slot').appendChild(entry);entry.hidden=false;sizeAnswerBox(entry,$('cloze-answer-slot'));}$('unit').textContent='';$('answer').value='';if(current.source?.id!=='A2'&&!current.source?.fields&&current.kind==='revision'&&/^\d+(?:,\d+)+$/.test(current.answer)){entry.hidden=true;$('answer-form').querySelector('.answer-row').prepend(entry);$('cloze-answer-slot').innerHTML=shellFields(current.answer.split(',').length);} if(current.source?.choices||current.source?.id==='E1'){selectConnection(current.choiceOrder?.[0]||'series');document.querySelectorAll('[data-connection]').forEach(button=>button.onclick=()=>selectConnection(button.dataset.connection));}paintAnswer();$('answer').inputMode='text';$('symbol-pad').hidden=!!(current.source?.choices||current.source?.id==='E1'||current.source?.flag||selectedClass==='yr10');if(!$('answer-result').textContent)renderAnswerHint();hud();startTimer();focus();
+  if(current.source?.cells)gcellInit();
   globalThis.CasinoExam?.afterRender();
 }
 
@@ -326,9 +358,12 @@ function choiceInDirection(key){
   return buttons.filter(b=>Math.abs(top(b)-target)<4).sort((a,b)=>Math.abs(cx(a)-cx(here))-Math.abs(cx(b)-cx(here)))[0].dataset.connection;
 }
 function renderAnswerHint(){$('feedback').innerHTML=escapeMarkup(answerHint()).replace(/\s*ENTER/g,'<strong class="enter-key">ENTER</strong>');}
-function answerHint(){return current?.source?.choices||current?.source?.id==='E1'?'choose with the arrow keys and press ENTER':'type an answer and press ENTER';}
+function answerHint(){if(current?.source?.cells)return current.source.cells.some(c=>c.options)?'↑ ↓ move between cells · ← → choose · ENTER':'↑ ↓ move between cells · type, then press ENTER';return current?.source?.choices||current?.source?.id==='E1'?'choose with the arrow keys and press ENTER':'type an answer and press ENTER';}
 function matches(value){
   if(current)current.spellingFix=null;
+  // A question may mark itself (typed definitions, whole tables in any row order): check(value, fieldValues).
+  if(current.source?.cells)return !!current.gstate&&current.gstate.done.size===current.source.cells.length&&!current.gstate.anyWrong;
+  if(typeof current.source?.check==='function')return !!current.source.check(value,[...document.querySelectorAll('#diagram .shell-input')].map(f=>f.value));
   if(current.source?.phys&&current.source.numeric)return Physics12.checkNumeric(current.source,value)==='ok';
   if(['positive','negative'].includes(current.answer)){const signs={positive:['positive','+','+ve'],negative:['negative','-','-ve']};if(signs[current.answer].includes(scientificInput(value).toLowerCase()))return true;}
   if(current.source?.fields){const expected=current.answer.split(','),parts=scientificInput(value).split(',').map(x=>x.trim());return parts.length===expected.length&&parts.every((x,i)=>current.caseSensitive?x===expected[i]:normalize(x)===normalize(expected[i]));}
@@ -418,14 +453,14 @@ $('answer-form').addEventListener('submit',e=>{
   const levelFinished=!reviewDeck&&correct===(levels[questionLevel].correctTarget||3),completed=questionLevel,advance=position<enabled.length-1;
   if(levelFinished){correct=0;needsLevelCard=false;}
   const proceed=()=>{if(levelFinished)completedLevel(completed,advance);else{next();if(needsLevelCard){needsLevelCard=false;showRule();}}};
-  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0){rouletteTarget=10;hud();pendingRoulette=true;setTimeout(()=>{pendingRoulette=false;openRoulette(proceed);},ROULETTE_DELAY_MS);return;}hud();}
+  if(rouletteCorrectCount>=rouletteTarget){rouletteCorrectCount=0;if($('roulette-enabled').checked&&score>0){rouletteTarget=nextRouletteTarget(false);hud();pendingRoulette=true;setTimeout(()=>{pendingRoulette=false;openRoulette(proceed);},ROULETTE_DELAY_MS);return;}hud();}
   proceed();
 });
 $('continue').addEventListener('click',()=>{if($('continue').textContent==='Start ↵')playEffect('level');});
 $('rule-dialog').addEventListener('close',()=>{if(screen!=='game')return;if(advanceAfterCorrection){advanceAfterCorrection=false;next();return;}if(wrong>=3){wrong=0;if(position>0){position--;needsLevelCard=true;}}render();});
 $('chapter-dialog').addEventListener('close',()=>{if(screen==='game')showRule('','Next learning unit');});
 $('learn').onclick=()=>showRule('','Rule');$('timed').onchange=()=>{if($('timed').checked)unlockAudio();if(!$('rule-dialog').open&&!$('settings-dialog').open)startTimer();};
-$('settings').onclick=()=>{returnToPreferences=true;$('preferences-dialog').close();stop();$('level-options').innerHTML=levels.map((l,i)=>({l,i})).filter(({l,i})=>curriculumUnits.length?(selectedUnit==='circuit_extension'?i<circuitLevelCount:l.unit===selectedUnit):true).map(({l,i})=>`<label><input type="checkbox" value="${i}" ${enabled.includes(i)?'checked':''}>${i+1}. ${l.name}</label>`).join('');$('settings-dialog').showModal();};
+$('settings').onclick=()=>{if(LOCK)return;returnToPreferences=true;$('preferences-dialog').close();stop();$('level-options').innerHTML=levels.map((l,i)=>({l,i})).filter(({l,i})=>curriculumUnits.length?(selectedUnit==='circuit_extension'?i<circuitLevelCount:l.unit===selectedUnit):true).map(({l,i})=>`<label><input type="checkbox" value="${i}" ${enabled.includes(i)?'checked':''}>${i+1}. ${l.name}</label>`).join('');$('settings-dialog').showModal();};
 $('all').onclick=()=>document.querySelectorAll('#level-options input').forEach(el=>el.checked=true);
 $('calculations').onclick=()=>document.querySelectorAll('#level-options input').forEach(el=>{const l=levels[Number(el.value)];el.checked=l.skill?l.make().answer.match(/^\d+(\.\d+)?$/)!==null:Number(el.value)>=12;});
 $('save-settings').onclick=()=>{const selection=[...document.querySelectorAll('#level-options input:checked')].map(el=>Number(el.value));if(!selection.length){$('save-settings').textContent='Choose at least one step';return;}saveRun();needsLevelCard=false;enabled=selection;position=0;correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;highestLevel=enabled[0]+1;current=levels[enabled[0]].make();returnToPreferences=false;$('settings-dialog').close();if(screen==='game'){activeRun=true;resetReviewDeck();next();showRule();}else{hud();showMenu();}};
@@ -460,7 +495,7 @@ function startGame(){if(!enabled.length)return;
   if(fullscreen)fullscreen.then(beginGame);
   else beginGame();
 }
-function beginGame(){const resume=activeRun;screen='game';document.documentElement.dataset.screen='game';$('game-screen').hidden=false;$('menu-screen').hidden=true;if(resume){hud();startTimer(false);focus();return;}activeRun=true;needsLevelCard=false;levels.filter(l=>l.unit===selectedUnit).forEach(l=>l.reset?.());position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;highestLevel=enabled[0]+1;resetReviewDeck();restoreSave();next();showRule();}
+function beginGame(){const resume=activeRun;screen='game';document.documentElement.dataset.screen='game';$('game-screen').hidden=false;$('menu-screen').hidden=true;if(resume){hud();startTimer(false);focus();return;}activeRun=true;needsLevelCard=false;levels.filter(l=>l.unit===selectedUnit).forEach(l=>l.reset?.());position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=nextRouletteTarget(true);highestLevel=enabled[0]+1;resetReviewDeck();restoreSave();next();showRule();}
 function readScores(){try{const saved=JSON.parse(localStorage.getItem('circuit-blaster-scores')||'[]');return Array.isArray(saved)?saved.filter(r=>Number.isFinite(r.score)&&r.score>0&&Number.isInteger(r.level)&&Number.isInteger(r.steps)&&r.steps>0).slice(0,10):[];}catch{return [];}}
 function saveRun(){if(!activeRun)return;activeRun=false;if(score<=0)return;const rows=readScores();rows.push({score,unit:selectedUnit,level:highestLevel,steps:enabled.length,timed:$('timed').checked,date:Date.now()});rows.sort((a,b)=>b.score-a.score||b.level-a.level);try{localStorage.setItem('circuit-blaster-scores',JSON.stringify(rows.slice(0,10)));}catch{}}
 function showLeaderboard(){const rows=readScores();$('leaderboard-rows').innerHTML=rows.length?'<table><thead><tr><th>RANK</th><th>BANK</th><th>UNIT</th><th>STEP</th><th>MODE</th></tr></thead><tbody>'+rows.map((r,i)=>`<tr><td>${String(i+1).padStart(2,'0')}</td><td>$${String(r.score).padStart(6,'0')}</td><td>${escapeMarkup(r.unit||'Circuits')}</td><td>${r.level}</td><td>${r.timed?'TIMED':'FREE'} · ${r.steps} STEPS</td></tr>`).join('')+'</tbody></table>':'<p class="empty-score">NO SCORES YET. THE HOUSE IS OPEN. PICK A UNIT.</p>';$('leaderboard-dialog').showModal();}
@@ -471,12 +506,10 @@ $('leaderboard-dialog').addEventListener('close',()=>selectMenu(menuIndex));
 menuIds.forEach((id,index)=>{ $(id).addEventListener('pointerenter',()=>{if(!$(id).hidden)selectMenu(index,index>menuIndex?'menuDown':'menuUp');}); });
 document.addEventListener('keydown',event=>{
   const panel=activeMenuPanel();
-  // S on the roulette table: skip the spin while it runs, otherwise skip or continue.
-  // R / B / G on the roulette table pick red, black or green; Space spins.
-  const betKey={r:'red',b:'black',g:'green'}[event.key.toLowerCase?.()];
-  if(panel?.id==='roulette-dialog'&&betKey&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();selectRouletteColour(betKey);return;}
-  if(panel?.id==='roulette-dialog'&&event.key===' '&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();if(!$('roulette-spin').disabled)$('roulette-form').requestSubmit();return;}
-  if(panel?.id==='roulette-dialog'&&event.key.toLowerCase?.()==='s'&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();if(rouletteSpinning)rouletteFinishSpin?.();else $('roulette-continue').onclick();return;}
+  // Prize wheel: S or Enter skips the spin animation; once it has settled, any key continues (Escape closes it natively).
+  if(panel?.id==='roulette-dialog'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!['Shift','Control','Alt','Meta','CapsLock','Tab','Escape'].includes(event.key)){
+    event.preventDefault();if(rouletteSpinning){if(event.key.toLowerCase?.()==='s'||event.key==='Enter')rouletteFinishSpin?.();}else $('roulette-continue').onclick();return;
+  }
   if(panel){navigatePanel(panel,event);return;}
   if(screen==='game'){if(event.key==='Escape'){event.preventDefault();showMenu();}else routeAnswerKey(event);return;}
   if(['ArrowDown','ArrowRight','ArrowUp','ArrowLeft'].includes(event.key)){event.preventDefault();const down=['ArrowDown','ArrowRight'].includes(event.key);selectMenu(menuIndex+(down?1:-1),down?'menuDown':'menuUp');}
@@ -783,29 +816,35 @@ function levelExplanation(index){if(levels[index].skill)return levels[index].exa
   'First combine the parallel resistances, then add the series resistance. Two 6 Ω resistors in parallel give 3 Ω; adding a 2 Ω series resistor gives 5 Ω. A 10 V supply then produces a current of 2 A.'
 ][index];}
 
-// Single-zero roulette after every ten correct answers, independent of level changes.
-const rouletteWheel=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-const rouletteRed=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-function rouletteColour(n){return n===0?'green':rouletteRed.has(n)?'red':'black';}
-let rouletteProceed,rouletteSpinning=false,roulettePlayed=false,rouletteSelectedColour='red';
+// Prize wheel (Hamish, 9 Nov 2026): no betting. When the variable-ratio schedule fires the wheel spins at once and the slice it
+// lands on is applied to the bank: add or take dollars, multiply, or change by a percentage. 24 slices, each equally likely;
+// +$200 and ×10 are the rare top prizes (one slice each). Bank rounded to whole dollars, never below $0.
+const rouletteSlices=[
+  {label:'+$10',add:10},{label:'−$10',add:-10},{label:'×2',mul:2},{label:'+$20',add:20},{label:'−25%',pct:-25},{label:'+$50',add:50},
+  {label:'−$20',add:-20},{label:'+10%',pct:10},{label:'×10',mul:10,top:true},{label:'−$10',add:-10},{label:'+$20',add:20},{label:'×0.5',mul:.5},
+  {label:'+$10',add:10},{label:'−$50',add:-50},{label:'+$100',add:100},{label:'−10%',pct:-10},{label:'+$10',add:10},{label:'×3',mul:3},
+  {label:'−$20',add:-20},{label:'+25%',pct:25},{label:'+$200',add:200,top:true},{label:'−$10',add:-10},{label:'+$20',add:20},{label:'−$20',add:-20}];
+const rouletteWheel=rouletteSlices;   // one pocket per slice (the spin and drawing code index by pocket)
+function rouletteColour(i){return rouletteSlices[i].top?'green':i%2?'black':'red';}
+function rouletteGood(slice){return (slice.add||0)>0||(slice.pct||0)>0||(slice.mul||1)>1;}
+function applyRouletteSlice(slice,bank){const value=slice.mul?bank*slice.mul:slice.pct?bank*(1+slice.pct/100):bank+slice.add;return Math.max(0,Math.round(value));}
+let rouletteProceed,rouletteSpinning=false,roulettePlayed=false,rouletteAutoTimer;
+const ROULETTE_AUTO_CONTINUE_MS=3000;
 function playRouletteResult(win){
   if($('sound').checked){
     stopMusic();musicEffectPause=true;
   }
   playEffect('rouletteSettle');playEffect(win?'rouletteWin':'rouletteLose',.16);
 }
-function selectRouletteColour(colour){if(rouletteSpinning||roulettePlayed)return;if(colour!==rouletteSelectedColour)playEffect('rouletteBet');rouletteSelectedColour=colour;for(const c of ['red','black','green'])$('bet-'+c).setAttribute?.('aria-pressed',String(c===colour));if($('roulette-dialog').querySelector?.('.bet-colour.selected'))selectPanelControl($('roulette-dialog'),panelControls($('roulette-dialog')).indexOf($('bet-'+colour)));} // the keyboard cursor follows R/B/G
-for(const colour of ['red','black','green'])$('bet-'+colour).onclick=()=>selectRouletteColour(colour);
-// Down from a colour button moves to Spin (stopPropagation keeps the document-level answer-key handler from reading it).
-// The pixel roulette wheel (also shown on the main menu).
+// The pixel prize wheel (also shown on the main menu). Each label runs along its slice, read from the rim inwards.
 function rouletteWheelSvg(){
   const step=360/rouletteWheel.length;
   // Draw on a four-unit grid so curved edges have deliberate pixel steps.
   const pixelDisc=(radius,inner=0)=>{let path='';for(let y=10;y<410;y+=4)for(let x=10;x<410;x+=4){const r=Math.hypot(x+2-210,y+2-210);if(r<=radius&&r>=inner)path+=`M${x} ${y}h4v4h-4z`;}return path;};
   const cells=rouletteWheel.map(()=>[]);
-  for(let y=26;y<394;y+=4)for(let x=26;x<394;x+=4){const dx=x+2-210,dy=y+2-210,r=Math.hypot(dx,dy);if(r<122||r>184)continue;const angle=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;const pocket=Math.round(angle/step)%37;cells[pocket].push(`M${x} ${y}h4v4h-4z`);}
-  const pockets=rouletteWheel.map((n,i)=>`<g class="pocket-${rouletteColour(n)}"><path class="wheel-sector" d="${cells[i].join('')}"/><text class="wheel-number" x="210" y="54" text-anchor="middle" dominant-baseline="middle" transform="rotate(${i*step} 210 210)">${n}</text></g>`).join('');
-  return `<svg class="roulette-disc" viewBox="0 0 420 420"><path class="wheel-rim" d="${pixelDisc(198)}"/><g id="roulette-rotor">${pockets}<path class="wheel-inner" d="${pixelDisc(120)}"/><path class="wheel-inner-ring" d="${pixelDisc(106,102)}"/><path class="wheel-spoke" d="M206 110h8v200h-8z M110 206h200v8H110z"/><path class="wheel-hub" d="${pixelDisc(30)}"/></g><g id="roulette-ball-orbit"><path class="wheel-ball" d="M206 30h8v4h4v8h-4v4h-8v-4h-4v-8h4z"/><path class="wheel-ball-shade" d="M214 38h4v4h-4z M210 42h4v4h-4z"/></g></svg>`;
+  for(let y=26;y<394;y+=4)for(let x=26;x<394;x+=4){const dx=x+2-210,dy=y+2-210,r=Math.hypot(dx,dy);if(r<90||r>184)continue;const angle=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;const pocket=Math.round(angle/step)%rouletteWheel.length;cells[pocket].push(`M${x} ${y}h4v4h-4z`);}
+  const pockets=rouletteWheel.map((slice,i)=>`<g class="pocket-${rouletteColour(i)}"><path class="wheel-sector" d="${cells[i].join('')}"/><text class="wheel-number" x="210" y="74" text-anchor="middle" dominant-baseline="middle" transform="rotate(${i*step} 210 210) rotate(90 210 74)">${slice.label}</text></g>`).join('');
+  return `<svg class="roulette-disc" viewBox="0 0 420 420"><path class="wheel-rim" d="${pixelDisc(198)}"/><g id="roulette-rotor">${pockets}<path class="wheel-inner" d="${pixelDisc(88)}"/><path class="wheel-inner-ring" d="${pixelDisc(76,72)}"/><path class="wheel-spoke" d="M206 140h8v140h-8z M140 206h140v8H140z"/><path class="wheel-hub" d="${pixelDisc(24)}"/></g><g id="roulette-ball-orbit"><path class="wheel-ball" d="M206 30h8v4h4v8h-4v4h-8v-4h-4v-8h4z"/><path class="wheel-ball-shade" d="M214 38h4v4h-4z M210 42h4v4h-4z"/></g></svg>`;
 }
 function paintRoulette(index,total=1,stopAngle=0,target=0){
   const step=360/rouletteWheel.length;
@@ -818,8 +857,6 @@ function paintRoulette(index,total=1,stopAngle=0,target=0){
   $('roulette-ball-orbit').setAttribute?.('style',`transform:translate(${snap(172*Math.sin(rad))}px,${snap(172-172*Math.cos(rad))}px)`);$('roulette-ball-orbit').setAttribute?.('data-angle',String(ballAngle));
 }
 $('menu-wheel').innerHTML=rouletteWheelSvg().replace(/<g id="roulette-ball-orbit">.*?<\/g>/,'').replace(' id="roulette-rotor"','');   // no ball on the menu
-function updateRouletteBet(){$('roulette-bet-value').textContent=`$${$('roulette-bet').value}`;}
-$('roulette-bet').addEventListener('input',updateRouletteBet);
 let roulettePointsTimer;
 function animateRoulettePoints(from,to){
   clearTimeout(roulettePointsTimer);
@@ -831,7 +868,7 @@ function animateRoulettePoints(from,to){
     const progress=frame/30,value=Math.round(from+(to-from)*(1-Math.pow(1-progress,3)));
     $('roulette-bank').textContent=`$${value}`;
     $('score').textContent=`BANK $${String(value).padStart(6,'0')}`;
-    if(frame===30){roulettePointsTimer=undefined;$('roulette-continue').disabled=false;return;}
+    if(frame===30){roulettePointsTimer=undefined;$('roulette-continue').disabled=false;selectPanelControl($('roulette-dialog'),0);clearTimeout(rouletteAutoTimer);rouletteAutoTimer=setTimeout(()=>{rouletteAutoTimer=undefined;if($('roulette-dialog').open)$('roulette-dialog').close();},ROULETTE_AUTO_CONTINUE_MS);return;}
     frame++;roulettePointsTimer=setTimeout(count,30);
   }
   count();
@@ -850,19 +887,26 @@ function flyBalanceToRoulette(fromRect,fromFont){
     fly.animate([{transform:`translate(${fromRect.left}px,${fromRect.top}px) scale(${scale})`},{transform:`translate(${cx}px,${to.top}px) scale(1)`}],{duration:ms,easing:'cubic-bezier(.3,.1,.2,1)',fill:'forwards'}).onfinish=()=>fly.remove();
   }catch{}
 }
-function openRoulette(proceed){const flyFrom=$('casino-score').getBoundingClientRect?.(),flyFont=typeof getComputedStyle==='function'?parseFloat(getComputedStyle($('casino-score')).fontSize):0;stop();rouletteProceed=proceed;roulettePlayed=false;rouletteSpinning=false;$('roulette-points-change').textContent='';$('roulette-points-change').setAttribute?.('data-direction','');$('roulette-bank').textContent=`$${score}`;$('roulette-bet').max=String(score);$('roulette-bet').value=String(Math.min(10,score));updateRouletteBet();$('roulette-result').textContent='Place a bet or skip.';$('roulette-spin').disabled=false;$('roulette-bet').disabled=false;$('roulette-colour').disabled=false;$('roulette-continue').disabled=false;$('roulette-continue').textContent='Skip (S) ↵';paintRoulette(0);$('roulette-dialog').showModal();flyBalanceToRoulette(flyFrom,flyFont);stopMusic();musicEffectPause=false;rouletteMusicStep=0;startMusic();}
-$('roulette-form').addEventListener('submit',e=>{e.preventDefault();if(rouletteSpinning||roulettePlayed||!$('roulette-dialog').open)return;const stake=Number($('roulette-bet').value),colour=rouletteSelectedColour;if(!Number.isInteger(stake)||stake<1||stake>score||!['red','black','green'].includes(colour)){$('roulette-result').textContent=`Bet a whole dollar amount from $1 to $${score}.`;return;}
-  const target=Math.floor(Math.random()*37),stopAngle=Math.random()*360,steps=74+target,bankBefore=score;let frame=0;rouletteSpinning=true;roulettePlayed=true;score-=stake;hud();$('roulette-spin').disabled=true;$('roulette-bet').disabled=true;$('roulette-colour').disabled=true;$('roulette-continue').disabled=true;$('roulette-result').textContent='SPINNING…';playEffect('rouletteStart');
-  function spin(){paintRoulette(frame,steps,stopAngle,target);if(frame<steps&&(frame%2===0||frame>=steps-15))playEffect('rouletteTick');if(frame===steps){const n=rouletteWheel[target],landed=rouletteColour(n),win=landed===colour,payout=win?stake*(colour==='green'?50:3):0;score+=payout;hud();playRouletteResult(win);rouletteSpinning=false;animateRoulettePoints(bankBefore,score);$('roulette-result').textContent='';$('roulette-continue').textContent='Continue (S) ↵';$('roulette-fast').hidden=true;rouletteFinishSpin=undefined;return;}frame++;rouletteSpinTimer=setTimeout(spin,frame<steps-15?25:35+(frame-(steps-15))*12);}
-  // Skip spin: jump straight to the last frame, which settles the bet as usual.
+function openRoulette(proceed){const flyFrom=$('casino-score').getBoundingClientRect?.(),flyFont=typeof getComputedStyle==='function'?parseFloat(getComputedStyle($('casino-score')).fontSize):0;stop();rouletteProceed=proceed;roulettePlayed=false;rouletteSpinning=false;$('roulette-points-change').textContent='';$('roulette-points-change').setAttribute?.('data-direction','');$('roulette-bank').textContent=`$${score}`;$('roulette-continue').disabled=true;$('roulette-continue').hidden=true;paintRoulette(0);$('roulette-dialog').showModal();flyBalanceToRoulette(flyFrom,flyFont);stopMusic();musicEffectPause=false;rouletteMusicStep=0;startMusic();spinRoulette();}
+// The wheel spins as soon as the screen opens. The outcome is chosen uniformly by slice and applied to the bank (and saved) at
+// once, so leaving mid-spin can't dodge a loss; the screen reveals it when the wheel settles.
+function spinRoulette(){
+  if(rouletteSpinning||roulettePlayed||!$('roulette-dialog').open)return;
+  const target=Math.floor(Math.random()*rouletteWheel.length),stopAngle=Math.random()*360,steps=74+target,bankBefore=score,slice=rouletteWheel[target];let frame=0;
+  rouletteSpinning=true;roulettePlayed=true;score=applyRouletteSlice(slice,bankBefore);hud();
+  $('roulette-result').textContent='SPINNING…';$('roulette-result').removeAttribute?.('data-direction');playEffect('rouletteStart');
+  function spin(){paintRoulette(frame,steps,stopAngle,target);if(frame<steps&&(frame%2===0||frame>=steps-15))playEffect('rouletteTick');if(frame===steps){const win=rouletteGood(slice);playRouletteResult(win);rouletteSpinning=false;animateRoulettePoints(bankBefore,score);$('roulette-result').innerHTML=`<span class="roulette-outcome">${slice.label}</span><span class="roulette-sum">$${bankBefore} → $${score}</span>`;$('roulette-result').setAttribute?.('data-direction',win?'gain':'loss');$('roulette-fast').hidden=true;$('roulette-continue').hidden=false;$('roulette-continue').textContent='Continue ↵';rouletteFinishSpin=undefined;return;}frame++;rouletteSpinTimer=setTimeout(spin,frame<steps-15?25:35+(frame-(steps-15))*12);}
+  // Skip spin: jump straight to the last frame, which settles as usual.
   rouletteFinishSpin=()=>{clearTimeout(rouletteSpinTimer);frame=steps;spin();};
   $('roulette-fast').hidden=false;$('roulette-fast').focus();
   spin();
-});
-$('roulette-fast').onclick=()=>rouletteFinishSpin?.();
-$('roulette-continue').onclick=()=>{if(!rouletteSpinning&&!$('roulette-continue').disabled)$('roulette-dialog').close();};
+}
+$('roulette-fast').onclick=event=>{event?.stopPropagation?.();rouletteFinishSpin?.();};
+$('roulette-continue').onclick=()=>{if(!rouletteSpinning&&roulettePlayed&&$('roulette-dialog').open)$('roulette-dialog').close();};
+// After the wheel settles, a click anywhere on the screen continues too.
+$('roulette-dialog').addEventListener('click',event=>{if(event.target?.closest?.('#roulette-fast,#roulette-continue'))return;$('roulette-continue').onclick();});
 $('roulette-dialog').addEventListener('cancel',e=>{if(rouletteSpinning){e.preventDefault();rouletteFinishSpin?.();}});
-$('roulette-dialog').addEventListener('close',()=>{clearTimeout(roulettePointsTimer);roulettePointsTimer=undefined;hud();stopMusic();musicEffectPause=false;startMusic();const proceed=rouletteProceed;rouletteProceed=undefined;if(proceed)proceed();});
+$('roulette-dialog').addEventListener('close',()=>{clearTimeout(roulettePointsTimer);roulettePointsTimer=undefined;clearTimeout(rouletteAutoTimer);rouletteAutoTimer=undefined;hud();stopMusic();musicEffectPause=false;startMusic();const proceed=rouletteProceed;rouletteProceed=undefined;if(proceed)proceed();});
 try{$('roulette-enabled').checked=localStorage.getItem('circuit-blaster-roulette')!=='off';}catch{}
 $('roulette-enabled').onchange=()=>{renderCasinoProgress();try{localStorage.setItem('circuit-blaster-roulette',$('roulette-enabled').checked?'on':'off');}catch{}};
 $('preferences').onclick=()=>{stop();$('preferences-dialog').showModal();};
@@ -903,9 +947,12 @@ for(const unit of curriculumUnits){
     levels.push(entry);
   }
 }
+// Locked class link (lock.js): the class is fixed to one unit. Everything that would pick another unit, class or skill checks this.
+const LOCK=window.CASINO_LOCK||null;
 function chooseUnit(id){
   if($('roulette-dialog').open)return;
-  saveRun();reviewDeck=null;currentReview=null;advanceAfterCorrection=false;selectedUnit=id;selectedClass=unitClass(id);lastUnitForClass[selectedClass]=id;syncClassUi();position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=3;needsLevelCard=false;lastQuestionKey=null;
+  if(LOCK&&id!==LOCK.unit)return;
+  saveRun();reviewDeck=null;currentReview=null;advanceAfterCorrection=false;selectedUnit=id;selectedClass=unitClass(id);lastUnitForClass[selectedClass]=id;syncClassUi();position=correct=wrong=score=rouletteCorrectCount=0;rouletteTarget=nextRouletteTarget(true);needsLevelCard=false;lastQuestionKey=null;
   const unit=curriculumUnits.find(u=>u.id===id);
   $('calculations').hidden=!!unit?.mixed;
   enabled=levels.map((l,i)=>({l,i})).filter(({l,i})=>id==='circuit_extension'?i<circuitLevelCount:l.unit===id).map(({i})=>i);
@@ -923,13 +970,14 @@ function chooseClass(id){if(id===selectedClass||!CLASSES.some(c=>c.id===id))retu
 $('class').onchange=()=>chooseClass($('class').value);
 for(const button of document.querySelectorAll('[data-setting="class"]'))button.hidden=!CLASSES.some(c=>c.id===button.dataset.value);
 if(curriculumUnits.length){
-  const params=new URLSearchParams(location.search),requestedUnit=params.get('unit');let requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12',yr13:'yr13',y13:'yr13',13:'yr13',year13:'yr13',flags:'flags',flag:'flags',dutch:'dutch',nl:'dutch'})[String(params.get('class')||'').toLowerCase()];
+  const params=new URLSearchParams(location.search),requestedUnit=LOCK?LOCK.unit:params.get('unit');if(LOCK)params.delete('class');let requestedClass=({yr10:'yr10',y10:'yr10',10:'yr10',year10:'yr10',yr12:'yr12',y12:'yr12',12:'yr12',year12:'yr12',yr13:'yr13',y13:'yr13',13:'yr13',year13:'yr13',flags:'flags',flag:'flags',dutch:'dutch',nl:'dutch'})[String(params.get('class')||'').toLowerCase()];
   const validUnit=curriculumUnits.some(u=>u.id===requestedUnit)||requestedUnit==='circuit_extension';
   if(requestedClass&&!CLASSES.some(c=>c.id===requestedClass))requestedClass=undefined;
   if(requestedClass)selectedClass=requestedClass;
   if(validUnit&&(!requestedClass||unitClass(requestedUnit)===requestedClass))selectedUnit=requestedUnit;
   else if(requestedClass)selectedUnit=CLASSES.find(c=>c.id===requestedClass).defaultUnit;
   if(!curriculumUnits.some(u=>u.id===selectedUnit)&&selectedUnit!=='circuit_extension')selectedUnit=curriculumUnits[0].id;
+  if(LOCK)LOCK.unit=selectedUnit;
   chooseUnit(selectedUnit);
 }
 
@@ -1107,6 +1155,7 @@ function cardFilter(){
   return item=>{const id=String(item.id||'').replace(/^FM-/,'');return tests.some(test=>test(id));};
 }
 function beginPractice(code){
+  if(LOCK)code='mixed';
   if(globalThis.CasinoDiagnostic?.begin(code)||globalThis.CasinoQuiz?.begin(code))return;
   // A circuit tile runs as the circuit_extension unit; any other tile runs as the chooser's own unit.
   const target=isCircuitTile(code)?'circuit_extension':chooserUnit();
@@ -1132,6 +1181,7 @@ $('practice-dialog').addEventListener('click',event=>{
 $('practice-search').addEventListener('input',filterPractice);
 // START always opens the chooser (unless a run is under way). A diagnostic/quiz unit named in the URL shows its parent's chooser with its tile selected, not started.
 function openPractice(code){
+  if(LOCK)return beginPractice('mixed');
   practicePage=0;practiceSearch='';$('practice-search').value='';renderPractice();
   const find=()=>code&&$('practice-rows').querySelector(`[data-practice="${code}"]`);
   for(let page=0;code&&!find()&&page<practicePages;page++){practicePage=page;renderPractice();}
@@ -1141,6 +1191,7 @@ function openPractice(code){
 }
 $('start-game').onclick=()=>{
   if(activeRun)return startGame();
+  if(LOCK)return beginPractice('mixed');
   if(globalThis.CasinoClass)return CasinoClass.restart();
   const code=PRACTICE_TILE_OF_UNIT[selectedUnit],unit=practiceUnit();
   if(unit?.diagnostic){const parent=curriculumUnits.find(u=>u.id===`${unit.class}_physics`);if(parent)chooseUnit(parent.id);}
@@ -1161,7 +1212,7 @@ var menuPanelIds=['rule-dialog','settings-dialog','leaderboard-dialog','preferen
 function activeMenuPanel(){return (menuPanelIds||['rule-dialog','settings-dialog','leaderboard-dialog','preferences-dialog','roulette-dialog','chapter-dialog','practice-dialog','diagnostic-dialog']).map($).find(panel=>panel.open);}
 function panelControls(panel){
   // After the wheel has spun, the only thing to do is Continue: keep arrow keys on it.
-  if(panel.id==='roulette-dialog'&&roulettePlayed)return [$('roulette-continue')].filter(control=>!control.disabled);
+  if(panel.id==='roulette-dialog')return [rouletteSpinning?$('roulette-fast'):$('roulette-continue')].filter(control=>!control.disabled&&!control.hidden);
   return [...panel.querySelectorAll('button,input:not([type="hidden"])')].filter(control=>!control.disabled&&!control.hidden&&(!control.getClientRects||control.getClientRects().length));}
 function selectPanelControl(panel,index){const controls=panelControls(panel);if(!controls.length)return;index=(index+controls.length)%controls.length;controls.forEach((control,i)=>control.classList.toggle('selected',i===index));controls[index].focus();}
 var spatialPanelIds=['practice-dialog','preferences-dialog','roulette-dialog'];
@@ -1233,6 +1284,54 @@ function navigatePanel(panel,event){
 for(const id of menuPanelIds){const panel=$(id),open=panel.showModal.bind(panel);panel.showModal=()=>{open();const controls=panelControls(panel);const chosen=controls.findIndex(control=>control.getAttribute('aria-pressed')==='true');selectPanelControl(panel,chosen>=0?chosen:0);};panel.addEventListener('focusin',event=>{const controls=panelControls(panel),index=controls.indexOf(event.target);if(index>=0)controls.forEach((control,i)=>control.classList.toggle('selected',i===index));});}
 
 function selectConnection(value){$('answer').value=value;document.querySelectorAll('[data-connection]').forEach(button=>{const selected=button.dataset.connection===value;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));if(selected)button.focus();});}
+// Answer cells in a gtable: every cell of the answer column(s) starts empty; ↑ ↓ move between cells; a multiple-choice cell is
+// answered from the option bar under the table (← → and ENTER, or click), a typed cell with ENTER. Each cell is marked at once:
+// right locks it (✓); wrong shows ✗ and strikes that option; a second miss reveals the answer. When every cell is done the
+// question is submitted: right if every cell was right first time.
+function gcellEls(){return [...document.querySelectorAll('#diagram .gcell')];}
+function gcellInit(){current.gstate={active:-1,done:new Set(),wrong:{},struck:{},anyWrong:false,sel:0};gcellActivate(0);}
+function gcellActivate(i){
+  const st=current.gstate,els=gcellEls();if(!st||!els.length)return;i=(i+els.length)%els.length;st.active=i;
+  els.forEach((el,k)=>{const host=el.closest('td')||el;host.classList.toggle('gactive',k===i);});
+  const spec=current.source.cells[i],bar=$('gopts'),done=st.done.has(i);
+  if(bar){const opts=spec.options&&!done?spec.options:[];const struck=st.struck[i]||[];st.sel=Math.max(0,opts.findIndex(o=>!struck.includes(o)));
+    bar.innerHTML=opts.map((o,k)=>`<button type="button" data-gopt="${escapeMarkup(o)}" class="${k===st.sel?'selected':''}${struck.includes(o)?' struck':''}"${struck.includes(o)?' disabled':''}>${escapeMarkup(o)}</button>`).join('');}
+  const input=els[i].querySelector('input,textarea');if(input&&!done)setTimeout(()=>input.focus(),0);else document.activeElement?.blur?.();
+  els[i].scrollIntoView?.({block:'nearest'});
+}
+function gcellRight(spec,value){
+  if(typeof spec.check==='function')return !!spec.check(value);
+  const v=String(value||'').trim();if(!v)return false;
+  return [spec.answer,...(spec.aliases||[])].some(a=>spec.caseSensitive?String(a).replace(/\s/g,'')===v.replace(/\s/g,''):normalize(String(a))===normalize(v));
+}
+function gcellLock(i,shown,ok){const el=gcellEls()[i];el.innerHTML=`<span class="gfilled">${escapeMarkup(shown)}</span> <span class="gmark">${ok?'✓':'✗'}</span>`;el.classList.add(ok?'right':'wrong');current.gstate.done.add(i);}
+function gcellCommit(i,value){
+  const st=current.gstate,spec=current.source.cells[i];if(!st||st.done.has(i))return;
+  if(gcellRight(spec,value)){gcellLock(i,typeof spec.check==='function'?value:spec.answer,true);   /* right shows ✓ even after a miss; the miss still counts against the question */playEffect('rouletteBet');}
+  else{
+    st.wrong[i]=(st.wrong[i]||0)+1;st.anyWrong=true;playEffect('wrong');
+    if(spec.options)(st.struck[i] ||= []).push(value);
+    if(st.wrong[i]>=2){gcellLock(i,spec.answer,false);}
+    else{const el=gcellEls()[i];el.classList.remove('miss');void el.offsetWidth;el.classList.add('miss');el.querySelector('.gmark').textContent='✗';gcellActivate(i);return;}
+  }
+  const n=gcellEls().length,next=[...Array(n).keys()].map(k=>(i+1+k)%n).find(k=>!st.done.has(k));
+  if(next===undefined){$('answer').value='table';setTimeout(()=>$('answer-form').requestSubmit(),350);}else gcellActivate(next);
+}
+function gcellKey(event){
+  const st=current.gstate;if(!st)return;const i=st.active,spec=current.source.cells[i],bar=$('gopts');
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();gcellActivate(i+(event.key==='ArrowDown'?1:-1));return;}
+  if(event.key==='Enter'){event.preventDefault();if(st.done.has(i)){const n=gcellEls().length,k=[...Array(n).keys()].find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);return;}
+    if(spec.options){const b=bar?.querySelectorAll('[data-gopt]')[st.sel];if(b&&!b.disabled)gcellCommit(i,b.dataset.gopt);}
+    else gcellCommit(i,gcellEls()[i].querySelector('input,textarea')?.value);return;}
+  if(event.key===' '&&gcellEls()[i]?.classList.contains('wordcell')&&!st.done.has(i)){event.preventDefault();gcellCommit(i,gcellEls()[i].querySelector('input')?.value);return;}
+  if(spec.options&&!st.done.has(i)&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();const bs=[...bar.querySelectorAll('[data-gopt]')];if(!bs.length)return;
+    let k=st.sel;do{k=(k+(event.key==='ArrowRight'?1:-1)+bs.length)%bs.length;}while(bs[k].disabled&&k!==st.sel);st.sel=k;bs.forEach((b,j)=>b.classList.toggle('selected',j===k));}
+}
+$('game-screen').addEventListener('click',event=>{
+  if(!current?.gstate)return;const opt=event.target.closest('#gopts [data-gopt]');
+  if(opt&&!opt.disabled){gcellCommit(current.gstate.active,opt.dataset.gopt);return;}
+  const el=event.target.closest('#diagram .gcell, #diagram td.gcell-td');if(el){const c=el.classList.contains('gcell')?el:el.querySelector('.gcell');if(c)gcellActivate(+c.dataset.cell);}
+});
 function routeAnswerKey(event){
   if(globalThis.CasinoExam?.ownsKey(event))return;
   if(!activeRun||event.ctrlKey||event.metaKey||event.altKey||event.isComposing)return;
@@ -1240,6 +1339,7 @@ function routeAnswerKey(event){
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();const to=choiceInDirection(event.key);if(to)selectConnection(to);}
     else if(event.key==='Enter'){event.preventDefault();$('answer-form').requestSubmit();}return;
   }
+  if(current.source?.cells&&document.querySelector('#diagram .gcell')){gcellKey(event);return;}
   const input=answerFocusTarget();if(event.target===input)return;
   if(event.key==='Enter'){event.preventDefault();input.focus();$('answer-form').requestSubmit();return;}
   if(event.key.length!==1&&!['Backspace','Delete'].includes(event.key))return;
@@ -1296,12 +1396,13 @@ function syncShellAnswer(){const fields=[...document.querySelectorAll('.shell-in
 $('game-screen').addEventListener('input',event=>{if(event.target.classList?.contains('shell-input'))syncShellAnswer();});
 $('game-screen').addEventListener('keydown',event=>{
   if(!event.target.classList?.contains('shell-input'))return;
-  const fields=[...document.querySelectorAll('.shell-input')],index=fields.indexOf(event.target),punnett=current.source?.visual?.type==='punnett';
+  const fields=[...document.querySelectorAll('.shell-input')],index=fields.indexOf(event.target),punnett=current.source?.visual?.type==='punnett',gtable=current.source?.visual?.type==='gtable';
   if(event.key==='Enter'){
     event.preventDefault();event.stopPropagation();syncShellAnswer();
-    if(punnett){const nextEmpty=[...fields.slice(index+1),...fields.slice(0,index+1)].find(field=>!field.value.trim());if(nextEmpty){nextEmpty.focus();return;}}
+    if(punnett||gtable){const nextEmpty=[...fields.slice(index+1),...fields.slice(0,index+1)].find(field=>!field.value.trim());if(nextEmpty){nextEmpty.focus();return;}}
     $('answer-form').requestSubmit();return;
   }
+  if(gtable){if(['ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();event.stopPropagation();fields[Math.max(0,Math.min(fields.length-1,index+(event.key==='ArrowDown'?2:-2)))]?.focus();}return;}
   if(punnett&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)){
     event.preventDefault();event.stopPropagation();
     const row=Math.floor(index/2),col=index%2;
@@ -1342,3 +1443,41 @@ $('symbol-pad').addEventListener('click',event=>{
   if(field.classList.contains('shell-input'))syncShellAnswer();
   paintAnswer();
 });
+
+// Preview mode (index.html?preview=1), for the results dashboard's hover tooltip: shows one question as a student
+// sees it, with no title card, menus, timer, music, saving or reporting (plain mode already sends nothing).
+// The parent page posts {preview:{unit,id}}; the question is a fresh random variant of that card, not the student's own numbers.
+// preview=full keeps the whole student screen (top bar, bank, ENTER box) for the genetics design sheet; preview=1 crops to the question.
+const previewMode=new URLSearchParams(location.search).get('preview');
+if(previewMode==='1'||previewMode==='full'){
+  saveProgress=function(){};
+  focus=function(){};   // never focus the answer box, so there's no blinking cursor
+  document.documentElement.dataset.preview='1';
+  // Only the parts that belong to the question: no top bar, bank, ENTER button, hint line or symbol pad.
+  if(previewMode==='1'){const st=document.createElement('style');st.textContent='header.arcade-hud,#player-badge,.answer-footer,#answer-result,#symbol-pad,#deck-progress,#unit-reminder{display:none!important}body::after{display:none!important}*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}#answer-slots{visibility:hidden}';document.head.append(st);}
+  // The box around what's actually drawn, so the parent can crop to it. Block elements (the heading, #diagram) span the
+  // whole window, so measure their text, graphics and the answer box instead; otherwise the crop is always full width.
+  const questionBox=()=>{let x0=1/0,y0=1/0,x1=-1/0,y1=-1/0;
+    const add=r=>{if(!r.width||!r.height)return;x0=Math.min(x0,r.left);y0=Math.min(y0,r.top);x1=Math.max(x1,r.right);y1=Math.max(y1,r.bottom);};
+    const drawn='svg,canvas,img,table,video,#entry-wrap,input:not(#answer),select,textarea';
+    for(const root of document.querySelectorAll('#game-screen .question-heading, #diagram, #answer-form .answer-row, #answer-suffix')){
+      if(root.closest('[hidden]'))continue;
+      for(const el of [root,...root.querySelectorAll(drawn)])if(el.matches(drawn)&&!el.parentElement.closest(drawn)&&getComputedStyle(el).visibility!=='hidden')add(el.getBoundingClientRect());
+      const walk=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const range=document.createRange();
+      for(let t;(t=walk.nextNode());){if(!t.nodeValue.trim()||t.parentElement.closest('[hidden],'+drawn))continue;range.selectNodeContents(t);for(const r of range.getClientRects())add(r);}}
+    if(!isFinite(x0))return null;const pad=16;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);
+    return {x:x0,y:y0,w:Math.min(innerWidth,x1+pad)-x0,h:Math.min(innerHeight,y1+pad)-y0};};
+  const findItem=(unit,id)=>{let fallback=null;
+    for(let i=0;i<levels.length;i++){const item=(levels[i].questions||[]).find(x=>x.id===id);if(item){if(levels[i].unit===unit)return [i,item];fallback=fallback||[i,item];}}
+    return fallback;};
+  const showQuestion=(unit,id)=>{const hit=findItem(unit,id);if(!hit)return false;const [index,item]=hit;
+    try{selectedClass=unitClass(levels[index].unit)||selectedClass;}catch{}
+    document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+    screen='game';document.documentElement.dataset.screen='game';$('game-screen').hidden=false;$('menu-screen').hidden=true;
+    questionLevel=index;current=makeRevisionQuestion(item,true);render();stop();document.activeElement?.blur?.();return true;};   // blur: a still picture, no blinking cursor
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data?.preview)return;const {unit,id}=e.data.preview;
+    let ok=false;try{ok=showQuestion(unit,id);}catch(err){console.warn('preview',err);}
+    // Let layout (and any answer-box sizing) settle before measuring.
+    const src=e.source;requestAnimationFrame(()=>requestAnimationFrame(()=>{const box=ok?questionBox():null;src?.postMessage({previewShown:{unit,id,ok:!!box,box}},location.origin);}));});
+  parent!==window&&parent.postMessage({previewReady:true},location.origin);
+}

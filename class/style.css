@@ -210,16 +210,6 @@ form#answer-form .question-heading h1{font-size:clamp(25px,3vw,32px);letter-spac
 .roulette-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;align-items:center;gap:28px}
 .roulette-controls{min-width:0;text-align:center}
 #roulette-dialog h2{font-size:32px}
-#roulette-form{display:flex;flex-direction:column;align-items:stretch;gap:18px}
-#roulette-form label{display:grid;gap:8px;text-align:center}
-#roulette-form input,#roulette-form select{width:120px;padding:8px;font-size:24px;border:1px solid var(--ink);background:var(--paper);color:var(--ink)}
-#roulette-form button{margin:0}
-#roulette-colour{display:flex;flex-direction:column;gap:6px;margin:0;padding:8px 0;border:0}
-#roulette-colour legend{text-align:center;margin:auto;padding:0}
-#roulette-form .bet-colour{width:100%;padding:8px 10px;border:2px solid var(--line);font-size:16px;text-transform:none}
-#roulette-colour .bet-red{color:#b62132}
-#roulette-colour .bet-green{color:#16833b}
-#roulette-form #roulette-colour .bet-colour[aria-pressed="true"]{border-color:currentColor;outline:2px solid currentColor;outline-offset:2px;background:var(--hover)}
 #roulette-continue{width:100%}
 #roulette-wheel{margin:12px 0;background:var(--paper)}
 :is(#roulette-wheel,#menu-wheel) .roulette-disc{display:block;width:min(100%,360px);height:auto;max-height:none;margin:auto;overflow:visible}
@@ -238,8 +228,6 @@ form#answer-form .question-heading h1{font-size:clamp(25px,3vw,32px);letter-spac
 :is(#roulette-wheel,#menu-wheel) .wheel-pointer{fill:var(--ink);stroke:var(--paper);stroke-width:1}
 :is(#roulette-wheel,#menu-wheel) .wheel-ball{fill:#fff;stroke:none}:is(#roulette-wheel,#menu-wheel) .wheel-ball-shade{fill:#9a9a9a;stroke:none}
 #roulette-ball-orbit{transition:none}
-#roulette-form #roulette-bet{width:100%;padding:0;accent-color:var(--ink);cursor:pointer}
-#roulette-bet-value{font-size:30px;color:var(--ink)}
 @media(prefers-reduced-motion:reduce){#roulette-rotor,#roulette-ball-orbit{transition:none}}
 #roulette-result{min-height:2.5em;color:var(--ink)}
 #roulette-result:empty{display:none}
@@ -451,13 +439,6 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 #practice-dialog[open]{display:flex;flex-direction:column;overflow:hidden;width:100vw;height:100svh}#practice-dialog[open]>*{width:100%;flex:none}
 #practice-dialog[open]>#practice-rows{flex:1 1 0;min-height:0;grid-template-rows:repeat(3,minmax(190px,1fr));overflow-y:auto;margin:12px auto}#practice-rows button.practice-tile{height:auto}
 @media(max-width:800px){#practice-dialog[open]{overflow:auto}#practice-dialog[open]>#practice-rows{flex:none;grid-template-rows:none;grid-auto-rows:178px}}
-/* Roulette bet slider: blocky Apple II bar with ten notches and a square thumb. */
-#roulette-form #roulette-bet{-webkit-appearance:none;appearance:none;height:32px;margin:12px 0;background:transparent;border-radius:0}
-#roulette-bet::-webkit-slider-runnable-track{height:16px;border-radius:0;background:repeating-linear-gradient(90deg,var(--line) 0 calc(10% - 4px),var(--paper) calc(10% - 4px) 10%);box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
-#roulette-bet::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:32px;margin-top:-8px;border:0;border-radius:0;background:var(--ink);box-shadow:0 0 0 4px var(--paper)}
-#roulette-bet::-moz-range-track{height:16px;border-radius:0;background:repeating-linear-gradient(90deg,var(--line) 0 calc(10% - 4px),var(--paper) calc(10% - 4px) 10%);box-shadow:0 -4px 0 0 var(--ink),0 4px 0 0 var(--ink),-4px 0 0 0 var(--ink),4px 0 0 0 var(--ink)}
-#roulette-bet::-moz-range-thumb{width:20px;height:32px;border:0;border-radius:0;background:var(--ink);box-shadow:0 0 0 4px var(--paper)}
-#roulette-bet:focus-visible{outline:none}#roulette-bet:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--paper),0 0 0 8px var(--ink)}
 .practice-head{display:flex;align-items:center;justify-content:flex-start;gap:16px}.practice-head .eyebrow{margin:0}#practice-find{flex:0 1 360px}#practice-find #practice-search{margin:0}
 .practice-head form{flex:none}#practice-dialog .practice-head form button{width:auto}#practice-find{margin-left:auto}
 /* Practice header: search box and back button share one height and the tiles' chunky border, so their edges line up with the grid. */
@@ -513,13 +494,14 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 #roulette-dialog .roulette-layout{grid-template-columns:auto 300px;justify-content:center;gap:clamp(32px,6vw,96px)}
 #roulette-wheel{margin:0}
 #roulette-wheel .roulette-disc{width:min(46vh,420px,42vw)}
-#roulette-form{gap:14px}
-#roulette-form label{gap:4px;font-size:20px}
-#roulette-form .bet-colour{font-size:18px;padding:10px 12px}
-#roulette-colour legend{font-size:20px;margin-bottom:6px}
 #roulette-result{margin:12px 0 0}
+/* Prize wheel outcome: the slice's label big, then the sum ($40 → $120). */
+#roulette-result .roulette-outcome{display:block;font-size:clamp(48px,8vw,96px);line-height:1.05}
+#roulette-result .roulette-sum{display:block;font-size:clamp(20px,2.6vw,30px);margin:8px 0 16px;white-space:nowrap}
+#roulette-result[data-direction="gain"] .roulette-outcome{color:#16833b}#roulette-result[data-direction="loss"] .roulette-outcome{color:#d52332}
+:root:not([data-theme="paper"]) #roulette-result[data-direction="gain"] .roulette-outcome{color:#7deaa0}:root:not([data-theme="paper"]) #roulette-result[data-direction="loss"] .roulette-outcome{color:#ff818a}
+:is(#roulette-wheel,#menu-wheel) .wheel-number{font-size:18px}
 @media(max-width:640px){#roulette-dialog .roulette-layout{grid-template-columns:1fr}#roulette-wheel .roulette-disc{width:min(70vw,300px)}}
-:root:not([data-theme="paper"]) #roulette-colour .bet-red{color:#ff4d5e}:root:not([data-theme="paper"]) #roulette-colour .bet-green{color:#3ddc6e}
 /* Diagnostic end card: one practise-next choice per row, with the reason underneath. */
 #diagnostic-actions{display:grid;gap:10px;margin-top:14px}#diagnostic-actions button{width:100%;text-align:left}.diagnostic-why{display:block;font-size:.7em;opacity:.8;margin-top:4px}
 /* NCEA exam mode (exam.js): self-marked explain parts. */
@@ -555,3 +537,59 @@ dialog .practice-tile.selected::before{position:absolute;top:8px;right:10px;font
 
 /* Short or narrow screens: smaller doodle and name so skill titles are never clipped; grid scrolls instead of squeezing tiles */
 @media(max-height:760px),(max-width:1100px){#practice-rows .practice-name{font-size:.78em;letter-spacing:0;overflow-wrap:break-word;hyphens:auto}#practice-rows .practice-doodle{width:48px;height:48px}#practice-rows button.practice-tile{padding-top:22px}}
+/* Choice buttons that must keep scientific case (genotypes such as Bb × bb): source.keepCase. */
+.connection-choices.keep-case button{text-transform:none}
+/* Generic tables (gtable, genetics templates): answer boxes and choice buttons live in the cells. Overrides .phys-table. */
+.phys-table.gtable{table-layout:auto;width:auto;min-width:min(94vw,560px);max-width:min(94vw,1000px);font-size:clamp(16px,1.7vw,22px)}
+.gtable th,.gtable td{text-align:left;padding:.35em .6em;vertical-align:middle}
+.gtable th{font-size:.75em}
+.gtable tr>:first-child{width:1%;white-space:nowrap}
+.gtable-ask{display:inline-block;min-width:3ch;border:2px dashed var(--ink);padding:0 .5em;text-align:center}
+.phys-table.gtable td.blank.inline{text-align:left}
+.phys-table.gtable td.blank.inline #cloze-answer-slot{display:inline-flex!important;width:auto!important;height:auto;min-height:0;vertical-align:middle}
+.phys-table.gtable td.blank.inline #entry-wrap{width:11ch!important;height:auto;min-height:1.5em;padding:0 .3em}
+.phys-table.gtable td.blank.pick{text-align:left}
+.gtable-input{width:12ch;background:transparent;color:var(--ink);border:0;border-bottom:2px solid var(--ink);font:inherit;padding:0 .2em;text-align:left}
+.gtable-input.wide{width:100%;min-width:24ch;box-sizing:border-box}
+.gcell{display:inline-flex;align-items:center;gap:.3em;min-width:5ch}
+.gslot{display:inline-block;min-width:4ch;border:2px dashed var(--ink);padding:0 .4em;text-align:center}
+.gcell-input{width:12ch;background:transparent;color:var(--ink);border:0;border-bottom:2px solid var(--ink);font:inherit;padding:0 .2em}
+.gcell-input.wide{width:100%;min-width:28ch}
+.gcell.typed:has(.wide){display:flex;width:100%}
+.gtable td.gactive{outline:3px dashed var(--ink);outline-offset:-6px}
+.gcell .gmark{min-width:1ch}
+.gcell.wrong .gfilled,.gcell.miss .gmark{color:var(--bad,#ff6a5c)}
+.gcell.miss{animation:gmiss .35s steps(2,end)}
+@keyframes gmiss{0%,100%{transform:none}50%{transform:translateX(4px)}}
+.gopts{margin-top:14px;justify-content:center}
+.gopts button{text-transform:none}
+.gopts button.struck{text-decoration:line-through;opacity:.4}
+/* Paragraph answers (gpara): explain/compare questions, answered blank by blank, word by word, or whole. */
+.gpara{max-width:min(1100px,94vw);margin:0 auto;text-align:left;font-size:clamp(17px,1.8vw,24px);line-height:1.9}
+.gpara-stem{color:var(--muted);margin-bottom:.7em;line-height:1.5}
+.gpara-answer{border:3px solid var(--ink);padding:.5em .8em}
+/* The picture beside a gtable or a gpara stem (every genetics question has one). */
+.gtable-wrap{display:flex;gap:clamp(12px,2vw,28px);align-items:center;justify-content:center}
+.gpara-top{display:flex;gap:clamp(12px,2vw,24px);align-items:center;margin-bottom:.6em}.gpara-top .gpara-stem{margin:0}
+.gtable-wrap .phys-table.gtable{margin:0}
+.gpic{flex:none;width:clamp(170px,22vw,290px)}
+.gtable-cloze .gpic .revision-visual{display:block;width:100%;height:auto;max-height:min(30vh,240px);margin:0}
+.gpara .gpic{width:clamp(140px,16vw,210px)}.gtable-cloze .gpara .gpic .revision-visual{max-height:min(22vh,170px)}
+.gpara .gpara-answer{line-height:1.65}.gpara-top .gpara-stem{line-height:1.4}
+.gpara-list{margin:0;padding-left:1.4em;list-style:square}.gpara-list li{margin:.15em 0}.gpara-list li::marker{color:var(--ink)}
+.gpara .gcell{vertical-align:baseline;min-width:0}
+.gpara .gcell.gactive{outline:2px dashed var(--ink);outline-offset:2px}
+/* One box, not two (Hamish, 9 Nov 2026): a multiple-choice slot that is active fills in, instead of a dashed outline drawn round its dashed border. */
+.gpara .gcell.gactive:has(.gslot),.gtable td.gactive:has(.gslot){outline:0}
+.gcell.gactive .gslot,td.gactive .gslot{background:var(--ink);color:var(--paper);border-style:solid}
+.gpara .gcell-input.word{min-width:2ch;padding:0}
+.gpara .gcell.wordcell .gmark{font-size:.6em}
+.gpara .gcell.wordcell.right .gmark{display:none}
+.gcell-input.area{display:block;width:100%;min-height:6em;resize:vertical;border:2px solid var(--ink);line-height:1.5}
+.gcell.typed:has(.area){display:block;width:100%}
+.gopts button{font-size:clamp(16px,1.9vw,26px);padding:.25em .8em;min-height:0}
+.gcell-input.area{padding:.4em .6em}
+.gpara .gcell.right .gfilled{display:inline}
+
+/* Locked class link (lock.js): no class picker, no unit chooser, no practice menu. app.js also refuses these actions. */
+html[data-locked] #practice-dialog,html[data-locked] #settings-dialog,html[data-locked] #settings,html[data-locked] [data-setting="class"],html[data-locked] [aria-label="Class"]{display:none!important}

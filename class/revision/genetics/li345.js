@@ -9,7 +9,7 @@
 
  // One short-answer item: a single blank, optional choices, and a picture.
  const one=(o)=>add({id:o.id,test:'',group:'Extra',title:o.title,li:o.li,sc:o.sc,level:'A',template:o.title,slots:{},
-  gen:r=>{const d=o.gen(r);return {instruction:d.instruction,cloze:d.cloze,answer:d.answer,aliases:d.aliases,choices:d.choices,
+  gen:r=>{const d=o.gen(r);return {instruction:d.instruction,cloze:d.cloze,answer:d.answer,aliases:d.aliases,choices:d.choices,unitGiven:d.unitGiven,
    visual:{type:'svg',svg:d.svg},explanation:d.explanation,chosen:d.chosen||{}};}});
 
  // Long-answer item in the LO1/LO2 style: 2–3 contexts, each with a stem line and a picture.
@@ -124,7 +124,7 @@
    svg:pic(punnett({top:[L,l],side:[L,l],cells:cells([L,l],[L,l]),x:90,y:50,c:80,label:'Punnett'}),'Punnett square for a heterozygous cross'),explanation:`${L}${l} × ${L}${l} gives 1 ${L}${L}, 2 ${L}${l} and 1 ${l}${l}, so 3 of 4 show the dominant phenotype.`};}});
 
  one({id:'li4-sex',li:4,sc:'Use Punnett squares to predict inheritance outcomes, including biological sex determination',title:'Sex determination',
-  gen:r=>({instruction:'Use the Punnett square for the sex chromosomes:',cloze:'The chance a child is male is ____ %.',answer:'50',choices:['25','50','75','100'],
+  gen:r=>({instruction:'Use the Punnett square for the sex chromosomes:',cloze:'The chance a child is male is ____ %.',unitGiven:true,answer:'50',choices:['25','50','75','100'],
    svg:pic(punnett({top:['X','X'],side:['X','Y'],cells:['XX','XY','XX','XY'],x:90,y:50,c:80,label:'sex'}),'Punnett square: mother XX, father XY'),explanation:'Half of the offspring get a Y chromosome from the father, so half are male (XY).'})});
 
  long({key:'li4-inherit',li:4,sc:'Explain that offspring inherit alleles from both parents',title:'Inheriting alleles',skill:'Alleles and inheritance',ask:'Explain how an offspring gets its alleles.',

@@ -177,7 +177,8 @@ const Physics12=(()=>{
   const numeric=!result.choices&&isNumericAnswer(answer);
   result.numeric=numeric;
   // Conversions ("1.2 A = ____ mA") state the target unit in the question: keep it visible and accept the bare number.
-  result.unitGiven=numeric&&!!out.answerUnit&&/\d[ \t]*(?:[A-Za-zµΩ°]{1,3}(?:\/[A-Za-z]{1,3}[²³]?)?|minutes?|hours?|tonnes?|seconds?)[ \t]*=[ \t]*____[ \t]*[A-Za-zµΩ°]/.test(result.cloze);
+  // A template may state outright that the unit is given in the question (e.g. a % blank on a multichoice question).
+  result.unitGiven=out.unitGiven!==undefined?!!out.unitGiven:numeric&&!!out.answerUnit&&/\d[ \t]*(?:[A-Za-zµΩ°]{1,3}(?:\/[A-Za-z]{1,3}[²³]?)?|minutes?|hours?|tonnes?|seconds?)[ \t]*=[ \t]*____[ \t]*[A-Za-zµΩ°]/.test(result.cloze);
   result.caseSensitive=out.caseSensitive!==undefined?out.caseSensitive:!numeric&&!result.choices&&/^[A-Za-zµΩ°]{1,3}$/.test(answer);
   let completed=result.cloze.replace(/____\s*(?:[^\s\n.,;:)]+)?/,m=>answer+(out.answerUnit?' '+out.answerUnit:''));
   result.completedExample=completed;

@@ -110,8 +110,8 @@
   ALIASES:{'dominant allele':['dominant'],'recessive allele':['recessive'],genotype:['genotypes'],phenotype:['phenotypes']}});
 
  one({id:'li4-gp',li:4,sc:'Distinguish between genotype and phenotype',title:'Genotype or phenotype',
-  gen:r=>{const rows=S(r,[['Bb','genotype'],['tall plant','phenotype'],['BB','genotype'],['black coat','phenotype']]).slice(0,4);return {instruction:'Choose genotype or phenotype for each:',cloze:rows.map(x=>x[0]).join(', '),answer:rows.map(x=>x[1]).join(', '),choices:['genotype','phenotype'],
-   svg:pic(text(150,120,'Genotype = genes',26)+text(150,160,'Phenotype = appearance',26),'Genotype is the genes; phenotype is what the organism looks like'),explanation:rows.map(x=>x[0]+' is a '+x[1]+'.').join(' ')};}});
+  gen:r=>{const [item,kind]=P(r,[['Bb','genotype'],['tall plant','phenotype'],['BB','genotype'],['black coat','phenotype']]);return {instruction:'Choose genotype or phenotype:',cloze:`${item} is a ____.`,answer:kind,choices:['genotype','phenotype'],
+   svg:pic(text(150,120,'Genotype = genes',26)+text(150,160,'Phenotype = appearance',26),'Genotype is the genes; phenotype is what the organism looks like'),explanation:`${item} is a ${kind}.`};}});
 
  one({id:'li4-punnett',li:4,sc:'Construct simple Punnett squares',title:'Complete the Punnett square',
   gen:r=>{const c=P(r,CROSSES),L=c.L,l=c.l,top=[L,l],side=[L,l],cs=cells(top,side),hide=Math.floor(r()*4);

@@ -3,6 +3,6 @@ window.CASINO_RESULTS_FORM='https://docs.google.com/forms/d/e/1FAIpQLSc3igKh2Vvx
 // Results backend (backend/server.py). When set, the game reports automatically under a random player id and the Form button is hidden.
 window.CASINO_RESULTS_API='https://rr.hamishhuggard.com';
 
-window.CASINO_VERSION='64a265d';
+window.CASINO_VERSION='c5c54d7';
 
 window.CASINO_DEFAULT_MODE='class';

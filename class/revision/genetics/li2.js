@@ -32,7 +32,7 @@
   +arrow(150,115,186,115,3,10)+(c.label.startsWith('cattle')?sprite('cow',196,90,5,'dim'):sprite('person',196,86,5,'bright'))+text(196,226,c.trait,21),
   `A gene is a section of DNA; it carries the instructions for ${c.trait}`);
 
- // ---------- LI2 definition table, six levels, same style as 1(a) ----------
+ // ---------- LI2 definition table, five levels, same style as 1(a) ----------
  vocabTable({key:'li2v',group:'LI2',li:2,sc:'Define continuous variation; define discontinuous variation; distinguish between inherited and environmental characteristics',
   title:'LI2 vocabulary',skillName:'Variation vocabulary',
   DEF:{'Continuous variation':'Variation where a characteristic is measured and can take any value in a range',

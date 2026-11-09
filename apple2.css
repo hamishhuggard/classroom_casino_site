@@ -58,7 +58,7 @@ svg,img{shape-rendering:crispEdges;image-rendering:pixelated}
 :root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .wheel-rim{fill:var(--a2-blue);stroke:none}
 :root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .wheel-inner-ring{fill:var(--a2-violet)}
 :root[data-theme="apple2"] :is(#roulette-wheel,#menu-wheel) .wheel-inner{fill:#000;stroke:none}
-:root[data-theme="apple2"] #roulette-colour .bet-red{color:var(--a2-orange)}
-:root[data-theme="apple2"] #roulette-colour .bet-green{color:var(--a2-green)}
+:root[data-theme="apple2"] #roulette-result[data-direction="gain"] .roulette-outcome{color:var(--a2-green)}
+:root[data-theme="apple2"] #roulette-result[data-direction="loss"] .roulette-outcome{color:var(--a2-orange)}
 #title-card .title-card-prompt{position:absolute;left:0;right:0;bottom:12vh;margin:0;text-align:center;color:var(--ink);font-size:clamp(18px,3vw,32px);animation:a2-flash 1.07s steps(1,end) infinite}
 :root[data-theme="apple2"] #title-card .title-card-prompt{color:var(--a2-green)}

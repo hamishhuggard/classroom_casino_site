@@ -36,10 +36,10 @@
   {k:'sheep',s:'A sheep farmer uses DNA tests to help choose rams for breeding.'},
   {k:'pea plants',s:'Plant scientists study the DNA inside pea plant cells.'}];
  add({id:'2a',test:'2(a)',group:'Q2',title:'Identifying genetic structures',li:3,sc:'Define DNA, gene and chromosome; identify where DNA is found in cells',level:'A',
-  template:'{context}\nThe diagram shows how genetic information is organised inside a cell.\nThe box marked ? is ____  (nucleotide, DNA, gene, nucleus, cell, chromosome)',
+  template:'The diagram shows how genetic information is organised inside a cell.\nThe box marked ? is ____  (nucleotide, DNA, gene, nucleus, cell, chromosome)',
   slots:{context:CTX2A.map(c=>c.k).join(', '),label:LABELS.map(l=>l.w).join(', ')},
   gen(r){const c=P(r,CTX2A),L=P(r,LABELS);
-   return {instruction:'Fill in the missing label:',cloze:`${c.s}\nThe box marked ? is ____`,answer:L.w,choices:LABELS.map(l=>l.w),
+   return {instruction:'The box marked ? is ____',cloze:' ',answer:L.w,choices:LABELS.map(l=>l.w),
     visual:{type:'svg',svg:zoomDiagram(L.w)},explanation:L.why,chosen:{context:c.k,label:L.w}};}});
 
  // ---------- 2(b) the schedule's exemplar chain, one sentence per draw ----------

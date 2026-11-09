@@ -17,7 +17,7 @@
  };
  const draw=(name,x,y,px,shade)=>{if(!LOCAL[name])return sprite(name,x,y,px,shade);let b='';LOCAL[name].forEach((row,j)=>[...row].forEach((c,i)=>{if(c!=='.')b+=fillRect(x+i*px,y+j*px,px,px,c==='s'||shade==='dark'?1:.32);}));return b;};
 
- // ---------- 1(a) Genetics vocabulary: Term | Definition table, six levels (core.js vocabTable) ----------
+ // ---------- 1(a) Genetics vocabulary: Term | Definition table, five levels (core.js vocabTable) ----------
  // Definitions from the Assessment Schedule V4; typed definitions are marked on their key ideas.
  GENETICS_T.vocabTable({key:'1a',group:'Q1',test:'1(a)',li:1,sc:'Define trait, heredity, variation and phenotype',title:'LI1 vocabulary',skillName:'Traits and variation vocabulary',
   DEF:{Trait:'A characteristic of an organism, such as eye colour',Heredity:'Passing genetic information from parents to offspring',

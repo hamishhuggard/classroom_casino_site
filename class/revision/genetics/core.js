@@ -25,7 +25,7 @@
          or visual:{type:'gtable', headers, rows, svg}: an HTML table (svg: the picture beside it; every template has one) whose cells hold the answer (see gtableMarkup in app.js):
          a cell is text, {blank:true,pre?,post?}, {field:i,wide?} (several typed boxes: also return fields:[...]),
          or {pick:i,options:[...]} (choose for that row; answer = the picks joined by commas, fields:[...])
-       check?(value, fieldValues)  optional: mark the answer yourself (typed definitions, whole tables in any order)
+       check?(value, fieldValues)  optional: mark the answer yourself (typed definitions, tables in any order)
        explanation:'…',          one short line, shown on the correction card
        chosen:{organism:'sheep',…}   the slot values used in this draw (shown on the sheet)
      }; }
@@ -133,13 +133,13 @@
       4:'Understand how alleles influence inherited traits and how inheritance patterns can be predicted.',
       5:'Understand how genetic variation can lead to adaptation, natural selection, and selective breeding.'}};
 
- // ---------- Definition table, six levels (Hamish, 9 Nov 2026; first used for 1(a)) ----------
+ // ---------- Definition table, five levels (Hamish, 9 Nov 2026; first used for 1(a); whole-table level removed 10 Nov 2026) ----------
  // A Term | Definition table, rows shuffled every draw. L1 choose every term (word bank), L2 type every term, L3 choose the
- // missing key word in every definition, L4 type them, L5 write every definition (marked on key ideas), L6 the whole table
- // from memory in any row order. Levels 1–5: the answer column starts empty, each cell is marked as soon as it is answered.
+ // missing key word in every definition, L4 type them, L5 write every definition (marked on key ideas). The answer column
+ // starts empty, each cell is marked as soon as it is answered.
  // spec: {key, group, test, li, sc, title, DEF:{term:definition}, KEYW:{term:[key words in its definition]},
  //        IDEAS:{term:[regex, …] all must match a typed definition}, KEYALT?:{key word:[other words accepted when it is typed]}, ALIASES?:{term:[accepted short forms]}, pic:()=>svg (the picture beside the table)}
- const LVNAMES=['','choose terms','type terms','choose key words','type key words','write definitions','whole table'];
+ const LVNAMES=['','choose terms','type terms','choose key words','type key words','write definitions'];
  root.GENETICS_T.vocabTable=spec=>{
   const {DEF,KEYW,IDEAS}=spec,TERMS=Object.keys(DEF),AL=spec.ALIASES||{},n=TERMS.length;
   const termOf=v=>{const x=String(v||'').trim().toLowerCase();return TERMS.find(t=>t.toLowerCase()===x||(AL[t]||[]).some(a=>a.toLowerCase()===x));};
@@ -148,17 +148,13 @@
    const order=S(r,TERMS),table=rows=>({type:'gtable',headers:['Term','Definition'],rows,svg:spec.pic?.()});
    const full=order.map(t=>`${t}: ${DEF[t].charAt(0).toLowerCase()+DEF[t].slice(1)}`).join('; ')+'.';
    const T2=(rows,cells,explanation)=>({instruction:'Complete the table:',cloze:'Fill in the table = ____',answer:cells.map(c=>c.answer).join(' | '),cells,visual:table(rows),explanation,chosen:{'row order':order.join(', ')}});
-   if(L<=2){const opts=S(r,TERMS);return T2(order.map((t,i)=>[{cell:i,label:'term'},DEF[t]]),order.map(t=>({answer:t,aliases:AL[t]||[],...(L===1?{options:opts}:{})})),full);}
+   if(L<=2){const four=(a,pool)=>S(r,[a,...S(r,pool.filter(x=>x!==a)).slice(0,3)]);return T2(order.map((t,i)=>[{cell:i,label:'term'},DEF[t]]),order.map(t=>({answer:t,aliases:AL[t]||[],...(L===1?{options:four(t,TERMS)}:{})})),full);}
    if(L<=4){const keys=order.map(t=>P(r,KEYW[t])),bank=S(r,keys);
     const rows=order.map((t,i)=>{const w=keys[i],j=DEF[t].toLowerCase().indexOf(w.toLowerCase());return [t,{cell:i,pre:DEF[t].slice(0,j),post:DEF[t].slice(j+w.length),label:'missing word'}];});
-    return T2(rows,keys.map(w=>({answer:w,aliases:[w.endsWith('s')?w.slice(0,-1):w+'s',...(spec.KEYALT?.[w]||[])],...(L===3?{options:bank}:{})})),full);}
+    return T2(rows,keys.map(w=>({answer:w,aliases:[w.endsWith('s')?w.slice(0,-1):w+'s',...(spec.KEYALT?.[w]||[])],...(L===3?{options:S(r,[w,...S(r,[...new Set(keys)].filter(x=>x!==w)).slice(0,3)])}:{})})),full);}
    if(L===5)return T2(order.map((t,i)=>[t,{cell:i,wide:true,label:'definition of '+t}]),order.map(t=>({answer:DEF[t],check:v=>defOK(t,v)})),full+' Your own words are fine if they include the key ideas.');
-   const rows=order.map((t,i)=>[{field:2*i,label:'term '+(i+1)},{field:2*i+1,wide:true,label:'definition '+(i+1)}]);
-   return {instruction:`Fill in the table: ${n} terms and their definitions:`,cloze:'Whole table = ____',answer:TERMS.flatMap(t=>[t,DEF[t]]).join(','),fields:TERMS.flatMap(()=>[{label:'term'},{label:'definition'}]),
-    check:(v,f)=>{const used=new Set();for(let i=0;i<n;i++){const t=termOf(f[2*i]);if(!t||used.has(t)||!defOK(t,f[2*i+1]))return false;used.add(t);}return used.size===n;},
-    visual:table(rows),explanation:full,chosen:{'row order':'any (the student chooses)'}};
   };
-  for(let L=1;L<=6;L++)root.GENETICS_T.add({id:`${spec.key}-${L}`,test:spec.test||'',group:spec.group,skill:spec.key,skillName:spec.skillName,tier:L,
+  for(let L=1;L<=5;L++)root.GENETICS_T.add({id:`${spec.key}-${L}`,test:spec.test||'',group:spec.group,skill:spec.key,skillName:spec.skillName,tier:L,
    title:`${spec.title} ${L}: ${LVNAMES[L]}`,li:spec.li,sc:spec.sc,level:'A',
    template:`Term | Definition table (${TERMS.join(', ')}), rows shuffled every draw. Level ${L}: ${LVNAMES[L]}.`,
    slots:{'key words':TERMS.map(t=>t+' ('+KEYW[t].join(', ')+')').join('; ')},gen:gen(L)});
@@ -181,7 +177,7 @@
     // Shown as bullet points (Hamish, 9 Nov 2026): one sentence per bullet; {bullet:true} starts each one.
     const sentences=s=>s.split(/(?<=[.!?])\s+/).filter(Boolean);
     if(L<=2){const keys=[];for(const sen of sentences(m)){parts.push({bullet:true});for(const tok of sen.split(/(\[[^\]]+\])/))if(/^\[.*\]$/.test(tok)){const [w,...wrong]=tok.slice(1,-1).split('|');parts.push({cell:cells.length,ch:Math.max(4,w.length+2)});cells.push({answer:w,aliases:spec.aliases?.[w]||[],...(wrong.length?{own:S(r,[w,...wrong])}:{})});if(!wrong.length)keys.push(w);}else if(tok)parts.push(tok);}
-     if(L===1){const bank=S(r,[...new Set(keys)]);cells.forEach(x=>x.options=x.own||bank);}cells.forEach(x=>delete x.own);}
+     if(L===1){const bank=S(r,[...new Set(keys)]);cells.forEach(x=>x.options=x.own||S(r,[x.answer,...S(r,bank.filter(k=>k!==x.answer)).slice(0,3)]));}cells.forEach(x=>delete x.own);}
     else{ // L3 / L4: the key words stay blank and more words are blanked, until only grammar words (the, a, of, is, and …) are left
      const FUNC=new Set('a an the and or but so if then than that this these those it its they them their he she his her we you i me my our your of in on at to for from by with as into onto over under about between through during before after is are was were be been being am do does did has have had can could will would may might must should not no nor too very also just only which who whom whose what when where while there here such each every both some any all more most other another same'.split(' '));
      const items=[];sentences(m).forEach((sen,si)=>{for(const tok of sen.split(/(\[[^\]]+\])/)){if(!tok)continue;

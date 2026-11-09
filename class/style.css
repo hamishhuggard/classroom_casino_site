@@ -647,7 +647,9 @@ html[data-locked] #practice-dialog,html[data-locked] #settings-dialog,html[data-
 .gcell.gactive .gchoice.selected,.gcell.gactive .gchoice:focus-visible{background:var(--ink);color:var(--paper)}
 .gcell:not(.gactive) .gchoice{opacity:.75}
 /* Tables with many rows (1.3.1 has twelve): choices on one line and tighter rows so the table fits the screen. */
-.gtable .gchoices{flex-wrap:nowrap;white-space:nowrap}
+.gtable .gchoices{flex-wrap:wrap;max-width:min(24em,60vw)}   /* a few choices per row, the rest on more rows, never running off the table */
+.gtable .gchoice{white-space:nowrap}
+.gtable tr>:first-child:has(.gchoices){width:auto;min-width:min(22em,55vw)}   /* the first column normally shrinks to fit; a cell of choices needs room to wrap */
 .gtable td{padding-top:.15em;padding-bottom:.15em}
 /* The active blank is marked on the table cell (td) in tables and on the blank itself in paragraphs. */
 .gactive .gchoice.selected,.gactive .gchoice:focus-visible{background:var(--ink);color:var(--paper)}
@@ -661,3 +663,4 @@ tr.row-added>td{animation:row-added .9s steps(1,end) 3}
 .correction-grid .gtable-wrap .gpic{width:clamp(120px,14vw,190px);max-width:100%}
 .correction-grid .gtable-wrap .gpic svg{display:block;width:100%;height:auto;max-height:150px}
 .correction-grid .phys-table.gtable{min-width:0;width:100%;max-width:100%;font-size:clamp(12px,1.2vw,17px)}
+.gwait{display:inline-block;min-width:5ch;border-bottom:2px dashed var(--ink);opacity:.4}

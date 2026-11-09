@@ -30,17 +30,29 @@
  // ---------- x-dna: base pairing on a DNA ladder, one base missing ----------
  const COMP={A:'T',T:'A',C:'G',G:'C'};
  const ORG=['kākāpō','sheep','pea plant','human','takahē'];
- add({id:'x-dna',test:'',group:'Extra',title:'DNA bases',li:3,sc:'Identify the four bases found in DNA (A, T, C and G); State that A pairs with T and C pairs with G',level:'A',
-  template:'Scientists sequenced a short section of {organism} DNA.\nMissing base = ____',
+ add({id:'x-dna',test:'',group:'Extra',skill:'x-dna',tier:1,title:'DNA base pairs 1: one missing base',li:3,sc:'State that A pairs with T and C pairs with G; Identify the four bases found in DNA (A, T, C and G)',level:'A',
+  template:'Missing base = ____',
   slots:{organism:ORG.join(', '),strand:'six random base pairs',missing:'any base on either strand'},
   gen(r){const org=P(r,ORG),left=Array.from({length:6},()=>P(r,'ATCG'.split(''))),right=left.map(b=>COMP[b]),k=Math.floor(r()*6),side=r()<.5?0:1;
    let b=line(200,16,200,248,4)+line(440,16,440,248,4);
    left.forEach((L,i)=>{const y=36+i*38;b+=line(200,y,220,y,3)+line(270,y,370,y,3)+line(420,y,440,y,3);
     [[220,L],[370,right[i]]].forEach(([x,v],s)=>{b+=(i===k&&s===side)?ask(x,y-17,50,34,24):rect(x,y-16,50,32,2)+text(x+25,y+8,v,22);});});
    const ans=side?right[k]:left[k];
-   return {instruction:'Complete the DNA base pairs:',cloze:`Scientists sequenced a short section of ${org} DNA.\nMissing base = ____`,answer:ans,caseSensitive:true,
+   return {instruction:'Complete the DNA base pairs:',cloze:'Missing base = ____',answer:ans,caseSensitive:true,
     visual:{type:'svg',svg:svg(b,'A DNA ladder of six base pairs with one base missing','0 0 640 262')},
     explanation:`A pairs with T and C pairs with G, so the partner of ${side?left[k]:right[k]} is ${ans}.`,chosen:{organism:org,missing:`pair ${k+1}, strand ${side+1}`}};}});
+
+ // Level 2: one whole strand is shown and every base of the other strand is blank (typed, one rung at a time).
+ add({id:'x-dna-2',test:'',group:'Extra',skill:'x-dna',tier:2,title:'DNA base pairs 2: a whole strand',li:3,sc:'State that A pairs with T and C pairs with G; Identify the four bases found in DNA (A, T, C and G)',level:'A',
+  template:'Complete the DNA base pairs: one strand of six bases is shown; type the partner of each base on the other strand.',
+  slots:{strand:'six random bases on one strand',blank:'the whole other strand'},
+  gen(r){const left=Array.from({length:6},()=>P(r,'ATCG'.split(''))),right=left.map(b=>COMP[b]),side=r()<.5?0:1,given=side?right:left,blank=side?left:right;
+   let b=line(200,16,200,248,4)+line(440,16,440,248,4);
+   given.forEach((g,i)=>{const y=36+i*38,xs=side?370:220,xb=side?220:370;b+=line(200,y,220,y,3)+line(270,y,370,y,3)+line(420,y,440,y,3)+rect(xs,y-16,50,32,2)+text(xs+25,y+8,g,22)+rect(xb,y-16,50,32,2);});
+   const rows=given.map((g,i)=>side?[{cell:i,label:'base '+(i+1)},g]:[g,{cell:i,label:'base '+(i+1)}]);
+   return {instruction:'Complete the DNA base pairs:',cloze:'Other strand = ____',answer:blank.join(' '),caseSensitive:true,
+    cells:blank.map(x=>({answer:x,caseSensitive:true})),visual:{type:'gtable',headers:['Strand 1','Strand 2'],rows,svg:svg(b,'A DNA ladder of six base pairs with one strand blank','0 0 640 262')},
+    explanation:'A pairs with T and C pairs with G, so the other strand is '+blank.join(', ')+'.',chosen:{strand:side?'strand 1 blank':'strand 2 blank'}};}});
 
  // ---------- x-mut: body-cell vs gamete mutation; or "a mutation is a change in DNA" ----------
  const WHO=[{w:'a ram',g:'sperm cell'},{w:'a ewe',g:'egg cell'},{w:'a woman',g:'egg cell'},{w:'a man',g:'sperm cell'}];

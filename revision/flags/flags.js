@@ -17,7 +17,9 @@
  const block=globalThis.FUZZY_BLOCK=globalThis.FUZZY_BLOCK||new Set();
  const key=s=>ascii(s).toLowerCase().replace(/[.,!?;:'"“”‘’]/g,'').replace(/(?<=[a-z])-(?=[a-z])/g,'').replace(/\s+/g,' ').trim();
  for(const c of COUNTRIES)for(const a of [c.name,...accepted(c)])block.add(key(a));
- const flagImage=(code,cls='revision-visual flag-visual')=>`<img class="${cls}" src="assets/flags/${code}.svg" alt="A national flag">`;
+ /* Pixelated to match the Apple II look: each SVG is drawn once onto a tiny canvas (48x36) and swapped in as a data URL; CSS scales it with image-rendering:pixelated. */
+window.pixelFlag=img=>{if(img.dataset.px)return;img.dataset.px='1';const W=48,H=36,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(img,0,0,W,H);try{img.src=c.toDataURL('image/png');}catch(e){}};
+const flagImage=(code,cls='revision-visual flag-visual')=>`<img class="${cls}" src="assets/flags/${code}.svg" alt="A national flag" onload="pixelFlag(this)">`;
  const MC_CHANCE={1:0.3,2:0.5,3:0.7};   // obscure flags are more often multiple choice
  function choicesFor(c,r,h){
   const pool=[...c.lookalikes.map(code=>byCode.get(code)).filter(Boolean)];

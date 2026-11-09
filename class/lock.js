@@ -15,10 +15,10 @@
       const unit=String(params.get('unit')||'').replace(/[^a-z0-9_-]/gi,'');
       if(params.get('lock')==='1'&&unit){
         const code=tidy(params.get('code'));
-        localStorage.setItem(KEY,JSON.stringify({unit,code:/^[A-Z0-9]{2,12}$/.test(code)?code:'',draft:params.get('draft')||''}));
+        localStorage.setItem(KEY,JSON.stringify({unit,code:/^[A-Z0-9]{2,12}$/.test(code)?code:'',draft:params.get('draft')||'',skills:String(params.get('skills')||'').slice(0,200)}));
       }
       const saved=JSON.parse(localStorage.getItem(KEY)||'null');
-      if(saved&&typeof saved.unit==='string'&&saved.unit)lock={unit:saved.unit,code:saved.code||'',draft:saved.draft||''};
+      if(saved&&typeof saved.unit==='string'&&saved.unit)lock={unit:saved.unit,code:saved.code||'',draft:saved.draft||'',skills:saved.skills||''};
     }
   }catch{}
   window.CASINO_LOCK=lock;

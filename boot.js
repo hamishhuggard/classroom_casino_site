@@ -217,4 +217,7 @@ const titleCard=(()=>{
     },finish);
   };
 })();
-titleCard(()=>{});
+{const params=new URLSearchParams(location.search),modeParam=params.get('mode');if(!['1','full'].includes(params.get('preview'))&&!(modeParam==='class'||(window.CASINO_DEFAULT_MODE==='class'&&modeParam!=='plain')))titleCard(()=>{});}
+
+// Locked class link: start the unit's mixed practice at once (lock.js; no skill menu).
+if(window.CASINO_LOCK&&(CASINO_LOCK.code||!CasinoResults.enabled)&&!activeRun&&screen==='menu')setTimeout(()=>{if(!activeRun&&$('start-game'))$('start-game').click();},0);

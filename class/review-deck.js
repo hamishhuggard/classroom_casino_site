@@ -36,6 +36,8 @@
         if(skip.length){for(const card of skip){card.seen=true;card.done=true;}this.streak=0;}
       }
     }
+    // A card made from a missed part of another card: asked again after `gap` other questions, then done once answered right.
+    insert(question,gap=2){const base=this.current;if(!base)return;this.cards.push({question,level:base.level,seen:true,done:false,stage:2,due:this.answers+1+gap,order:this.sequence++,checkpoint:false});}
     get progress(){
       const position=Math.min(this.position,this.levels.length-1),level=this.levels[position];
       return {position,seen:level.cards.filter(card=>card.seen).length,total:level.cards.length,done:this.cards.filter(card=>card.done).length,pending:this.cards.filter(card=>card.seen&&!card.done).length,finished:this.cards.every(card=>card.done)};

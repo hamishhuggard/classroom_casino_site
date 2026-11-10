@@ -38,7 +38,7 @@
    left.forEach((L,i)=>{const y=36+i*38;b+=line(200,y,220,y,3)+line(270,y,370,y,3)+line(420,y,440,y,3);
     [[220,L],[370,right[i]]].forEach(([x,v],s)=>{b+=(i===k&&s===side)?ask(x,y-17,50,34,24):rect(x,y-16,50,32,2)+text(x+25,y+8,v,22);});});
    const ans=side?right[k]:left[k];
-   return {instruction:'Complete the DNA base pairs:',cloze:'Missing base = ____',answer:ans,caseSensitive:true,
+   return {instruction:'Complete the DNA base pairs:',cloze:'Missing base = ____',answer:ans,caseSensitive:false,
     visual:{type:'svg',svg:svg(b,'A DNA ladder of six base pairs with one base missing','0 0 640 262')},
     explanation:`A pairs with T and C pairs with G, so the partner of ${side?left[k]:right[k]} is ${ans}.`,chosen:{organism:org,missing:`pair ${k+1}, strand ${side+1}`}};}});
 
@@ -50,8 +50,8 @@
    let b=line(200,16,200,248,4)+line(440,16,440,248,4);
    given.forEach((g,i)=>{const y=36+i*38,xs=side?370:220,xb=side?220:370;b+=line(200,y,220,y,3)+line(270,y,370,y,3)+line(420,y,440,y,3)+rect(xs,y-16,50,32,2)+text(xs+25,y+8,g,22)+rect(xb,y-16,50,32,2);});
    const rows=given.map((g,i)=>side?[{cell:i,label:'base '+(i+1)},g]:[g,{cell:i,label:'base '+(i+1)}]);
-   return {instruction:'Complete the DNA base pairs:',cloze:'Other strand = ____',answer:blank.join(' '),caseSensitive:true,
-    cells:blank.map(x=>({answer:x,caseSensitive:true})),visual:{type:'gtable',headers:['Strand 1','Strand 2'],rows,svg:svg(b,'A DNA ladder of six base pairs with one strand blank','0 0 640 262')},
+   return {instruction:'Complete the DNA base pairs:',cloze:'Other strand = ____',answer:blank.join(' '),caseSensitive:false,
+    cells:blank.map(x=>({answer:x,caseSensitive:false})),visual:{type:'gtable',headers:['Strand 1','Strand 2'],rows,svg:svg(b,'A DNA ladder of six base pairs with one strand blank','0 0 640 262')},
     explanation:'A pairs with T and C pairs with G, so the other strand is '+blank.join(', ')+'.',chosen:{strand:side?'strand 1 blank':'strand 2 blank'}};}});
 
  // ---------- x-mut: body-cell vs gamete mutation; or "a mutation is a change in DNA" ----------

@@ -1422,7 +1422,7 @@ function gcellKey(event){
   if(event.key==='Enter'){event.preventDefault();if(st.done.has(i)){const k=gcellOrder().find(k=>!st.done.has(k));if(k!==undefined)gcellActivate(k);return;}
     if(spec.options){const b=bar?.querySelectorAll('[data-gopt]')[st.sel];if(b&&!b.disabled)gcellCommit(i,b.dataset.gopt);}
     else gcellCommit(i,gcellEls()[i].querySelector('input,textarea')?.value);return;}
-  if(event.key===' '&&gcellEls()[i]?.classList.contains('wordcell')&&!st.done.has(i)){event.preventDefault();gcellCommit(i,gcellEls()[i].querySelector('input')?.value);return;}
+  if(event.key===' '&&gcellEls()[i]?.classList.contains('wordcell')&&!/\s/.test(String(spec.answer).trim())&&!st.done.has(i)){event.preventDefault();gcellCommit(i,gcellEls()[i].querySelector('input')?.value);return;}
   if(spec.options&&!st.done.has(i)&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();const bs=[...bar.querySelectorAll('[data-gopt]')];if(!bs.length)return;
     let k=st.sel;do{k=(k+(event.key==='ArrowRight'?1:-1)+bs.length)%bs.length;}while(bs[k].disabled&&k!==st.sel);st.sel=k;bs.forEach((b,j)=>b.classList.toggle('selected',j===k));}
 }

@@ -84,9 +84,19 @@
   };
   const pick=list=>list[Math.floor(Math.random()*list.length)];
   function makeName(){const animal=pick(ANIMALS);return pick(WORDS[animal[0]])+' '+animal;}
+  // ?random-names=kiwi (default): te reo Māori, kiwiana and science names from assets/animals/animals.js (CASINO_KIWI_NAMES).
+  // ?random-names=original: the alliterating animals above. Each list keeps its own saved name, so switching back restores it.
+  const kiwiNames=(globalThis.CASINO_KIWI_NAMES||[]).map(e=>e.name);
+  const nameSet=new URLSearchParams(location.search).get('random-names')==='original'||!kiwiNames.length?'original':'kiwi';
+  const NAME_KEY=nameSet==='kiwi'?'casino-player-name-kiwi':'casino-player-name';
   let name='';
-  try{name=localStorage.getItem('casino-player-name')||'';}catch{}
-  if(!name){name=makeName();try{localStorage.setItem('casino-player-name',name);}catch{}}
+  try{name=localStorage.getItem(NAME_KEY)||'';}catch{}
+  if(nameSet==='kiwi'&&!kiwiNames.includes(name))name=''; // a name dropped from the list gets replaced
+  if(!name){name=nameSet==='kiwi'?pick(kiwiNames):makeName();try{localStorage.setItem(NAME_KEY,name);}catch{}}
+  // The server's name check allows letters and spaces only, so "Sweet-as Sausage" is sent as "Sweet as Sausage";
+  // race.html and the dashboard turn it back with casinoDisplayName().
+  const serverName=name.replace(/-/g,' ');
+  const gloss=globalThis.casinoNameGloss?.(name)||'';
   // Class code (e.g. KEA7) keeps each class's data separate. From ?code=, else typed on a full-screen prompt at the start.
   const CODE_RE=/^[A-Z0-9]{2,12}$/;
   const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
@@ -95,7 +105,7 @@
   let dirty=true; // report soon after joining (even before an answer) so the leaderboard shows the bank on screen
   function report(beacon){
     if(!api||!code||!dirty)return;
-    const body=JSON.stringify({id:player,name,code,payload:payload(),written:Object.values(state.written||{})});dirty=false;
+    const body=JSON.stringify({id:player,name:serverName,code,payload:payload(),written:Object.values(state.written||{})});dirty=false;
     if(beacon&&navigator.sendBeacon){navigator.sendBeacon(api+'/api/report',new Blob([body],{type:'text/plain'}));return;}
     // text/plain keeps this a simple request (no CORS preflight).
     fetch(api+'/api/report',{method:'POST',headers:{'Content-Type':'text/plain'},body,keepalive:true}).catch(()=>{dirty=true;});
@@ -206,7 +216,7 @@
     // Name and animal in the top bar of every screen, so students can find themselves on the class race.
     const showBadge=()=>{
       const bar=document.querySelector('header.arcade-hud');if(!bar||document.getElementById('player-badge'))return;
-      const badge=document.createElement('span');badge.id='player-badge';badge.setAttribute('aria-label','You are '+name);
+      const badge=document.createElement('span');badge.id='player-badge';badge.setAttribute('aria-label','You are '+name+(gloss?' ('+gloss+')':''));if(gloss)badge.title=name+': '+gloss;
       badge.style.cssText='flex:0 0 auto;display:flex;align-items:center;gap:12px;font-size:clamp(22px,2.6vw,34px);letter-spacing:.04em;margin-left:auto;margin-right:12px;color:var(--a2-green,var(--ink))';
       badge.innerHTML=(globalThis.animalIcon?.(name,3,true)||'')+'<span>'+name.toUpperCase()+'</span>';
       const nav=bar.querySelector('nav');bar.insertBefore(badge,nav);if(nav)nav.style.marginLeft='0';
@@ -223,7 +233,7 @@
       const art=globalThis.animalIcon?.(name,1,true)||'';
       // A valid ?code= in the link means no code field: just the character, name, unit and a START button.
       const linked=!window.CASINO_LOCK?.code&&CODE_RE.test(tidy(new URLSearchParams(location.search).get('code')));
-      screen.innerHTML=`<form style="display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,22px)"><p class="menu-hint" style="margin:0;animation:none;opacity:1">YOU ARE</p><div id="join-art" style="line-height:0">${art}</div><h1 id="class-code-title" style="font-size:clamp(30px,8vh,76px);margin:0;color:var(--a2-green,var(--ink))">${name.toUpperCase()}</h1>${unitName?`<p class="menu-hint" style="margin:0;animation:none;opacity:1">TODAY: ${unitName}</p>`:''}${linked?`<button type="submit" id="class-start" style="font-size:clamp(26px,6vh,48px);letter-spacing:.08em;padding:10px 36px;margin-top:clamp(8px,3vh,32px);background:var(--ink);color:var(--paper);border:2px solid var(--ink);box-shadow:4px 4px 0 var(--a2-green,var(--line))">START</button>`:`<label for="class-code" class="menu-hint" style="margin:clamp(4px,2vh,24px) 0 0;animation:none;opacity:1">ENTER YOUR CLASS CODE</label><input id="class-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" value="${code}" style="font:inherit;font-size:clamp(30px,7vh,56px);width:7em;max-width:90vw;text-align:center;text-transform:uppercase;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:8px"><p id="class-code-error" class="menu-hint" style="min-height:1.5em;margin:0" aria-live="polite">PRESS ENTER TO START</p>`}</form>`;
+      screen.innerHTML=`<form style="display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,22px)"><p class="menu-hint" style="margin:0;animation:none;opacity:1">YOU ARE</p><div id="join-art" style="line-height:0">${art}</div><h1 id="class-code-title" style="font-size:clamp(30px,8vh,76px);margin:0;color:var(--a2-green,var(--ink))">${name.toUpperCase()}</h1>${gloss?`<p id="name-gloss" class="menu-hint" style="margin:0;animation:none;opacity:1;text-transform:none;font-size:clamp(18px,3.4vh,30px)">${gloss.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c])}</p>`:''}${unitName?`<p class="menu-hint" style="margin:0;animation:none;opacity:1">TODAY: ${unitName}</p>`:''}${linked?`<button type="submit" id="class-start" style="font-size:clamp(26px,6vh,48px);letter-spacing:.08em;padding:10px 36px;margin-top:clamp(8px,3vh,32px);background:var(--ink);color:var(--paper);border:2px solid var(--ink);box-shadow:4px 4px 0 var(--a2-green,var(--line))">START</button>`:`<label for="class-code" class="menu-hint" style="margin:clamp(4px,2vh,24px) 0 0;animation:none;opacity:1">ENTER YOUR CLASS CODE</label><input id="class-code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" value="${code}" style="font:inherit;font-size:clamp(30px,7vh,56px);width:7em;max-width:90vw;text-align:center;text-transform:uppercase;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:8px"><p id="class-code-error" class="menu-hint" style="min-height:1.5em;margin:0" aria-live="polite">PRESS ENTER TO START</p>`}</form>`;
       // Locked link with a code: no join screen, boot.js starts the unit straight away.
       if(window.CASINO_LOCK?.code)screen.hidden=true;else document.body.append(screen);
       const svg=screen.querySelector('#join-art svg');if(svg){const size=Math.max(96,Math.min(innerHeight*.34,320));svg.setAttribute('width',size);svg.setAttribute('height',size);}

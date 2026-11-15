@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en" data-theme="apple2">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Revision Roulette — Class Vote</title>
+<!-- Opening vote for a lesson: one question at a time, every student votes once on their own device, the front of the room shows live bars.
+     Student link:  vote.html?code=KEA7&unit=electricity_magnetism             (add &q=id1,id2 to choose questions; default is every question of the unit in revision/vote_questions.json)
+     Teacher link:  vote.html?code=KEA7&unit=electricity_magnetism&front=1      (project this; it has the buttons)
+     After the teacher presses FINISH (or closes/reveals the last question), students get START ANSWERING QUESTIONS, which opens index.html with the same
+     code and unit (&lock=1, &tile=, &draft=, &roulette= are passed on if present).
+     Votes and teacher controls travel as ordinary events (types 'vote' and 'vote_ctrl') through backend/server.py POST/GET /api/events: no server change.
+     Anonymous: only the random player id the game already keeps (casino-player-id). If the backend is unreachable the student still votes, locally,
+     and is told the teacher cannot see it. Details: DEV_LOG.md, 16 Nov 2026. -->
+<link rel="stylesheet" href="apple2.css">
+<script src="results-config.js"></script>
+<style>
+:root{--paper:#000;--ink:#fff;--muted:#14cffd;--a2-green:#14f53c;--a2-violet:#ff44fd;--a2-orange:#ff6a3c;--a2-blue:#14cffd;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;color:#fff;min-height:100%}
+body{padding:clamp(12px,2.4vw,32px);max-width:1500px;margin:0 auto;font-size:clamp(20px,2.4vw,30px);line-height:1.25}
+h1{margin:0 0 .4em;font-size:clamp(22px,3vw,40px);color:var(--a2-orange);letter-spacing:.04em}
+.meta{color:var(--a2-blue);font-size:.8em;margin-bottom:.6em}
+.q{font-size:1.15em;margin:.3em 0 .8em}
+.opt{display:flex;align-items:center;gap:.6em;width:100%;text-align:left;background:#000;color:#fff;border:3px solid var(--a2-violet);padding:.55em .7em;margin:.4em 0;font:inherit;cursor:pointer}
+.opt:hover:not(:disabled){background:var(--a2-green);color:#000}
+.opt:disabled{cursor:default}
+.opt .L{flex:0 0 1.6em;height:1.6em;display:grid;place-items:center;background:var(--a2-violet);color:#000}
+.opt.mine{border-color:var(--a2-blue);background:#06303a}
+.opt.right{border-color:var(--a2-green)}
+.opt.wrong{opacity:.55}
+.opt.mine.wrong{border-color:var(--a2-orange);opacity:1}
+.note{margin:.8em 0;padding:.6em .8em;border:3px solid var(--a2-blue);color:var(--a2-blue)}
+.warn{border-color:var(--a2-orange);color:var(--a2-orange)}
+.expl{border-color:var(--a2-green);color:#fff}
+button.big{font:inherit;background:var(--a2-green);color:#000;border:0;padding:.7em 1.1em;margin:.3em .3em .3em 0;cursor:pointer}
+button.big[disabled]{opacity:.4;cursor:default}
+button.alt{background:#000;color:var(--a2-violet);border:3px solid var(--a2-violet)}
+button.go{display:block;width:100%;font-size:1.3em;padding:.9em;margin-top:1em;text-align:center;text-decoration:none}
+a.go{background:var(--a2-green);color:#000}
+/* front of the room */
+body.front{font-size:clamp(22px,3.6vh,46px)}
+.bar-row{display:flex;align-items:center;gap:.6em;margin:.35em 0}
+.bar-row .L{flex:0 0 1.5em;text-align:center;color:var(--a2-violet)}
+.lane{flex:1;position:relative;height:2.2em;border:2px solid #222}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--a2-blue);transition:width .5s steps(8,end);
+  background-image:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.38) 3px 4px)}
+.bar-row.right .fill{background:var(--a2-green)}
+.bar-row.dim .fill{background:#4a4a4a}
+.lane .t{position:absolute;left:.5em;top:50%;transform:translateY(-50%);white-space:nowrap;text-shadow:0 0 4px #000,0 0 4px #000,0 0 4px #000;max-width:calc(100% - 5em);overflow:hidden;text-overflow:ellipsis}
+.cnt{flex:0 0 4.5em;text-align:right}
+.mis{color:var(--a2-orange);font-size:.7em;margin:0 0 .5em 2.4em}
+.controls{position:sticky;bottom:0;background:#000;padding:.6em 0;border-top:4px double var(--a2-blue);margin-top:1em}
+.links{font-size:.5em;color:var(--a2-blue);word-break:break-all;margin-top:1em}
+</style>
+</head>
+<body>
+<h1 id="title">CLASS VOTE</h1>
+<div id="meta" class="meta"></div>
+<div id="app"></div>
+<script>
+(function(){
+const P=new URLSearchParams(location.search);
+const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const CODE=tidy(P.get('code')),FRONT=P.get('front')==='1',UNIT=String(P.get('unit')||'electricity_magnetism').replace(/[^a-z0-9_-]/gi,'');
+const API=String(P.get('api')||P.get('results-api')||window.CASINO_RESULTS_API||'').trim().replace(/\/+$/,'');
+const app=document.getElementById('app'),meta=document.getElementById('meta');
+if(FRONT)document.body.classList.add('front');
+const el=(tag,props,...kids)=>{const e=document.createElement(tag);Object.assign(e,props||{});for(const k of kids.flat())e.append(k);return e;};
+const LET='ABCDEF';
+let QS=[],events=[],cursor=0,online=!!API,lastOk=0,session=Math.random().toString(36).slice(2,10).padEnd(8,'0'),seq=0,pending=[],msg='';
+// Player id: the same random id the game keeps, so no new personal data.
+let player='';try{player=localStorage.getItem('casino-player-id')||'';}catch{}
+if(!/^P-\d{4,8}$/.test(player)){player='P-'+String(1000+Math.floor(Math.random()*9000));try{localStorage.setItem('casino-player-id',player);}catch{}}
+if(FRONT)player='P-0000'; // teacher controls are posted under this id
+const LKEY='rr-vote-'+CODE;let localVotes={};
+try{localVotes=JSON.parse(localStorage.getItem(LKEY)||'{}')||{};}catch{}
+const saveLocal=()=>{try{localStorage.setItem(LKEY,JSON.stringify(localVotes));}catch{}};
+
+// ---- the state is a fold over the vote / vote_ctrl events in server order ----
+function fold(){
+  const s={cur:0,state:{},votes:{},done:false,epoch:0};
+  for(const q of QS)s.votes[q.id]={};
+  for(const e of events){
+    const d=e.data||{};
+    if(e.type==='vote_ctrl'){
+      if(d.state==='reset'){s.cur=0;s.state={};s.done=false;s.epoch=e.t;for(const q of QS)s.votes[q.id]={};}
+      else if(d.state==='done')s.done=true;
+      else{const i=QS.findIndex(q=>q.id===d.vq);if(i>=0&&['open','closed','revealed'].includes(d.state)){s.cur=i;s.state[d.vq]=d.state;s.done=false;}}
+    }else if(e.type==='vote'){
+      const i=QS.findIndex(q=>q.id===d.vq);
+      if(i>=0&&i===s.cur&&(s.state[d.vq]||'open')==='open'&&Number.isInteger(d.opt)&&d.opt>=0&&d.opt<QS[i].options.length)s.votes[d.vq][e.id]=d.opt;
+    }
+  }
+  return s;
+}
+
+// ---- backend ----
+async function post(list){
+  if(!API||!CODE)throw new Error('no api');
+  const body=JSON.stringify({id:player,code:CODE,session,events:list});
+  const r=await fetch(API+'/api/events',{method:'POST',headers:{'Content-Type':'text/plain'},body});
+  if(!r.ok)throw new Error('http '+r.status);
+}
+function mk(type,data){return {seq:++seq,t:Date.now(),type,...data};}
+async function flush(){
+  if(!pending.length||!API)return;
+  const batch=pending.slice();
+  try{await post(batch);pending=pending.filter(e=>!batch.includes(e));online=true;}catch(err){online=false;}
+}
+async function poll(){
+  if(!API||!CODE){online=false;return render();}
+  try{
+    await flush();
+    const since=Date.now()-12*3600*1000;
+    for(let guard=0;guard<20;guard++){
+      const r=await fetch(`${API}/api/events?code=${CODE}&after=${cursor}&since=${since}&limit=5000`,{cache:'no-store'});
+      if(!r.ok)throw new Error('http '+r.status);
+      const rows=await r.json();
+      for(const row of rows){cursor=Math.max(cursor,row.n);if(row.type==='vote'||row.type==='vote_ctrl')events.push({n:row.n,id:row.id,t:row.t,type:row.type,data:row.data});}
+      if(rows.length<5000)break;
+    }
+    online=true;lastOk=Date.now();
+  }catch{online=false;}
+  render();
+}
+
+// ---- student view ----
+function startLink(){
+  const u=new URL('index.html',location.href);
+  u.searchParams.set('mode','class');u.searchParams.set('unit',UNIT);u.searchParams.set('code',CODE);
+  for(const k of ['lock','tile','draft','roulette','skills'])if(P.has(k))u.searchParams.set(k,P.get(k));
+  return u.href;
+}
+function myVote(qid,epoch){const v=localVotes[qid];return v&&v.t>=epoch?v.opt:null;}
+function castVote(q,opt){
+  localVotes[q.id]={opt,t:Date.now()};saveLocal();
+  pending.push(mk('vote',{vq:q.id,opt}));
+  if(API){flush().then(poll);}render();
+}
+function renderStudent(){
+  const s=fold(),n=QS.length;
+  let i=s.cur;
+  const offline=!online;
+  if(offline){ // local-only: the student works through the questions at their own pace
+    i=QS.findIndex(q=>myVote(q.id,0)===null);if(i<0)i=n-1;
+  }
+  const q=QS[i],st=offline?(myVote(q.id,0)!==null?'revealed':'open'):(s.state[q.id]||'open');
+  const mine=myVote(q.id,s.epoch);
+  const finished=offline?QS.every(x=>myVote(x.id,0)!==null):(s.done||(i===n-1&&st!=='open'));
+  document.getElementById('title').textContent='VOTE';
+  meta.textContent=`QUESTION ${i+1} OF ${n}`+(CODE?` · CLASS ${CODE}`:'');
+  app.replaceChildren();
+  if(!CODE)app.append(el('div',{className:'note warn',textContent:'This link has no class code. Ask your teacher for the full link.'}));
+  app.append(el('div',{className:'q',textContent:q.prompt}));
+  const reveal=st==='revealed'||(offline&&mine!==null);
+  q.options.forEach((o,k)=>{
+    const b=el('button',{className:'opt'+(mine===k?' mine':'')+(reveal?(k===q.correct?' right':' wrong'):''),disabled:mine!==null||st!=='open'},
+      el('span',{className:'L',textContent:LET[k]}),el('span',{textContent:o.text}));
+    b.onclick=()=>castVote(q,k);app.append(b);
+  });
+  if(mine!==null&&st==='open')app.append(el('div',{className:'note',textContent:offline?'VOTE SAVED ON THIS DEVICE.':'VOTE CAST. WAIT FOR THE TEACHER.'}));
+  else if(mine===null&&st==='closed')app.append(el('div',{className:'note',textContent:'VOTING IS CLOSED FOR THIS QUESTION.'}));
+  if(reveal)app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
+  if(offline&&CODE)app.append(el('div',{className:'note warn',textContent:API?'CAN\'T REACH THE CLASS SERVER, so your vote is saved on this device only and your teacher cannot see it. It will be sent if the connection comes back.':'NO CLASS SERVER IS SET UP, so your vote is saved on this device only.'}));
+  if(finished)app.append(el('a',{className:'big go',href:startLink(),textContent:'START ANSWERING QUESTIONS'}));
+  else if(!offline&&mine!==null&&st==='open'&&events.length===0)app.append(el('div',{className:'meta',textContent:''}));
+}
+
+// ---- front-of-room view ----
+function ctrl(state,vq){
+  const e=mk('vote_ctrl',{vq:vq||'',state});
+  if(!API||!online){events.push({n:null,id:player,t:e.t,type:e.type,data:{vq:e.vq,state}});render();}
+  pending.push(e);
+  if(API)flush().then(poll);
+}
+function renderFront(){
+  const s=fold(),n=QS.length,i=s.cur,q=QS[i],st=s.state[q.id]||'open';
+  document.getElementById('title').textContent='CLASS VOTE';
+  const counts=q.options.map(()=>0);
+  for(const o of Object.values(s.votes[q.id]))counts[o]++;
+  const total=counts.reduce((a,b)=>a+b,0),max=Math.max(1,...counts);
+  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':st==='closed'?'VOTING CLOSED':'ANSWER REVEALED'}${s.done?' · STUDENTS CAN START':''}`;
+  app.replaceChildren();
+  if(!CODE)app.append(el('div',{className:'note warn',textContent:'Add &code=XXXX to this link.'}));
+  if(!online)app.append(el('div',{className:'note warn',textContent:API?'CAN\'T REACH THE CLASS SERVER: students\' votes are not arriving. Controls work on this screen only.':'NO CLASS SERVER SET UP (results-config.js): votes cannot be shown.'}));
+  app.append(el('div',{className:'q',textContent:q.prompt}));
+  q.options.forEach((o,k)=>{
+    const rv=st==='revealed',cls='bar-row'+(rv?(k===q.correct?' right':' dim'):'');
+    const row=el('div',{className:cls},el('span',{className:'L',textContent:LET[k]}),
+      el('div',{className:'lane'},el('div',{className:'fill',style:`width:${counts[k]/max*100}%`}),el('span',{className:'t',textContent:o.text})),
+      el('span',{className:'cnt',textContent:`${counts[k]}${total?' · '+Math.round(counts[k]/total*100)+'%':''}`}));
+    app.append(row);
+    if(rv&&k!==q.correct&&o.misconception)app.append(el('div',{className:'mis',textContent:'Idea behind it: '+o.misconception}));
+  });
+  app.append(el('div',{className:'meta',textContent:`${total} VOTE${total===1?'':'S'}`}));
+  if(st==='revealed')app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
+  const bar=el('div',{className:'controls'});
+  const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
+  btn(st==='open'?'CLOSE VOTING':'REOPEN VOTING',()=>ctrl(st==='open'?'closed':'open',q.id),true,st==='revealed');
+  btn('REVEAL ANSWER',()=>ctrl('revealed',q.id),false,st==='revealed');
+  if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
+  btn(s.done?'STUDENTS CAN START (SENT)':'FINISH: LET STUDENTS START',()=>ctrl('done',''),i<n-1,s.done);
+  btn('RESET',()=>{if(confirm('Clear all votes for this class code and start again?'))ctrl('reset','');},true);
+  app.append(bar);
+  const sl=new URL(location.href);sl.searchParams.delete('front');
+  app.append(el('div',{className:'links',textContent:'Student link: '+sl.href}));
+}
+function render(){if(!QS.length)return;(FRONT?renderFront:renderStudent)();}
+
+(async function(){
+  try{
+    const r=await fetch('revision/vote_questions.json',{cache:'no-store'});
+    const all=(await r.json()).questions;
+    const want=String(P.get('q')||'').split(',').map(x=>x.trim()).filter(Boolean);
+    QS=want.length?want.map(id=>all.find(q=>q.id===id)).filter(Boolean):all.filter(q=>q.unit===UNIT);
+    QS=QS.slice(0,4);
+  }catch{}
+  if(!QS.length){app.append(el('div',{className:'note warn',textContent:'No vote questions found for this link.'}));return;}
+  await poll();
+  setInterval(poll,FRONT?1500:2500);
+  window.RRVote={fold,get events(){return events;},get online(){return online;}};
+})();
+})();
+</script>
+</body>
+</html>

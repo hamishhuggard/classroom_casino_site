@@ -52,7 +52,9 @@ let enabled=levels.map((_,i)=>i),position=0,current,correct=0,wrong=0,score=0,at
 let screen='menu',activeRun=false,highestLevel=1;
 // Roulette on a variable-ratio schedule (Hamish, 9 Nov 2026; Ferster & Skinner's highest, steadiest response rates): after a random
 // number of correct answers, mean 10 (3–17); the first spin of a run after 1–5. No progress bar, so the next spin can't be predicted.
-const nextRouletteTarget=first=>first?1+Math.floor(Math.random()*5):3+Math.floor(Math.random()*15);
+// ?roulette=fixed (added 12 Nov 2026, for the Y10 forces lessons): the old fixed schedule, first spin after 3 correct, then every 10.
+const FIXED_ROULETTE=(()=>{try{return new URLSearchParams(location.search).get('roulette')==='fixed';}catch{return false;}})();
+const nextRouletteTarget=first=>FIXED_ROULETTE?(first?3:10):first?1+Math.floor(Math.random()*5):3+Math.floor(Math.random()*15);
 let rouletteCorrectCount=0,rouletteTarget=nextRouletteTarget(true);
 let lastQuestionKey=null,questionLevel=0,needsLevelCard=false;
 let reviewDeck=null,currentReview=null,advanceAfterCorrection=false;
@@ -343,7 +345,7 @@ function next(){if(reviewDeck){currentReview=reviewDeck.next();
 function scientificInput(s){return String(s).normalize('NFKC').replace(/−/g,'-').trim();}
 // "1,000" and "12,345,678" are the numbers 1000 and 12345678. Other commas are left for the caller.
 function withoutThousands(s){return String(s).replace(/(^|[^\d.])(\d{1,3}(?:[, ]\d{3})+)(?![\d,])/g,(m,pre,num)=>pre+num.replace(/[, ]/g,''));}
-function normalize(s){return scientificInput(s).toLowerCase().replace(/[.,!?;:'"“”‘’]/g,'').replace(/(?<=[a-z])-(?=[a-z])/g,'').replace(/\s+/g,' ');}
+function normalize(s){return scientificInput(s).toLowerCase().replace(/[.,!?;:'"“”‘’]/g,'').replace(/(?<=[a-z])-(?=[a-z])/g,'').replace(/\b((?:kilo|centi|milli|micro|nano)?)meter(s?)\b/g,'$1metre$2').replace(/\s+/g,' ');}
 function expectedAnswerUnit(question){
   if(question.source?.unitGiven)return '';
   if(question.unit)return question.unit;

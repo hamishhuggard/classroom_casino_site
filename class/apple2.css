@@ -5,6 +5,9 @@
 /* Our own 5×7 dot-matrix font (scripts/build_font.py). size-adjust keeps it close
    to the VT323 sizes style.css was tuned for; VT323 covers any missing character. */
 @font-face{font-family:'RC Dot Matrix';src:url('assets/RCDotMatrix.ttf') format('truetype');font-display:block;size-adjust:78%}
+/* RC Dot Matrix has no macron letters (ā ē ī ō ū), so player names (te reo Māori, e.g. KĀKĀPŌ MOE) use VT323, which has them. */
+@font-face{font-family:'VT323';src:url('assets/VT323-Regular.ttf') format('truetype');font-display:swap}
+#player-badge,#player-badge *,#class-code-title,#name-gloss,.player-name,.who span{font-family:'VT323',monospace!important}
 *,*::before,*::after{font-family:'RC Dot Matrix','VT323',monospace!important;font-weight:400!important;font-style:normal!important;font-synthesis:none;-webkit-font-smoothing:none;text-rendering:optimizeSpeed}
 
 /* Hard edges: no rounded corners, glows or soft shadows. */

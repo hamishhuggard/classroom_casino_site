@@ -1,0 +1,57 @@
+{
+  "_note": "Opening vote questions for vote.html. FLAGGED FOR HAMISH TO CHECK: every 'correct' index and explanation was written by Claude on 16 Nov 2026 and has not been checked by a teacher. options[].misconception names the wrong idea a distractor is built to catch (shown to the teacher on the front view after the reveal, never to students before). correct is a 0-based index into options; the options keep a fixed order so votes can be counted by index.",
+  "questions": [
+    {
+      "id": "em-vote-bulbs",
+      "unit": "electricity_magnetism",
+      "prompt": "Identical bulbs and identical batteries are used in three circuits. Circuit X: two bulbs in series with a battery. Circuit Y: two bulbs in parallel with a battery. Circuit Z: one bulb with a battery. Which bulbs are brightest?",
+      "options": [
+        { "text": "Both bulbs in X, because the current passes through two bulbs", "misconception": "More bulbs in the circuit means more light" },
+        { "text": "Each bulb in Y only, because parallel circuits are always brighter", "misconception": "Parallel is brighter than a single bulb" },
+        { "text": "The bulb in Z and each bulb in Y, all equally bright", "misconception": null },
+        { "text": "The bulb in Z only, because it is the only bulb", "misconception": "Branches share the battery's energy, so each parallel bulb is dimmer" }
+      ],
+      "correct": 2,
+      "explanation": "Each bulb in Y is connected straight across the battery, so it gets the same voltage and the same current as the single bulb in Z. In X the two bulbs share the battery's voltage, so each is dimmer."
+    },
+    {
+      "id": "em-vote-series-current",
+      "unit": "electricity_magnetism",
+      "prompt": "A battery lights one bulb. A second identical bulb is added in series. What happens to the current in the circuit?",
+      "options": [
+        { "text": "It stays the same, because the battery has not changed", "misconception": "The battery fixes the current" },
+        { "text": "It gets smaller, because the total resistance is bigger", "misconception": null },
+        { "text": "It gets bigger, because there are more bulbs to push it through", "misconception": "More components means more current" },
+        { "text": "It is used up by the first bulb, so the second bulb gets less", "misconception": "Current is used up (it is energy that is transferred, current is the same all the way round a series loop)" }
+      ],
+      "correct": 1,
+      "explanation": "Two bulbs in series have twice the resistance of one, so with the same battery voltage the current is halved. The current is the same everywhere in the loop, so both bulbs are equally (and dimly) lit."
+    },
+    {
+      "id": "em-vote-magnetic",
+      "unit": "electricity_magnetism",
+      "prompt": "Which of these objects would a magnet pick up?",
+      "options": [
+        { "text": "A brass key", "misconception": "All metals are magnetic (brass is copper and zinc)" },
+        { "text": "An aluminium can", "misconception": "All shiny metals are magnetic" },
+        { "text": "A copper wire", "misconception": "Metals that conduct well are magnetic" },
+        { "text": "An iron nail", "misconception": null }
+      ],
+      "correct": 3,
+      "explanation": "Only a few metals are magnetic: iron, steel, nickel and cobalt. Brass, aluminium and copper are metals but are not attracted to a magnet."
+    },
+    {
+      "id": "em-vote-electromagnet",
+      "unit": "electricity_magnetism",
+      "prompt": "A student wraps wire around an iron nail and connects it to a battery to make an electromagnet. Which ONE change makes the electromagnet stronger?",
+      "options": [
+        { "text": "Reverse the connections to the battery", "misconception": "Reversing the current makes it stronger (it only swaps the poles)" },
+        { "text": "Replace the iron nail with a wooden rod", "misconception": "Any rod will do as a core" },
+        { "text": "Wind more turns of wire around the nail", "misconception": null },
+        { "text": "Use a longer piece of wire to connect the battery to the coil", "misconception": "More wire anywhere means a stronger magnet" }
+      ],
+      "correct": 2,
+      "explanation": "More turns of wire in the coil makes a stronger magnetic field. So does more current (a bigger voltage) or an iron core. Reversing the battery only swaps the north and south poles, and a wooden core removes the iron, so the magnet gets weaker."
+    }
+  ]
+}

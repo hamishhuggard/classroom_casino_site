@@ -124,7 +124,7 @@ async function poll(){
     const day=q.get('day')||reports.reduce((d,r)=>r.day>d?r.day:d,'');
     const seen={},list=[];
     for(const r of reports.filter(r=>r.day===day)){
-      const base=r.name||r.id;seen[base]=(seen[base]||0)+1;
+      const base=(globalThis.casinoDisplayName?casinoDisplayName(r.name):r.name)||r.id;seen[base]=(seen[base]||0)+1;
       list.push({key:r.id,name:seen[base]>1?`${base} ${seen[base]}`:base,score:bankOf(r.payload)});
     }
     lastDay=day;$('day').textContent=day;

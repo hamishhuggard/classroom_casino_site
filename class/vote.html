@@ -128,6 +128,24 @@ async function flush(){
   const batch=pending.slice();
   try{await post(batch);pending=pending.filter(e=>!batch.includes(e));online=true;}catch(err){online=false;}
 }
+function ingest(rows){
+  for(const row of rows){
+    if(row.n<=cursor)continue; // already have it (stream and poll can overlap)
+    cursor=row.n;
+    if(row.type==='vote'||row.type==='vote_ctrl')events.push({n:row.n,id:row.id,t:row.t,type:row.type,data:row.data});
+  }
+}
+// Live push: the server streams new rows the moment they are stored (Server-Sent Events). Polling stays as a slow
+// safety net, and as the main route if the stream cannot connect (old server, proxy that buffers, no EventSource).
+let streamUp=false,es=null;
+function openStream(){
+  if(!API||!CODE||typeof EventSource==='undefined')return;
+  const since=Date.now()-12*3600*1000;
+  es=new EventSource(`${API}/api/events/stream?code=${CODE}&after=${cursor}&since=${since}`);
+  es.onopen=()=>{streamUp=true;};
+  es.onmessage=ev=>{try{ingest(JSON.parse(ev.data));online=true;lastOk=Date.now();render();}catch{}};
+  es.onerror=()=>{streamUp=false;}; // EventSource reconnects by itself, resuming from the last id
+}
 async function poll(){
   if(!API||!CODE){online=false;return render();}
   try{
@@ -137,7 +155,7 @@ async function poll(){
       const r=await fetch(`${API}/api/events?code=${CODE}&after=${cursor}&since=${since}&limit=5000`,{cache:'no-store'});
       if(!r.ok)throw new Error('http '+r.status);
       const rows=await r.json();
-      for(const row of rows){cursor=Math.max(cursor,row.n);if(row.type==='vote'||row.type==='vote_ctrl')events.push({n:row.n,id:row.id,t:row.t,type:row.type,data:row.data});}
+      ingest(rows);
       if(rows.length<5000)break;
     }
     online=true;lastOk=Date.now();
@@ -156,7 +174,7 @@ function myVote(qid,epoch){const v=localVotes[qid];return v&&v.t>=epoch?v.opt:nu
 function castVote(q,opt){
   localVotes[q.id]={opt,t:Date.now()};saveLocal();
   pending.push(mk('vote',{vq:q.id,opt}));
-  if(API){flush().then(poll);}render();
+  if(API){flush().then(()=>streamUp||poll());}render();
 }
 function renderStudent(){
   const s=fold(),n=QS.length;
@@ -198,7 +216,7 @@ function ctrl(state,vq){
   const e=mk('vote_ctrl',{vq:vq||'',state});
   if(!API||!online){events.push({n:null,id:player,t:e.t,type:e.type,data:{vq:e.vq,state}});render();}
   pending.push(e);
-  if(API)flush().then(poll);
+  if(API)flush().then(()=>streamUp||poll());
 }
 let seen={},actx=null;
 function chime0(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch{}} // unlock audio on the button press
@@ -243,7 +261,6 @@ function renderFront(){
   const bar=el('div',{className:'controls'});
   const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
   if(st==='open')btn('CLOSE VOTING',()=>{chime0();ctrl('revealed',q.id);},false);
-  else btn('REOPEN VOTING',()=>ctrl('open',q.id),true);
   if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
   btn(s.done?'FINISH (SENT)':'FINISH',()=>ctrl('done',''),i<n-1,s.done);
   btn('RESET',()=>{if(confirm('Clear all votes for this class code and start again?'))ctrl('reset','');},true);
@@ -263,7 +280,8 @@ function render(){if(!QS.length)return;(FRONT?renderFront:renderStudent)();}
   }catch{}
   if(!QS.length){app.append(el('div',{className:'note warn',textContent:'No vote questions found for this link.'}));return;}
   await poll();
-  setInterval(poll,FRONT?1500:2500);
+  openStream();
+  setInterval(()=>{if(!streamUp||Date.now()-lastOk>20000)poll();else if(Math.random()<0.15)poll();},FRONT?1500:2500); // fast poll only when no stream; occasional safety poll otherwise
   window.RRVote={fold,get events(){return events;},get online(){return online;}};
 })();
 })();

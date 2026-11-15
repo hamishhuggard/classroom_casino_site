@@ -36,7 +36,9 @@ button.big{font:inherit;background:var(--a2-green);color:#000;border:0;padding:.
 button.big[disabled]{opacity:.4;cursor:default}
 button.alt{background:#000;color:var(--a2-violet);border:3px solid var(--a2-violet)}
 button.go{display:block;width:100%;font-size:1.3em;padding:.9em;margin-top:1em;text-align:center;text-decoration:none}
-a.go{background:var(--a2-green);color:#000}
+a.go{background:var(--a2-green);color:#000;border:4px solid #fff;box-shadow:0 .25em 0 #0a8a22;font-weight:bold;letter-spacing:.05em;cursor:pointer;animation:pulse 1.2s steps(2,end) infinite}
+a.go:hover{background:#fff}
+@keyframes pulse{50%{box-shadow:0 .25em 0 #0a8a22,0 0 0 .3em rgba(20,245,60,.45)}}
 /* student view: exactly the screen (100vw x 100vh), nothing scrolls */
 body.student{max-width:none;margin:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;padding:1.2vh 3vw;display:flex;flex-direction:column;font-size:min(3.4vh,5.2vw);line-height:1.15}
 body.student h1{display:none}
@@ -44,9 +46,9 @@ body.student .meta{margin:0 0 .3em;font-size:.65em}
 body.student #app{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 body.student #app>*{flex:none}
 body.student .q{margin:.1em 0 .35em;font-size:1em}
-body.student.rv .fig{display:none}
-body.student .fig{flex:1 1 0;min-height:7vh;max-height:30vh;margin:0 0 .35em}
+body.student .fig{flex:1 1 0;min-height:5vh;max-height:30vh;margin:0 0 .35em}
 body.student .fig svg{width:100%;height:100%;max-width:none}
+body.student.rv{font-size:min(2.9vh,4.5vw)}
 body.student .opt{margin:.18em 0;padding:.35em .6em;border-width:2px}
 body.student .note{margin:.25em 0;padding:.3em .5em;font-size:.75em;border-width:2px}
 body.student .score{margin:.15em 0;font-size:.8em}
@@ -54,6 +56,7 @@ body.student button.go{margin:.4em 0 0;padding:.6em}
 /* front of the room: the student layout plus a counter and the teacher buttons */
 body.front .big-n{font-size:.9em;margin:.1em 0 0;text-align:center}
 body.front .fig{max-height:24vh}
+body.front .opt{pointer-events:none;cursor:default}
 body.front .opt{padding:.2em .6em;margin:.12em 0}
 body.front .bar-row{margin:.25em 0}
 body.front .lane{height:1.9em}
@@ -215,7 +218,7 @@ function renderStudent(){
     app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
   }
   if(offline&&CODE)app.append(el('div',{className:'note warn',textContent:API?'CAN\'T REACH THE CLASS SERVER, so your vote is saved on this device only and your teacher cannot see it. It will be sent if the connection comes back.':'NO CLASS SERVER IS SET UP, so your vote is saved on this device only.'}));
-  if(finished)app.append(el('a',{className:'big go',href:startLink(),textContent:'START ANSWERING QUESTIONS'}));
+  if(finished)app.append(el('a',{className:'big go',href:startLink(),textContent:'START PRACTICE QUESTIONS  ▶'}));
   else if(!offline&&mine!==null&&st==='open'&&events.length===0)app.append(el('div',{className:'meta',textContent:''}));
 }
 
@@ -245,7 +248,7 @@ function renderFront(){
   for(const o of Object.values(s.votes[q.id]))counts[o]++;
   const total=counts.reduce((a,b)=>a+b,0),max=Math.max(1,total);
   const pct=total?Math.round(counts[q.correct]/total*100):0;
-  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':'ANSWER SHOWN'}${st!=='open'&&i===n-1?' · STUDENTS CAN START':''}`;
+  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · `;
   const grow=seen[q.id]==='open'&&st==='revealed'; // the answer has just been shown: animate
   if(grow){animEnd=Date.now()+GROW+80;growSound();setTimeout(()=>celebrate(pct),GROW);}
   seen[q.id]=st;
@@ -275,6 +278,7 @@ function renderFront(){
   const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
   if(st==='open')btn('SHOW ANSWER',()=>{chime0();ctrl('revealed',q.id);},false);
   else if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
+  else btn('LEADERBOARD  ▶',()=>{const u=new URL('results/dashboard.html',location.href);u.searchParams.set('board','1');u.searchParams.set('code',CODE);if(API)u.searchParams.set('api',API);window.open(u.href,'_blank');},false,false);
   // after the last answer is shown, students get the START ANSWERING QUESTIONS button by themselves
   btn('RESET',()=>{if(confirm('Clear all votes for this class code and start again?'))ctrl('reset','');},true);
   app.append(bar);

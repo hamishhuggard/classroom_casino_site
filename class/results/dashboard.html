@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roulette Class Results</title>
+<!-- Teacher-only. Open locally; do not publish. Reads the results backend (?api=…) or a CSV you choose. -->
+<style>
+:root{--bg:#fff;--ink:#111;--muted:#666;--line:#ddd;--bad:#f4b6b6;--mid:#f6e3a8;--good:#b8e6c1;--none:#f2f2f2}
+@media(prefers-color-scheme:dark){:root{--bg:#111;--ink:#eee;--muted:#999;--line:#333;--bad:#6b2a2a;--mid:#5f5323;--good:#245a32;--none:#1c1c1c}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px}p{color:var(--muted);margin:4px 0}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+button{font:inherit;padding:4px 10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;cursor:pointer}
+button[aria-pressed=true]{border-color:var(--ink);font-weight:600}
+textarea{width:100%;max-width:900px;height:70px;font:12px monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.wrap{overflow:auto;max-width:100%}
+table{border-collapse:collapse;font-size:12px}
+th,td{border:1px solid var(--line);padding:3px 6px;text-align:center;white-space:nowrap}
+th.skill{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;max-height:220px;font-weight:500}
+td.name,th.name{text-align:left;position:sticky;left:0;background:var(--bg)}
+td.toggle{cursor:pointer;user-select:none}td.d1{padding-left:18px}td.d2{padding-left:32px}td.d3{padding-left:46px;color:var(--muted)}.cut{width:40em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#grid td{height:18px}.qid{font-family:monospace;color:var(--ink)}tr.lvl0 td{border-top:2px solid var(--ink)}
+.bad{background:var(--bad)}.mid{background:var(--mid)}.good{background:var(--good)}.none{background:var(--none);color:var(--muted)}
+.board td{font-size:16px;text-align:left}.board svg{vertical-align:middle;display:block}
+body:not(.projector) #board{display:none}body.projector>*:not(#board){display:none}
+:root{--bar:#3f7fd9}:root{--bar:#3f7fd9}@media(prefers-color-scheme:dark){:root{--bar:#6aa0ee}}
+#dist{display:flex;flex-wrap:wrap;gap:32px}.hist{flex:1 1 300px;min-width:0}.hist h3{font-size:13px;font-weight:600;margin:0 0 2px}.hist p{font-size:12px;margin:0 0 8px}
+.hbars{display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid var(--line)}
+.hbar{flex:1 1 0;min-width:0;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.hbar i{display:block;width:100%;background:var(--bar);border-radius:4px 4px 0 0}.hbar:hover i{opacity:.75}
+.hbar b{font-size:11px;font-weight:500;color:var(--muted)}.hlab{display:flex;gap:2px}.hlab span{flex:1 1 0;min-width:0;max-width:30px;overflow:visible;white-space:nowrap;text-align:center;font-size:10px;color:var(--muted)}body.projector #board{display:block}body.projector .board td{font-size:36px;padding:6px 20px}
+.wq{margin:12px 0 4px;font-weight:600;max-width:900px}.wa{max-width:900px;border:1px solid var(--line);padding:6px 10px;margin:4px 0;white-space:pre-wrap}.wa b{font-weight:600}.wa small{color:var(--muted)}
+.bar{display:inline-block;height:10px;background:var(--ink);opacity:.6;vertical-align:middle}
+
+/* ===== Revision Roulette look (styleguide.md / apple2.css): green-on-black terminal, dot-matrix type, hard pixel edges,
+   the title card's 80s sunset stripes. Always dark, like the game's default theme. Heatmap cells keep their own ramp. ===== */
+@font-face{font-family:'RC Dot Matrix';src:url('../assets/RCDotMatrix.ttf') format('truetype');font-display:block;size-adjust:78%}
+@font-face{font-family:'VT323';src:url('../assets/VT323-Regular.ttf') format('truetype');font-display:block}
+:root,:root:not(#x){--bg:#050b07;--ink:#65ff8d;--muted:#9ac8a6;--line:#2d603b;--none:#0b170e;--bar:#65ff8d;--hover:#112a19;color-scheme:dark}
+*,*::before,*::after{font-family:'RC Dot Matrix','VT323',monospace!important;font-weight:400!important;border-radius:0!important;-webkit-font-smoothing:none}
+body{font-size:17px;line-height:1.35;padding:20px 24px 48px;background:var(--bg)}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
+h1{font-size:44px;line-height:1;letter-spacing:.02em;text-transform:uppercase;margin:4px 0 0;
+  background:linear-gradient(#ecf2ee 0 22%,#ffe45c 22% 45%,#ffbd54 45% 60%,#ff963c 60% 72%,#ff4050 72% 86%,#c83caa 86%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(3px 3px 0 #8c3cc8)}
+h1::after{content:'█';-webkit-text-fill-color:var(--ink);color:var(--ink);margin-left:8px;animation:blink 1.07s steps(1,end) infinite}
+@keyframes blink{50%{opacity:0}}
+.stripes{height:12px;margin:10px 0 14px;background:linear-gradient(#c83caa 0 2px,transparent 2px 4px,#ff4050 4px 6px,transparent 6px 8px,#ff963c 8px 10px,transparent 10px 12px)}
+.tag{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:14px}
+h2{font-size:22px;text-transform:uppercase;letter-spacing:.06em;margin:34px 0 10px;padding:4px 10px;display:inline-block;background:var(--ink);color:var(--bg)}
+h2::before{content:'> '}
+.hist h3{font-size:17px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink)}
+p,.hist p{color:var(--muted)}a{color:#ffe45c}
+button{border:1px solid var(--ink);background:var(--bg);color:var(--ink);text-transform:uppercase;letter-spacing:.05em;padding:6px 12px;box-shadow:3px 3px 0 var(--line)}
+button:hover{background:var(--hover)}button:active{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--line)}
+button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+input,textarea{background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:5px 7px}
+summary{cursor:pointer;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+table{font-size:15px}th,td{border-color:var(--line)}#grid td{height:22px}
+th.skill{color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+tr.lvl0 td{border-top:2px solid var(--ink)}td.name{background:var(--bg)}td.toggle:hover{background:var(--hover)}
+.qid{color:#ffe45c}
+.hbars{border-bottom:2px solid var(--ink)}.hbar i{background:var(--ink)}.hbar:nth-child(odd) i{background:#4fd677}
+/* Big counters, like the game's HUD. */
+#hud{display:flex;flex-wrap:wrap;gap:0;margin:14px 0 4px;border:1px solid var(--ink);width:fit-content;max-width:100%}
+#hud>div{padding:10px 18px;border-right:1px solid var(--ink);min-width:120px}#hud>div:last-child{border-right:0}
+#hud b{display:block;font-size:40px;line-height:1;color:var(--ink)}#hud span{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+#hud .warn b{color:#ff963c;font-size:20px;line-height:1.2;max-width:22em;white-space:normal}
+@media(max-width:600px){body{padding:16px}h1{font-size:30px}#hud>div{min-width:0;padding:8px 12px}#hud b{font-size:28px}}
+@media(prefers-reduced-motion:reduce){h1::after{animation:none}}
+#grid .dim{opacity:.28}#grid td,#grid th,#grid [data-col]{transition:opacity .08s steps(2,end)}
+#grid .sumc{width:6px;min-width:6px;padding:0;border-top:0;border-bottom:0;background:var(--bg)}#grid tr.sumr td{height:6px;padding:0;border:0;background:var(--bg)}
+#grid th.corner{vertical-align:bottom;padding:6px}#grid .gridmodes{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 2px}.modes{display:inline-flex;gap:6px}.modes button{padding:4px 10px;font-size:14px}
+#grid th.boxh{vertical-align:bottom;text-align:left;font-size:12px;color:var(--muted);white-space:normal}#grid th.boxh>div:first-child{max-width:360px;margin-bottom:4px}#grid th.boxh,#grid td.boxc{width:var(--bxw,480px);min-width:var(--bxw,480px);max-width:var(--bxw,480px)}
+#grid td.boxc{position:relative;padding-top:1px;padding-bottom:1px;padding-right:4px}
+#grid .bp{position:relative;height:18px;margin:0 44px 0 6px}#grid .bp>*{position:absolute;top:0;bottom:0}
+#grid .bp .g{width:1px;background:var(--line)}#grid .bp .w{top:8px;bottom:auto;height:1px;background:var(--muted)}
+#grid .bp .b{top:3px;bottom:3px}#grid .bp .m{width:3px;margin-left:-1px;top:1px;bottom:1px;background:#ecf2ee}
+#grid .bn{position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)}
+#grid .bp.ax{height:14px;font-size:10px;color:var(--muted)}#grid .bp.ax span{transform:translateX(-50%)}
+#grid .bp.ax span:first-child{transform:none}#grid .bp.ax span:last-child{transform:translateX(-100%)}
+#tip{position:fixed;z-index:60;display:none;max-width:540px;padding:8px 10px;background:var(--bg);color:var(--ink);border:1px solid var(--ink);box-shadow:4px 4px 0 var(--line);font-size:15px;white-space:pre-line;pointer-events:none}
+/* Compact layout: header row holds title + counters + live status; filters sit right under it; setup lives at the bottom. */
+#top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px}
+#top h1{font-size:30px}.brand .tag{font-size:12px}
+.stripes{height:6px;margin:8px 0 10px;background:linear-gradient(#c83caa 0 2px,transparent 2px 3px,#ff4050 3px 4px,transparent 4px 5px,#ff963c 5px 6px)}
+#hud{margin:0}#hud>div{padding:4px 12px;min-width:0}#hud b{font-size:24px}#hud span{font-size:11px}
+#hud .warn b{font-size:15px;max-width:26em}
+#live{font-size:13px;color:var(--muted);margin-left:auto}
+.filters{display:flex;flex-wrap:wrap;gap:4px 24px}.filters .controls{margin:0 0 6px}.filters .controls:empty{display:none}
+.filters button{padding:2px 8px;font-size:14px;box-shadow:2px 2px 0 var(--line)}
+section{margin-top:22px}h2{font-size:18px;margin:0 12px 8px 0;padding:2px 8px}
+.note{color:var(--muted);font-size:13px}.note button{padding:2px 8px;font-size:13px}
+#setup{margin-top:36px}#setup>.controls{margin:10px 0}
+@media(max-width:600px){#top h1{font-size:24px}#hud b{font-size:20px}#live{margin-left:0}}
+#grid{--scw:44px;--ccw:64px}#grid .sc{width:var(--scw);min-width:var(--scw);max-width:var(--scw);box-sizing:border-box;padding-left:2px;padding-right:2px;overflow:hidden}
+#grid tr:first-child>th{height:150px;box-sizing:border-box}#grid th.skill{max-height:140px;overflow:hidden}
+#grid th.boxh{box-sizing:border-box}
+/* Hierarchy in the heatmap: lower levels are slightly shorter rows, and higher levels get thicker lines above them. Tree guide lines in the name
+   column show which rows belong together. */
+#grid tr.lvl0{--d:0;--tw:3px;--tl:var(--ink)}#grid tr.lvl1{--d:1;--tw:2px;--tl:color-mix(in srgb,var(--ink) 60%,var(--bg))}#grid tr.lvl2{--d:2;--tw:1px;--tl:var(--line)}#grid tr.lvl3{--d:3;--tw:1px;--tl:var(--line)}
+#grid tr.lvl0>td{height:26px;border-top:3px solid var(--ink)}
+#grid tr.lvl1>td{height:23px;border-top:2px solid color-mix(in srgb,var(--ink) 60%,transparent)}
+#grid tr.lvl2>td{height:20px;padding-top:1px;padding-bottom:1px;font-size:14px}
+#grid tr.lvl3>td{height:18px;padding-top:0;padding-bottom:0;font-size:13px}
+/* Lesson objectives always take two lines (short ones too, so every LO row is the same height), cut off after two. */
+#grid tr.lvl2 .cut{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3;height:2.6em}
+/* Drape: a parent row's colour hangs down the left side of its children, like a panhandle. Each level steps in by
+   7.5% of the column's width (--st), and that strip of a child's cell is painted in each ancestor's colour for that
+   student, outermost first (--drape, built in cell()); right edges stay on the column line so columns line up with their
+   headers. Box mode has no per-student colours, so its cells just step in with border colour. */
+#grid td.sc{--st:calc(var(--scw)*.075)}#grid td.cc{--st:calc(var(--ccw)*.075)}#grid td.boxc{--st:3.5px}
+#grid td.sc,#grid td.cc,#grid td.boxc{--in:calc(var(--d,0)*var(--st));padding-left:calc(2px + var(--in))}
+#grid td.boxc{background:linear-gradient(90deg,var(--line) var(--in),var(--c,var(--none)) var(--in))}
+/* The drape covers the row lines: heat cells have no top/bottom borders; each row's line (--tl, --tw) is painted only
+   over the cell's own colour, to the right of the drape, so a parent's colour runs unbroken down past its children. */
+#grid td.sc,#grid td.cc{border-top-style:hidden;border-bottom-style:hidden;
+  background:linear-gradient(var(--tl,var(--line)),var(--tl,var(--line))) right top/calc(100% - var(--in)) var(--tw,1px) no-repeat,var(--drape,var(--c,var(--none)))}
+#grid tr:last-child>td.sc,#grid tr:last-child>td.cc{border-bottom-style:solid}
+#grid tr.sumr td{background:linear-gradient(var(--line),var(--line)) top/100% 1px no-repeat,var(--bg)}
+/* Plain toggle: an ordinary heatmap (full borders, no drape); the row labels are the same either way. */
+#grid.plain td.sc,#grid.plain td.cc{--in:0px;border-top-style:solid;border-bottom-style:solid;background:var(--c,var(--none))}
+#grid td.boxc:not(.none){--c:transparent}
+#grid th.cls,#grid td.cc{width:var(--ccw);min-width:var(--ccw);box-sizing:border-box}
+#grid tr.lvl1>td.name{background:linear-gradient(var(--line),var(--line)) 10px 0/1px 100% no-repeat,var(--bg)}
+#grid tr.lvl2>td.name{background:linear-gradient(var(--line),var(--line)) 10px 0/1px 100% no-repeat,linear-gradient(var(--line),var(--line)) 24px 0/1px 100% no-repeat,var(--bg)}
+#grid tr.lvl3>td.name{background:linear-gradient(var(--line),var(--line)) 10px 0/1px 100% no-repeat,linear-gradient(var(--line),var(--line)) 24px 0/1px 100% no-repeat,linear-gradient(var(--line),var(--line)) 38px 0/1px 100% no-repeat,var(--bg)}
+#grid tr.lvl1>td.name:hover,#grid tr.lvl2>td.name:hover{background-color:var(--hover)}
+#grid.narrow td.sc{padding:0;font-size:0}#grid.narrow th.sc{padding-left:0;padding-right:0;font-size:12px}.modes+.modes{margin-left:10px}
+/* Live panel, student drill-down, wandering columns. */
+#live-sec .note{display:block;margin:2px 0 4px}#live-sum{font-size:17px;color:var(--ink)}
+#live-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;margin-top:8px}
+.tile{border:1px solid var(--line);padding:4px 8px;cursor:pointer;line-height:1.25;min-width:0}.tile:hover,.tile.sel{border-color:var(--ink);background:var(--hover)}
+.tile .t1{display:flex;align-items:center;gap:6px;font-size:16px}.tile .t1 b{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .t2{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tile .t3{font-size:13px;color:#ff6070}
+.tile.help{border-color:#ff4050;box-shadow:inset 4px 0 0 #ff4050}
+.dot{display:inline-block;width:10px;height:10px;flex:0 0 auto;background:#666}.dot.active{background:#4ade80}.dot.idle{background:#fcd34d}.dot.away{background:#666}.dot.menu{background:#6aa0ee}
+#drill{margin-top:12px;border:1px solid var(--ink);padding:8px 12px}#drill h3{margin:0 0 4px;font-size:18px;text-transform:uppercase;letter-spacing:.05em}
+#drill .tl{max-height:420px;overflow:auto;margin-top:6px;border:1px solid var(--line)}#drill .tl table{width:100%}#drill td{text-align:left;white-space:normal;font-size:14px}
+#drill td.tm{white-space:nowrap;color:var(--muted);width:1%}#drill tr.ok td.res{color:#4ade80}#drill tr.no td.res{color:#ff6070}#drill tr.dim td{color:var(--muted)}
+#drill tr.spin td{color:#ffe45c}#drill tr.away td{color:#ff963c}
+#drill svg{display:block;width:100%;max-width:720px;margin:4px 0}#drill svg text{fill:var(--muted);font-size:11px}
+#drill .bl{fill:none;stroke:var(--ink);stroke-width:1.5}#drill .ga{fill:var(--ink)}#drill .gh{fill:#ff963c}#drill .gb{fill:var(--none)}#drill .win{fill:#4ade80}#drill .lose{fill:#ff4050}
+#signals-students tr[data-id],#signals-wander td.link{cursor:pointer}#signals-students tr[data-id]:hover td,#signals-wander tr:hover td.link{background:var(--hover)}
+</style>
+<body>
+<header id="top"><div class="brand"><div class="tag">Revision Roulette · teacher terminal</div><h1>Class results</h1></div>
+<div id="hud"></div><span id="live"></span></header>
+<div class="stripes"></div>
+<section id="launch"><h2>Class links</h2><span class="note">Pick a code, then copy the three links for this class.</span>
+<div class="controls"><label>Class code <input id="lcode" size="8" maxlength="12" style="text-transform:uppercase"></label><button id="lrand">Randomise code</button></div>
+<table id="llinks"></table>
+<h3 style="margin:14px 0 4px;font-size:14px">Most often wrong right now</h3><div id="lhard" class="note">Connect to a class with answers to see this.</div></section>
+<div class="filters"><div class="controls" id="days"></div><div class="controls" id="units"></div></div>
+<section id="live-sec" hidden><h2>Live</h2><span class="note" id="live-sum"></span><div id="live-tiles"></div><div id="drill" hidden></div></section>
+<section><h2>Skills × students</h2><span class="note">Cell = first-try correct / questions tried, or correct / all attempts with the overall button (latest submission per student for the day). Red 0% → amber 50% → green 100%. Click a row to open it.</span>
+<div class="wrap" id="grid"></div></section>
+<section><h2>Spread across students</h2><span class="note">Bars count students. <a id="board-link" href="?board=1">Projector leaderboard</a></span><div id="dist"></div></section>
+<section><h2>Class: weakest skills first</h2><div class="wrap" id="class"></div></section>
+<section><h2>Hardest questions</h2><span class="note" id="hard-note"></span><div class="wrap" id="hardest"></div></section>
+<section><h2>Written answers (self-marked)</h2><span class="note">Students mark themselves against the marking points; check their answers here. <button id="written-download">Download JSON (for AI marking)</button></span><div id="written"></div></section>
+<div class="wrap" id="board"></div>
+<section><h2>Signals</h2><span class="note" id="signals-note">Signals from the event log, not proof of anything: slow, fast or odd answers have many innocent causes, so use them to start a conversation.</span><div class="wrap" id="signals-students"></div><div class="wrap" id="signals-wander"></div></section>
+<details id="setup"><summary>Data source &amp; settings</summary>
+<div class="controls"><label>Live from server <input id="api" size="34" placeholder="https://…"></label><label>Class code <input id="code" size="8" style="text-transform:uppercase"></label><button id="api-go">Connect</button></div>
+<p>Players get a random animal name in their browser (no real names). Enter the class code you gave them; the page refreshes every 10 seconds.</p>
+<details><summary>Or read a Google Form CSV</summary><p>In the responses Sheet, choose File → Download → CSV, then choose that file here. The page reads it in this browser only.</p>
+<div class="controls"><input type="file" id="file" accept=".csv,text/csv"><span id="status"></span></div></details>
+<details><summary>Or paste rows copied from the Sheet</summary><textarea id="paste"></textarea><br><button id="paste-go">Read pasted text</button></details>
+</details>
+
+<script src="../revision/curriculum.js"></script>
+<script src="../revision/mixed/level.js"></script>
+<script src="../revision/physics12/core.js"></script>
+<script src="../revision/physics12/numbers.js"></script>
+<script src="../revision/physics12/units_tables.js"></script>
+<script src="../revision/physics12/units_other.js"></script>
+<script src="../revision/physics12/level4a.js"></script>
+<script src="../revision/physics12/level4b.js"></script>
+<script src="../revision/physics12/level5a.js"></script>
+<script src="../revision/physics12/level5b.js"></script>
+<script src="../revision/physics12/level6a.js"></script>
+<script src="../revision/physics12/level6b.js"></script>
+<script src="../revision/physics12/level7a.js"></script>
+<script src="../revision/physics12/level7b.js"></script>
+<script src="../revision/physics12/level8.js"></script>
+<script src="../revision/forces/forces.js"></script>
+<script src="../mastery.js"></script>
+<script src="../diagnostic.js"></script>
+<script src="../assets/animals/animals.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const labels={},qIndex={},qText={};
+// One example of each question, made with a fixed seed so it doesn't change on every refresh (students each saw their own random numbers).
+function sampleText(unit,id){const k=unit+'|'+id;if(k in qText)return qText[k];let t='';
+  try{const base=qIndex[k];if(base){let seed=[...k].reduce((a,c)=>Math.imul(a,31)+c.charCodeAt(0)|0,7);
+    const rnd=()=>{seed=seed+0x6D2B79F5|0;let x=Math.imul(seed^seed>>>15,1|seed);x=x+Math.imul(x^x>>>7,61|x)^x;return((x^x>>>14)>>>0)/4294967296;};
+    const g=typeof base.gen==='function'?Physics12.generate(base,rnd):base;
+    t=String(g.cloze||g.prompt||g.q||'').replace(/_{3,}/g,'___');
+    if(g.choices)t+=`  [${g.choices.join(' / ')}]`;
+    if(g.visual&&g.visual.type&&g.visual.type!=='recall')t+='  (with a graph/diagram)';}}catch{}
+  return qText[k]=t;}
+function addLabels(){
+  for(const unit of (typeof REVISION_UNITS==='undefined'?[]:REVISION_UNITS))
+    for(const skill of unit.skills)skill.questions.forEach((q,i)=>{labels[`${unit.id}|${skill.id}#${i}`]=`${unit.name} / ${skill.name}`;if(q.id){labels[`${unit.id}|${q.id}`]=`${unit.name} / ${q.skill||skill.name}`;qIndex[`${unit.id}|${q.id}`]=q;}});
+  const mixed=[typeof MIXED_REVISION_UNIT==='undefined'?null:MIXED_REVISION_UNIT];
+  try{if(typeof Physics12!=='undefined')mixed.push(Physics12.unit());}catch{}
+  if(typeof DIAGNOSTIC_UNIT!=='undefined')mixed.push(DIAGNOSTIC_UNIT);
+  for(const unit of mixed.filter(Boolean))for(const skill of unit.skills)for(const q of skill.questions){labels[`${unit.id}|${q.id}`]=`${q.unit||unit.name} / ${q.skill||skill.name}`;qIndex[`${unit.id}|${q.id}`]=q;}
+}
+addLabels();
+const label=(unit,id)=>labels[`${unit}|${id}`]||(unit==='yr12_diagnostic'&&labels[`yr12_physics|${id}`])||(id.startsWith('circuit#')?`Circuits / level ${Number(id.slice(8))+1}`:`${unit} / ${id}`);
+
+function parseCSV(text){
+  // Rows copied straight from the Sheet are tab-separated; downloads are CSV.
+  const first=text.split(/\r?\n/,1)[0];if(first.includes('\t')&&!first.includes(','))return text.split(/\r?\n/).map(line=>line.split('\t')).filter(r=>r.some(x=>x.trim()));
+  const rows=[];let row=[],field='',quoted=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++;}else if(c==='"')quoted=false;else field+=c;}
+    else if(c==='"')quoted=true;else if(c===','){row.push(field);field='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);rows.push(row);row=[];field='';}
+    else field+=c;}
+  if(field||row.length){row.push(field);rows.push(row);}
+  return rows.filter(r=>r.some(x=>x.trim()));
+}
+// Submissions on or before 2026-10-28 used the old level numbers; translate them to current ids.
+const OLD_IDS={'L1-11':'L1-X05','L1-29':'L3-X01'};
+const modernId=(id,day)=>day>'2026-10-28'?id:OLD_IDS[id]||id.replace(/^L2-([ME]\d+)$/,'L4-$1').replace(/^L3-([ME]\d+)$/,'L5-$1');
+// "v1 2026-10-23 unit=id:attempts.correct.first,...;unit2=..."
+function parsePayload(text){
+  const m=String(text).trim().match(/^v1\s+(\S+)\s+(.*)$/s);if(!m)return null;
+  const items=[];
+  for(const group of m[2].split(';')){const eq=group.indexOf('=');if(eq<0)continue;const unit=group.slice(0,eq);
+    for(const entry of group.slice(eq+1).split(',')){const colon=entry.lastIndexOf(':');if(colon<0)continue;const [a,c,f]=entry.slice(colon+1).split('.').map(Number);items.push({unit,id:modernId(entry.slice(0,colon),m[1]),a,c,f});}}
+  return {day:m[1],items};
+}
+
+let submissions=[],day=null,unitFilter='all';
+function load(text){
+  const rows=parseCSV(text);if(!rows.length){$('status').textContent='No rows found.';return;}
+  const header=rows[0].map(h=>h.toLowerCase());
+  let emailCol=header.findIndex(h=>h.includes('email'));
+  const timeCol=header.findIndex(h=>h.includes('timestamp'));
+  submissions=[];EV.mode='reports';
+  rows.slice(1).forEach((row,order)=>{
+    const resultCol=row.findIndex(cell=>/^\s*v1\s/.test(cell));if(resultCol<0)return;
+    const data=parsePayload(row[resultCol]);if(!data)return;
+    submissions.push({who:(emailCol>=0?row[emailCol]:'')||'(no email)',time:timeCol>=0?row[timeCol]:'',order,...data});
+  });
+  $('status').textContent=`${submissions.length} submissions read.`;
+  const days=[...new Set(submissions.map(s=>s.day))].sort();day=days.at(-1)||null;
+  $('days').innerHTML=days.length>1?'Day: '+days.map(d=>`<button data-day="${d}" aria-pressed="${d===day}">${d}</button>`).join(''):'';
+  const units=[...new Set(submissions.flatMap(s=>s.items.map(it=>it.unit)))].sort();
+  unitFilter=units.includes('yr12_diagnostic')?'yr12_diagnostic':'all';
+  $('units').innerHTML=units.length>1?'Show: '+['all',...units].map(u=>`<button data-unit="${u}" aria-pressed="${u===unitFilter}">${u==='all'?'everything':u}</button>`).join(''):'';
+  render();
+}
+$('units').onclick=e=>{const b=e.target.closest('[data-unit]');if(!b)return;unitFilter=b.dataset.unit;$('units').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));render();};
+$('days').onclick=e=>{const b=e.target.closest('[data-day]');if(!b)return;day=b.dataset.day;$('days').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));render();};
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Mastery state from one submission's Year 12 items (same maths as the game), then the top "practise next" pick.
+const byId={};try{for(const sk of Physics12.unit().skills)for(const q of sk.questions)byId[q.id]=q;}catch{}
+function practiseNext(items){
+  const M=globalThis.CasinoMastery;if(!M)return '';
+  const state={};for(const it of items){if(it.unit!=='yr12_diagnostic'&&it.unit!=='yr12_physics')continue;const key=M.skillKey(byId[it.id]);if(key)M.update(state,key,it.f===1);}
+  const r=M.recommend(state,1)[0];return r?`${esc(r.name)}${r.because?` <small>(needed for ${esc(r.because)})</small>`:''}`:'';
+}
+// Hover focus, as in the classroom5 viewer's skills heatmap: everything outside the hovered cell's row and column dims.
+// Only data cells trigger it; row labels, column names and the spacers don't.
+function gridFocus(cell){const t=$('grid').querySelector('table');if(!t)return;
+  t.querySelectorAll('.dim').forEach(n=>n.classList.remove('dim'));if(!cell)return;
+  const tr=cell.closest('tr'),col=cell.dataset.col;
+  for(const n of t.querySelectorAll('[data-col],td.name'))if(n.closest('tr')!==tr&&n.dataset.col!==col)n.classList.add('dim');}
+$('grid').addEventListener('mouseover',e=>gridFocus(e.target.closest('td[data-col]')));
+$('grid').addEventListener('mouseleave',()=>gridFocus(null));
+const gridOpen=new Map();let lastGridHTML='';
+// Instant tooltip with the full row title (the browser's own title tooltip is slow and the table refreshes every 10 s).
+const tip=document.createElement('div');tip.id='tip';document.body.appendChild(tip);
+const tipText=document.createElement('div'),tipShot=document.createElement('div');tipShot.className='qshot';tip.append(tipText,tipShot);
+// Question rows also show the question as students see it: the game itself (index.html?preview=1) in a hidden iframe,
+// loaded once and told which question to draw (a fresh random variant of the card, not the student's own numbers).
+const PV={w:960,h:1000,maxW:560,maxH:420};let pvFrame=null,pvReady=false,pvWant='',pvShown='';
+function pvLoad(){if(pvFrame)return;pvFrame=document.createElement('iframe');pvFrame.src='../index.html?preview=1';pvFrame.tabIndex=-1;pvFrame.setAttribute('aria-hidden','true');
+  pvFrame.style.cssText=`width:${PV.w}px;height:${PV.h}px;border:0;transform-origin:0 0;pointer-events:none;background:#000`;
+  // The iframe lives in its own fixed box that is always laid out (a display:none iframe can't measure its question),
+  // parked off-screen and moved over the tooltip's placeholder when shown. Moving the iframe itself would reload it.
+  pvBox=document.createElement('div');pvBox.style.cssText='position:fixed;left:-10000px;top:0;overflow:hidden;z-index:61;pointer-events:none;border:1px solid var(--line)';
+  pvBox.append(pvFrame);document.body.append(pvBox);tipShot.style.display='none';}
+let pvBox=null;
+function pvPlace(){if(!pvBox)return;if(tip.style.display==='block'&&tipShot.style.display==='block'){const r=tipShot.getBoundingClientRect();pvBox.style.left=r.left+'px';pvBox.style.top=r.top+'px';}else pvBox.style.left='-10000px';}
+// Crop and scale the iframe to the question's own box (sent by the game), so only the question shows.
+function pvFit(b){const s=Math.min(.75,PV.maxW/b.w,PV.maxH/b.h);pvFrame.style.transform=`scale(${s}) translate(${-b.x}px,${-b.y}px)`;
+  tipShot.style.width=pvBox.style.width=Math.round(b.w*s)+'px';tipShot.style.height=pvBox.style.height=Math.round(b.h*s)+'px';}
+let pvOk=false;
+const pvShow=on=>{tipShot.style.display=on?'block':'none';tipText.style.display=on?'none':'';pvPlace();};
+function pvAsk(qk){pvWant=qk;if(pvReady&&pvShown!==qk){const i=qk.indexOf('|');pvFrame.contentWindow.postMessage({preview:{unit:qk.slice(0,i),id:qk.slice(i+1)}},location.origin);}}
+addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==pvFrame?.contentWindow)return;
+  if(e.data?.previewReady){pvReady=true;if(pvWant)pvAsk(pvWant);}
+  if(e.data?.previewShown){const {unit,id,ok,box}=e.data.previewShown;pvShown=unit+'|'+id;pvOk=ok;if(ok)pvFit(box);pvShow(ok&&pvShown===pvWant&&tip.style.display==='block');if(tip.style.display==='block')pvClamp();}});
+// Keep the tooltip on screen once the preview has changed its size.
+function pvClamp(){const r=tip.getBoundingClientRect();if(r.bottom>innerHeight-4)tip.style.top=Math.max(4,innerHeight-4-r.height)+'px';if(r.right>innerWidth-4)tip.style.left=Math.max(4,innerWidth-4-r.width)+'px';pvPlace();}
+setTimeout(pvLoad,1500);   // preload, so the first hover is quick
+$('grid').addEventListener('mousemove',e=>{const d=e.target.closest('[data-tip]');if(!d||!d.dataset.tip){tip.style.display='none';pvWant='';pvPlace();return;}
+  tipText.textContent=d.dataset.tip;const qk=d.dataset.q||'';
+  // Question rows: just the question as students see it (the text stays only while it loads, or if it can't be drawn).
+  if(qk){pvLoad();if(qk!==pvWant){pvShow(false);pvAsk(qk);}else pvShow(pvShown===qk&&pvOk);}else{pvShow(false);pvWant='';}
+  tip.style.display='block';const w=tip.offsetWidth,h=tip.offsetHeight+(qk&&tipShot.style.display==='none'?PV.maxH:0);
+  tip.style.left=Math.min(e.clientX+14,innerWidth-w-8)+'px';tip.style.top=Math.max(4,e.clientY+18+h>innerHeight?e.clientY-h-10:e.clientY+18)+'px';pvPlace();});
+$('grid').addEventListener('mouseleave',()=>{tip.style.display='none';pvWant='';pvPlace();});
+// Table mode: one column per student. Box mode: one wide column with a box plot of the students' first-try accuracy for each row.
+let gridMode='table';try{if(localStorage.getItem('rr-grid-mode')==='box')gridMode='box';}catch{}
+function setMode(m){gridMode=m;try{localStorage.setItem('rr-grid-mode',m);}catch{}render();}
+$('grid').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setMode(b.dataset.mode);const c=e.target.closest('[data-cells]');if(c)setCells(c.dataset.cells);const q=e.target.closest('[data-cue]');if(q)setCue(q.dataset.cue);const v=e.target.closest('[data-score]');if(v)setScore(v.dataset.score);});
+// Cell display in table mode: 'counts' shows n/m in each cell (wide columns, may scroll sideways);
+// 'narrow' shrinks the student columns to fit the page and shows n/m on hover only.
+let cellMode='counts';try{if(localStorage.getItem('rr-grid-cells')==='narrow')cellMode='narrow';}catch{}
+function setCells(m){cellMode=m;try{localStorage.setItem('rr-grid-cells',m);}catch{}render();}
+// Hierarchy cue in table mode: 'drape' (parents' colours hang down the left of their children) or 'plain' (ordinary heatmap).
+let cueMode='plain';try{if(localStorage.getItem('rr-grid-cue')==='drape')cueMode='drape';}catch{}
+function setCue(m){cueMode=m;try{localStorage.setItem('rr-grid-cue',m);}catch{}render();}
+// What the grid's colours and numbers show: 'first try' (right first try / questions) or 'overall' (correct / all attempts).
+let scoreMode='first try';try{if(localStorage.getItem('rr-grid-score')==='overall')scoreMode='overall';}catch{}
+function setScore(m){scoreMode=m;try{localStorage.setItem('rr-grid-score',m);}catch{}render();}
+const scoreOf=t=>scoreMode==='overall'?(t.a?t.c/t.a:0):(t.n?t.ok/t.n:0);
+function fitColumns(){const g=$('grid'),t=g.querySelector('table'),narrow=cellMode==='narrow'&&gridMode==='table'&&t;g.classList.toggle('narrow',!!narrow);g.classList.toggle('plain',cueMode==='plain'||gridMode==='box');   // box mode's Class column is always plain
+  // Box mode: the box column takes the width left over by the labels, the gap and Class.
+  if(gridMode==='box'&&t){const rest=[...t.rows[0].cells].filter(c=>!c.classList.contains('boxh')).reduce((a,c)=>a+c.offsetWidth,0)+4;
+    let w=Math.max(240,g.clientWidth-rest);g.style.setProperty('--bxw',w+'px');
+    const over=g.scrollWidth-g.clientWidth;if(over>0)g.style.setProperty('--bxw',Math.max(240,w-over)+'px');}   // borders etc. not counted above
+  if(!narrow){g.style.removeProperty('--scw');return;}
+  const n=t.querySelectorAll('tr:first-child th.sc').length;if(!n)return;
+  const other=t.querySelector('th.corner').offsetWidth+[...t.rows[0].cells].filter(c=>!c.classList.contains('sc')&&!c.classList.contains('corner')).reduce((a,c)=>a+c.offsetWidth,0)+n+4;
+  g.style.setProperty('--scw',Math.max(14,Math.min(44,Math.floor((g.clientWidth-other)/n)))+'px');}
+addEventListener('resize',fitColumns);
+$('grid').addEventListener('click',e=>{const td=e.target.closest('[data-key]');if(!td)return;const k=td.dataset.key;gridOpen.set(k,!(gridOpen.has(k)?gridOpen.get(k):!k.startsWith('l:')));render();});
+// Continuous red→amber→green ramp, the same anchors as the classroom5 viewer's skills heatmap (viewer/skills_heatmap_prototype.html).
+const RAMP=['#f87171','#fb923c','#fcd34d','#a3e635','#4ade80'].map(h=>[1,3,5].map(k=>parseInt(h.slice(k,k+2),16)));
+const heatRGB=v=>{const t=Math.max(0,Math.min(1,v))*(RAMP.length-1),i=Math.min(RAMP.length-2,Math.floor(t)),f=t-i;return RAMP[i].map((x,k)=>Math.round(x+(RAMP[i+1][k]-x)*f));};
+const heat=(ok,n)=>{if(!n)return 'class="none"';const t=ok/n*(RAMP.length-1),i=Math.min(RAMP.length-2,Math.floor(t)),f=t-i;
+  const [r,g,b]=RAMP[i].map((v,k)=>Math.round(v+(RAMP[i+1][k]-v)*f));
+  return `style="background:rgb(${r},${g},${b});color:${0.299*r+0.587*g+0.114*b<140?'#fff':'#1f2937'}"`;};
+const shade=(ok,n)=>!n?'none':ok/n<.5?'bad':ok/n<.8?'mid':'good';
+function render(){
+  // Latest submission per student for the chosen day; later rows win.
+  const latest=new Map();for(const s of submissions.filter(s=>s.day===day))latest.set(s.who,s);
+  const students=[...latest.keys()].sort();
+  const per={},skills=new Set();
+  for(const [who,s] of latest){per[who]={};for(const it of s.items){if(unitFilter!=='all'&&it.unit!==unitFilter)continue;const k=label(it.unit,it.id);skills.add(k);const cell=per[who][k]||(per[who][k]={n:0,ok:0,a:0,c:0});cell.n++;cell.ok+=it.f;cell.a+=it.a;cell.c+=it.c;}}
+  const totals=[...skills].map(k=>{let n=0,ok=0,who=0;for(const s of students){const c=per[s][k];if(c){n+=c.n;ok+=c.ok;who++;}}return {k,n,ok,who};}).sort((x,y)=>x.ok/x.n-y.ok/y.n||y.n-x.n);
+  $('class').innerHTML=totals.length?`<table><tr><th class="name">Skill</th><th>Students</th><th>First-try correct</th><th></th></tr>${totals.map(t=>`<tr><td class="name">${esc(t.k)}</td><td>${t.who}</td><td ${heat(t.ok,t.n)}>${t.ok}/${t.n} (${Math.round(100*t.ok/t.n)}%)</td><td style="text-align:left"><span class="bar" style="width:${Math.round(100*t.ok/t.n)}px"></span></td></tr>`).join('')}</table>`:'<p>No results for this day yet.</p>';
+  const ranked=students.map(s=>{let ok=0,n=0;for(const c of Object.values(per[s])){ok+=c.ok;n+=c.n;}return {s,ok,n};}).filter(r=>r.n).sort((a,b)=>b.ok-a.ok||a.n-b.n);
+  // Distributions instead of a named table: how much each student did, and how accurate they were.
+  const hist=(title,note,vals,edges,fmt,axis)=>{const counts=edges.slice(0,-1).map((lo,i)=>vals.filter(v=>v>=lo&&(i===edges.length-2?v<=edges[i+1]:v<edges[i+1])).length);const max=Math.max(1,...counts);
+    return `<div class="hist"><h3>${title}</h3><p>${note}</p><div class="hbars" style="max-width:${counts.length*32}px">${counts.map((c,i)=>`<div class="hbar" title="${c} student${c===1?'':'s'}: ${fmt(edges[i],edges[i+1],i===counts.length-1)}"><b>${c||''}</b><i style="height:${Math.round(100*c/max)}%;${c?'':'display:none'}"></i></div>`).join('')}</div><div class="hlab" style="max-width:${counts.length*32}px">${counts.map((_,i)=>`<span>${fmt(edges[i],edges[i+1],i===counts.length-1,true)}</span>`).join('')}</div><p>${axis}</p></div>`;};
+  const med=a=>{const b=[...a].sort((x,y)=>x-y),m=b.length>>1;return b.length?(b.length%2?b[m]:(b[m-1]+b[m])/2):0;};
+  const tried=ranked.map(r=>r.n);
+  const tEdges=[];for(let x=0;x<=Math.max(0,...tried)+1;x++)tEdges.push(x); // one bar per count, no binning
+  $('dist').innerHTML=ranked.length?hist('Questions tried',`Median ${med(tried)} · total ${tried.reduce((a,b)=>a+b,0)} · ${ranked.length} students`,tried,tEdges,(lo,hi,last,short)=>!short||tEdges.length<=21||lo%5===0?String(lo):'','questions tried per student'):'';
+  const icon=name=>globalThis.animalIcon?animalIcon(name,document.body.classList.contains('projector')?4:2):'';
+  $('board').innerHTML=ranked.length?`<table class="board">${ranked.map((r,i)=>`<tr><td>${i+1}</td><td>${icon(r.s)}</td><td>${esc(r.s)}</td><td>${r.ok} right first try</td><td>${r.n} tried</td></tr>`).join('')}</table>`:'';
+  // Written answers for the day, grouped by question, so you can read them and check the self-marks.
+  const groups=new Map();
+  for(const [who,sub] of latest)for(const w of sub.written||[]){if(unitFilter!=='all'&&w.unit!==unitFilter)continue;const k=w.unit+'|'+w.id;if(!groups.has(k))groups.set(k,{q:w.q||label(w.unit,w.id),list:[]});groups.get(k).list.push({who,...w});}
+  $('written').innerHTML=groups.size?[...groups.values()].map(g=>`<p class="wq">${esc(g.q)}</p>${g.list.map(a=>`<div class="wa"><b>${esc(a.who)}</b> <small>${a.self?'marked it: GOT IT':'marked it: NOT YET'}</small>\n${esc(a.text)}</div>`).join('')}`).join(''):'<p>None yet.</p>';
+  // Student columns run weakest to strongest (first-try accuracy over the shown questions; ties: more questions tried counts as surer, so 0/3 sits before 0/1 and 3/3 after 1/1).
+  {const acc=s=>{let n=0,ok=0;for(const c of Object.values(per[s])){n+=c.n;ok+=c.ok;}return [n?ok/n:-1,n];};
+   students.sort((x,y)=>{const [a,n]=acc(x),[b,m]=acc(y);return a-b||(a<.5?m-n:n-m);});}
+  // Hierarchy down the side: unit → skill → lesson objective (LO) → question, each level collapsible. Students across the top.
+  // Every level is sorted weakest to strongest (first-try accuracy; more questions first on a tie), with 'Other' kept last.
+  // Opens to the LO level by default (units and skills open, LOs closed); clicks override that.
+  // anc: this column's colour in each ancestor row, outermost first (see the drape CSS).
+  // Each band ends in a 1px border-coloured line, so with the row lines (which stop at the drape) the borders outline
+  // each parent's L shape instead of cutting through it.
+  const drape=anc=>anc.length?`--drape:linear-gradient(90deg,${anc.map((a,i)=>`${a} calc(var(--st)*${i}) calc(var(--st)*${i+1} - 1px),var(--line) calc(var(--st)*${i+1} - 1px) calc(var(--st)*${i+1})`).join(',')},var(--c,var(--none)) var(--in));`:'';
+  const colour=t=>t&&t.n?`rgb(${heatRGB(scoreOf(t)).join(',')})`:'var(--none)';
+  const cell=(c,col,cls,anc=[])=>{if(!c||!c.n)return `<td class="none ${cls}" data-col="${col}" style="${drape(anc)}">–</td>`;const [r,g,b]=heatRGB(scoreOf(c));
+    return `<td class="${cls}" data-col="${col}" style="${drape(anc)}--c:rgb(${r},${g},${b});color:${0.299*r+0.587*g+0.114*b<140?'#fff':'#1f2937'}" data-tip="${c.ok}/${c.n} right first try · ${c.c} correct of ${c.a} attempts">${scoreMode==='overall'?`${c.c}/${c.a}`:`${c.ok}/${c.n}`}</td>`;};
+  const qper={},qinfo=new Map();
+  for(const [who,s] of latest){qper[who]={};for(const it of s.items){if(unitFilter!=='all'&&it.unit!==unitFilter)continue;const qk=it.unit+'|'+it.id;
+    if(!qinfo.has(qk)){const k=label(it.unit,it.id),x=k.indexOf(' / ');qinfo.set(qk,{qk,unit:it.unit,id:it.id,uname:x<0?it.unit:k.slice(0,x),skill:x<0?k:k.slice(x+3),lo:(qIndex[qk]||{}).lo||''});}
+    const c=qper[who][qk]||(qper[who][qk]={n:0,ok:0,a:0,c:0});c.n++;c.ok+=it.f;c.a+=it.a;c.c+=it.c;}}
+  const add=(t,c)=>{if(c){t.n+=c.n;t.ok+=c.ok;t.a+=c.a;t.c+=c.c;}return t;};
+  const stats=(qs,s)=>{const t={n:0,ok:0,a:0,c:0};for(const q of qs)for(const w of s?[s]:students)add(t,qper[w][q.qk]);return t;};
+  const groupBy=(qs,f)=>{const m=new Map();for(const q of qs){const k=f(q);if(!m.has(k))m.set(k,[]);m.get(k).push(q);}return [...m];};
+  const weakest=(a,b)=>{const x=stats(a[1]),y=stats(b[1]);return x.ok/x.n-y.ok/y.n||y.n-x.n;};
+  const all=[...qinfo.values()];
+  const isOpen=key=>gridOpen.has(key)?gridOpen.get(key):!key.startsWith('l:');
+  // Box mode: one column whose width fitColumns() sets to whatever the page has left (--bxw); the plot is drawn with
+  // CSS percentages so it stretches to fit, instead of a fixed-width SVG that made the page scroll sideways.
+  const pct=(a,p)=>{const i=(a.length-1)*p,lo=Math.floor(i);return a[lo]+(a[Math.min(lo+1,a.length-1)]-a[lo])*(i-lo);};
+  const boxCell=qs=>{const v=students.map(s=>stats(qs,s)).filter(t=>t.n).map(scoreOf).sort((a,b)=>a-b);
+    if(!v.length)return `<td class="none boxc" data-col="b">–</td>`;
+    const [a,m,b]=[.25,.5,.75].map(p=>pct(v,p)),[r,g,bl]=heatRGB(m),P=x=>Math.round(x*100)+'%',Q=x=>(x*100).toFixed(2)+'%';
+    return `<td class="boxc" data-col="b" title="${v.length} students · 25th ${P(a)} · median ${P(m)} · 75th ${P(b)} · range ${P(v[0])}–${P(v.at(-1))}"><div class="bp">${[0,.25,.5,.75,1].map(t=>`<i class="g" style="left:${Q(t)}"></i>`).join('')}<i class="w" style="left:${Q(v[0])};width:${Q(v.at(-1)-v[0])}"></i><i class="b" style="left:${Q(a)};width:max(3px,${Q(b-a)});background:rgb(${r},${g},${bl})"></i><i class="m" style="left:${Q(m)}"></i></div><span class="bn">n=${v.length}</span></td>`;};
+  // anc: the ancestor rows' colours, outermost first, each {i: colour per student column, c: Class colour}.
+  // A question listed straight under a skill (no LOs) repeats the skill's colour so it still steps in by its depth.
+  const colours=qs=>{const m={c:colour(stats(qs))};students.forEach((s,i)=>m[i]=colour(stats(qs,s)));return m;};
+  const row=(key,depth,name,qs,canOpen,open,tip='',qk='',anc=[])=>{anc=anc.slice(0,depth);while(anc.length<depth)anc.push(anc.at(-1));return `<tr class="lvl${depth}"><td class="name d${depth}${canOpen?' toggle':''}"${canOpen?` data-key="${esc(key)}"`:''}><div class="cut"${qk?` data-q="${esc(qk)}"`:''} data-tip="${esc(tip||name.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"'))}">${canOpen?(open?'▾ ':'▸ '):''}${name}</div></td>${gridMode==='box'?boxCell(qs):students.map((s,i)=>cell(stats(qs,s),i,'sc',anc.map(m=>m[i]))).join('')}<td class="sumc"></td>${cell(stats(qs),'c','cc',anc.map(m=>m.c))}</tr>`;};
+  const qRows=(qs,depth,anc)=>qs.sort((x,y)=>weakest([,[x]],[,[y]])||x.id.localeCompare(y.id,undefined,{numeric:true})).map(q=>row('',depth,`<span class="qid">${esc(q.id)}</span> ${esc((sampleText(q.unit,q.id)||'(question text not found)').replace(/\s+/g,' '))}`,[q],false,false,sampleText(q.unit,q.id),q.unit+'|'+q.id,anc)).join('');
+  const loRows=(sk,qs,anc)=>{const los=groupBy(qs,q=>q.lo);if(los.length===1&&!los[0][0])return qRows(qs,3,anc);
+    return los.sort((a,b)=>!a[0]-!b[0]||weakest(a,b)).map(([lo,lq])=>{const key='l:'+sk+'|'+lo,open=isOpen(key);const t=lo.replace(/^LO\d+:\s*/,'');return row(key,2,esc(t||'Other'),lq,true,open,t,'',anc)+(open?qRows(lq,3,[...anc,colours(lq)]):'');}).join('');};
+  const skillRows=(u,qs,anc)=>groupBy(qs,q=>q.skill).sort(weakest).map(([sk,sq])=>{const key='s:'+u+'|'+sk,open=isOpen(key);return row(key,1,esc(sk),sq,true,open,'','',anc)+(open?loRows(u+'|'+sk,sq,[...anc,colours(sq)]):'');}).join('');
+  const units=groupBy(all,q=>q.uname).sort(weakest);
+  const next=students.map(s=>practiseNext(latest.get(s).items));
+  const gridHTML=students.length?`<table><tr><th class="name corner"></th>${gridMode==='box'?`<th class="boxh" data-col="b"><div>Students: ${scoreMode==='overall'?'overall correct':'first try correct'} (box = 25th–75th percentile, white line = median, n at right)</div><div class="bp ax">${[0,.25,.5,.75,1].map(t=>`<span style="left:${t*100}%">${t*100}%</span>`).join('')}</div></th>`:students.map((s,i)=>`<th class="skill sc" data-col="${i}" title="${esc(latest.get(s).time)}">${esc(s)}</th>`).join('')}<th class="sumc"></th><th class="skill cls" data-col="c">Class</th></tr>${units.map(([u,uq])=>{const key='u:'+u,open=isOpen(key);return row(key,0,`<b>${esc(u)}</b>`,uq,true,open)+(open?skillRows(u,uq,[colours(uq)]):'');}).join('')}${gridMode==='table'&&next.some(Boolean)?`<tr><td class="name">Practise next</td>${next.map((x,i)=>`<td class="none" data-col="${i}" style="text-align:left;font-size:.8em;min-width:7em;white-space:normal">${x}</td>`).join('')}<td class="sumc"></td><td class="none" data-col="c"></td></tr>`:''}<tr class="sumr"><td colspan="${gridMode==='box'?4:students.length+3}"></td></tr>${row('',0,'<b>All students</b>',all,false,false)}</table><div class="gridmodes"><span class="modes">${['first try','overall'].map(m=>`<button data-score="${m}" aria-pressed="${scoreMode===m}" title="${m==='overall'?'Colour by correct answers out of all attempts':'Colour by right first try out of questions tried'}">${m}</button>`).join('')}</span><span class="modes">${['table','box'].map(m=>`<button data-mode="${m}" aria-pressed="${gridMode===m}">${m}</button>`).join('')}</span>${gridMode==='table'?`<span class="modes">${['counts','narrow'].map(m=>`<button data-cells="${m}" aria-pressed="${cellMode===m}" title="${m==='counts'?'Show n/m in every cell':'Fit columns to the page; hover a cell for n/m'}">${m}</button>`).join('')}</span><span class="modes">${['drape','plain'].map(m=>`<button data-cue="${m}" aria-pressed="${cueMode===m}" title="${m==='drape'?'Parent rows drape their colour down the left of their children':'Ordinary heatmap'}">${m}</button>`).join('')}</span>`:''}</div>`:'';
+  if(gridHTML!==lastGridHTML){lastGridHTML=gridHTML;$('grid').innerHTML=gridHTML;}
+  fitColumns();renderSignals();renderHardest();renderLive();
+  // HUD counters along the top.
+  {const t=stats(all),los=[];for(const [u,uq] of units)for(const [sk,sq] of groupBy(uq,q=>q.skill))for(const [lo,lq] of groupBy(sq,q=>q.lo))if(lo)los.push({lo:lo.replace(/^LO\d+:\s*/,''),...stats(lq)});
+   const weak=los.filter(l=>l.n).sort((a,b)=>a.ok/a.n-b.ok/b.n)[0];
+   $('hud').innerHTML=students.length?`<div><b>${students.length}</b><span>Players</span></div><div title="${t.a} attempts in all"><b>${t.n}</b><span>Questions</span></div><div><b>${t.n?Math.round(100*t.ok/t.n):0}%</b><span>Right first try</span></div>${weak?`<div class="warn"><b>${esc(weak.lo)} · ${Math.round(100*weak.ok/weak.n)}%</b><span>Weakest objective</span></div>`:''}`:'';}
+}
+// Event log: the whole log for a class, paged by row number (after=N), then reduced to the same per-student model as the report payloads.
+const EV={key:'',n:0,events:[],fetches:0,labels:{},mode:'reports',PAGE:5000,MAXPAGES:400};
+const localDay=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+async function loadEvents(base,code){
+  const key=base+'|'+code;if(EV.key!==key){EV.key=key;EV.n=0;EV.events=[];EV.fetches=0;}
+  for(let page=0;page<EV.MAXPAGES;page++){
+    const res=await fetch(`${base}/api/events?code=${encodeURIComponent(code)}&after=${EV.n}&limit=${EV.PAGE}`,{cache:'no-store'});if(!res.ok)throw new Error(res.status);
+    const rows=await res.json();EV.fetches++;
+    for(const r of rows)EV.events.push(r);
+    const last=rows.length?rows[rows.length-1].n:undefined;
+    if(rows.length<EV.PAGE||typeof last!=='number'||last<=EV.n)break;   // short page = done; no row numbers (old server) or no progress = stop rather than loop
+    EV.n=last;
+  }
+  if(EV.events.length&&typeof EV.events.at(-1).n==='number')EV.n=Math.max(EV.n,EV.events.at(-1).n);
+}
+// Student labels as the dashboard shows them: the random animal name from the reports; two players with one name become "Grumpy Gorilla 2".
+function eventLabels(events,reports){
+  const names={};for(const r of reports)if(r.name)names[r.id]=(globalThis.casinoDisplayName?casinoDisplayName(r.name):r.name);
+  const ids=[...new Set(events.map(e=>e.id).concat(reports.map(r=>r.id)))].sort(),seen={},out={};
+  for(const id of ids){const b=names[id]||id;seen[b]=(seen[b]||0)+1;out[id]=seen[b]>1?`${b} ${seen[b]}`:b;}
+  return out;
+}
+function submissionsFromEvents(events,reports){
+  const labels=EV.labels=eventLabels(events,reports),subs=new Map(),days=new Set();
+  const sub=(id,d)=>{const k=id+'|'+d;if(!subs.has(k))subs.set(k,{who:labels[id]||id,time:'',day:d,items:new Map(),written:[]});return subs.get(k);};
+  for(const e of events){if(e.type!=='answer'||!e.data||!e.data.qid||!e.data.unit)continue;
+    const d=localDay(e.t),s=sub(e.id,d),k=e.data.unit+'|'+e.data.qid;days.add(d);
+    let it=s.items.get(k);if(!it){it={unit:e.data.unit,id:modernId(e.data.qid,d),a:0,c:0,f:e.data.ok?1:0,ft:e.t};s.items.set(k,it);}
+    it.a++;if(e.data.ok)it.c++;if(e.t<it.ft){it.ft=e.t;it.f=e.data.ok?1:0;}
+    s.time=new Date(Math.max(Date.parse(s.time)||0,e.t)).toISOString();}
+  // Written answers only come with the reports; reports for days with no events are kept as they were.
+  const have=new Set([...subs.keys()]);let order=0;
+  for(const r of reports){const data=parsePayload(r.payload);if(!data)continue;const k=r.id+'|'+data.day;
+    if(have.has(k)){subs.get(k).written=r.written||[];continue;}
+    subs.set(k,{who:labels[r.id]||r.id,time:r.time,...data,written:r.written||[],items:data.items});}
+  return [...subs.values()].map(s=>({...s,items:Array.isArray(s.items)?s.items:[...s.items.values()].map(({ft,...it})=>it),order:order++}));
+}
+const medianOf=a=>{const b=[...a].sort((x,y)=>x-y),m=b.length>>1;return b.length?(b.length%2?b[m]:(b[m-1]+b[m])/2):null;};
+function renderHardest(){
+  const H=$('hardest'),N=$('hard-note');
+  if(EV.mode!=='events'){H.innerHTML='';N.textContent='Needs the event log (the exact wrong answers are only recorded there).';return;}
+  const m=new Map();
+  for(const e of EV.events){if(e.type!=='answer'||localDay(e.t)!==day)continue;const d=e.data||{};if(!d.qid||(unitFilter!=='all'&&d.unit!==unitFilter))continue;
+    const k=d.unit+'|'+d.qid,w=m.get(k)||m.set(k,{unit:d.unit,id:d.qid,n:0,bad:0,kids:new Set(),badKids:new Set(),by:new Map(),exp:d.expected}).get(k);
+    w.n++;w.kids.add(e.id);if(d.ok!==false)continue;w.bad++;w.badKids.add(e.id);
+    const t=d.how==='timeout'?'(timed out)':(String(d.entered||'').trim()||'(blank)');const lc=t.toLowerCase();w.by.set(lc,(w.by.get(lc)||0)+1);if(d.expected)w.exp=d.expected;}
+  const qs=[...m.values()].filter(w=>w.bad).sort((a,b)=>b.bad-a.bad||b.bad/b.n-a.bad/a.n||a.id.localeCompare(b.id)).slice(0,15);
+  $('lhard').innerHTML=qs.length?qs.slice(0,3).map(w=>`<div><b>${Math.round(100*w.bad/w.n)}% wrong</b> (${w.badKids.size} of ${w.kids.size} students) · ${esc(label(w.unit,w.id))}<br><small>Right answer: ${esc(w.exp||'–')} · common wrong: ${[...w.by].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([t,n])=>esc(t)+' ×'+n).join('; ')}</small></div>`).join('<hr>'):'No wrong answers yet today.';
+  N.textContent='Top 15 by number of wrong attempts (follows the day and unit filters). Every attempt counts, so a student retrying a question counts more than once.';
+  H.innerHTML=qs.length?`<table><tr><th class="name">Question</th><th>Wrong</th><th>Of attempts</th><th>Students wrong</th><th>Right answer</th><th>Top wrong answers</th></tr>${qs.map(w=>`<tr><td class="name"><span class="qid">${esc(w.id)}</span> ${esc(label(w.unit,w.id))}</td><td>${w.bad}</td><td>${Math.round(100*w.bad/w.n)}% of ${w.n}</td><td>${w.badKids.size}/${w.kids.size}</td><td>${esc(w.exp||'–')}</td><td>${[...w.by].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,5).map(([t,n])=>`${esc(t)} ×${n}`).join('; ')}</td></tr>`).join('')}</table>`:'<p class="note">No wrong answers on this day.</p>';
+}
+function renderSignals(){
+  const S=$('signals-students');
+  if(EV.mode!=='events'){S.innerHTML='<p class="note">No event log for this class (older data, or students on an older version), so there are no signals to show.</p>';return;}
+  const per={},who=id=>per[id]||(per[id]={id,name:EV.labels[id]||id,times:[],answers:0,timeouts:0,pasteEvents:0,pasteOnAnswers:0,odd:0});
+  for(const e of EV.events){if(localDay(e.t)!==day)continue;const d=e.data||{};if(unitFilter!=='all'&&d.unit!==unitFilter)continue;
+    if(e.type==='paste_blocked'){who(e.id).pasteEvents++;continue;}
+    if(e.type!=='answer')continue;const p=who(e.id);p.answers++;
+    if(d.how==='timeout')p.timeouts++;else if(typeof d.ms==='number')p.times.push(d.ms);
+    p.pasteOnAnswers+=d.pastes||0;
+    if(d.how!=='timeout'&&d.len>0&&(d.keys===0||d.inputs===0||d.mismatch===true))p.odd++;
+  }
+  const rows=Object.values(per).sort((a,b)=>a.name.localeCompare(b.name));
+  S.innerHTML=rows.length?`<table><tr><th class="name">Student</th><th>Answers</th><th>Median time to answer</th><th>Timeouts</th><th>Paste attempts blocked</th><th>Pastes on answers</th><th>Typed oddly</th></tr>${rows.map(p=>{const m=medianOf(p.times);
+    return `<tr data-id="${esc(p.id)}"><td class="name">${esc(p.name)}</td><td>${p.answers}</td><td>${m===null?'–':(m/1000).toFixed(1)+' s'}</td><td>${p.timeouts}</td><td>${p.pasteEvents}</td><td>${p.pasteOnAnswers}</td><td>${p.odd}</td></tr>`;}).join('')}</table><p class="note">Time excludes time the tab was hidden and leaves out timeouts. "Typed oddly" = a typed answer with no key presses or input events, or whose text did not match what was keyed in.</p>`:'<p class="note">No answers on this day.</p>';
+}
+// ===== Live panel, student drill-down and wandering signals: all derived in the browser from EV.events. =====
+// Thresholds: active = an event within 30 s with the tab visible; idle 30 s to 2 min; away = over 2 min or tab hidden; in menu = the last
+// events since the last question/answer/spin are clicks or dialogs and that was over 20 s ago. Needs help = 3 wrong in a row on the question
+// they are still on, or (live only) over 2 min with no event in the middle of a question with the tab visible.
+const LV={sel:null,key:'',by:new Map(),dayEnd:0,dev:[],rebuilt:false,drillSig:'',drillId:null,tiles:new Map(),wsig:''};
+const LVT={ACTIVE:30000,AWAY:120000,MENU:20000,VISIT:10000,RATE:300000};
+const lvName=id=>EV.labels[id]||id;
+const lvDur=ms=>{const s=Math.round(ms/1000);return s<60?s+' s':Math.floor(s/60)+' m '+String(s%60).padStart(2,'0')+' s';};
+const lvClock=t=>new Date(t).toLocaleTimeString();
+const lvLive=()=>day===localDay(Date.now());
+const lvNow=()=>lvLive()?Date.now():LV.dayEnd;
+// Per-student events for the chosen day and unit, in time order. Rebuilt only when the log or the filters change.
+function lvBuild(){
+  const key=[day,unitFilter,EV.key,EV.events.length].join('|');LV.rebuilt=false;if(key===LV.key)return;LV.key=key;LV.rebuilt=true;
+  const by=new Map(),dev=new Map();let end=0;
+  for(const e of EV.events){if(localDay(e.t)!==day)continue;const d=e.data||{};
+    if(e.type==='vote'||e.type==='vote_ctrl')continue; // class vote (vote.html), not practice
+    if(e.type==='session_start')dev.set(e.id,d);
+    if(unitFilter!=='all'&&d.unit!==unitFilter)continue;
+    let a=by.get(e.id);if(!a)by.set(e.id,a=[]);a.push(e);if(e.t>end)end=e.t;}
+  for(const a of by.values())a.sort((x,y)=>x.t-y.t||(x.n-y.n)||0);
+  LV.by=by;LV.dayEnd=end;LV.dev=[...dev.values()];
+}
+function lvStats(evs,now,live){
+  const last=evs.at(-1),ses=last.session;let answers=[],qid='',anchor='',anchorT=0,tail=0,hidden=false,bank=null;
+  for(const e of evs){if(e.session!==ses)continue;const d=e.data||{};if(typeof d.bank==='number')bank=d.bank;
+    if(e.type==='answer'){answers.push(e);qid=d.qid||qid;anchor='answer';anchorT=e.t;tail=0;}
+    else if(e.type==='question_shown'){qid=d.qid||qid;anchor='question_shown';anchorT=e.t;tail=0;}
+    else if(e.type==='roulette'||e.type==='session_start'||e.type==='join'){anchor=e.type;anchorT=e.t;tail=0;}
+    else if(e.type==='visibility')hidden=d.state==='hidden';
+    else if(e.type==='click'||e.type==='dialog'||e.type==='change')tail++;}
+  const age=Math.max(0,now-last.t),lastMenu=['click','dialog','change'].includes(last.type);
+  const menu=tail>0&&lastMenu&&now-anchorT>LVT.MENU;
+  const status=hidden||age>LVT.AWAY?'away':menu?'menu':age<=LVT.ACTIVE?'active':'idle';
+  const l3=answers.slice(-3),l5=answers.slice(-5);let flag='';
+  if(l3.length===3&&l3.every(a=>a.data.ok===false&&a.data.qid===qid))flag='3 wrong in a row on '+qid;
+  else if(live&&anchor==='question_shown'&&age>LVT.AWAY&&!hidden)flag='no activity for '+lvDur(age)+' on '+qid;
+  return {status,hidden,bank,qid,answers:answers.length,r5:l5.filter(a=>a.data.ok).length,n5:l5.length,flag,lastT:last.t};
+}
+const LV_STATUS={active:'ACTIVE',idle:'IDLE',away:'AWAY',menu:'IN MENU'};
+function lvTileHTML(s){return `<div class="t1"><span class="dot ${s.status}"></span><b>${esc(s.name)}</b><span>${s.bank===null?'':'$'+s.bank}</span></div><div class="t2">${LV_STATUS[s.status]}${s.hidden?' (tab hidden)':''} · ${s.answers} ans · last 5: ${s.n5?s.r5+'/'+s.n5:'–'} · ${esc(s.qid||'–')}</div>${s.flag?`<div class="t3">NEEDS HELP: ${esc(s.flag)}</div>`:''}`;}
+function renderLive(){
+  const sec=$('live-sec');if(EV.mode!=='events'){sec.hidden=true;return;}
+  lvBuild();const now=lvNow(),live=lvLive(),list=[];let answersRecent=0;
+  for(const [id,evs] of LV.by){if(!evs.length)continue;const s=lvStats(evs,now,live);s.id=id;s.name=lvName(id);list.push(s);
+    for(const e of evs)if(e.type==='answer'&&e.t>now-LVT.RATE&&e.t<=now)answersRecent++;}
+  sec.hidden=!list.length;if(!list.length)return;
+  list.sort((a,b)=>(!a.flag)-(!b.flag)||a.name.localeCompare(b.name));
+  const active=list.filter(s=>s.status==='active').length,flagged=list.filter(s=>s.flag).length;
+  $('live-sum').textContent=`${live?'':'Replay of '+day+' · '}${active} active now · ${(answersRecent/5).toFixed(1)} answers/min (last 5 min) · ${flagged} need${flagged===1?'s':''} help · ${list.length} students`;
+  const box=$('live-tiles'),seen=new Set();
+  for(const s of list){seen.add(s.id);let t=LV.tiles.get(s.id);
+    if(!t){t={el:document.createElement('div'),sig:''};t.el.className='tile';t.el.tabIndex=0;t.el.dataset.id=s.id;LV.tiles.set(s.id,t);}
+    const sig=JSON.stringify([s.name,s.status,s.hidden,s.bank,s.answers,s.r5,s.n5,s.qid,s.flag,LV.sel===s.id]);
+    if(sig!==t.sig){t.sig=sig;t.el.innerHTML=lvTileHTML(s);t.el.dataset.status=s.status;t.el.dataset.help=s.flag?'1':'';t.el.classList.toggle('help',!!s.flag);t.el.classList.toggle('sel',LV.sel===s.id);}}
+  for(const [id,t] of LV.tiles)if(!seen.has(id)){t.el.remove();LV.tiles.delete(id);}
+  const want=list.map(s=>LV.tiles.get(s.id).el);if(want.some((el,i)=>box.children[i]!==el)||box.children.length!==want.length)want.forEach(el=>box.appendChild(el));
+  if(LV.rebuilt){renderWander(now);}
+  renderDrill();
+}
+// Wandering: time outside answering (a run of clicks/dialogs that ends in a new question or spin, not in an answer, at least 10 s), tab-hidden spans,
+// and the share of correct answers that repeat a question already answered correctly that day.
+function lvWander(evs,endT){
+  let first=null,out=0,visits=0,hc=0,hms=0,hs=null,ses=null,open=false;const spans=[],done=new Set();let cor=0,rep=0;
+  const ovl=(a,b)=>{let s=0;for(const [x,y] of spans)s+=Math.max(0,Math.min(b,y)-Math.max(a,x));if(hs!==null)s+=Math.max(0,b-Math.max(a,hs));return s;};
+  const close=t=>{if(first!==null){const dur=t-first-ovl(first,t);if(dur>=LVT.VISIT){out+=dur;visits++;}first=null;}};
+  for(const e of evs){const d=e.data||{};
+    if(e.session!==ses){ses=e.session;first=null;if(hs!==null)open=true;hs=null;}
+    switch(e.type){
+      case 'visibility':if(d.state==='hidden'){hc++;hs=e.t;}else if(hs!==null){hms+=e.t-hs;spans.push([hs,e.t]);hs=null;}break;
+      case 'click':case 'dialog':case 'change':if(first===null)first=e.t;break;
+      case 'question_shown':case 'roulette':close(e.t);break;
+      case 'answer':first=null;if(d.ok){cor++;if(done.has(d.qid))rep++;done.add(d.qid);}break;
+      case 'session_start':case 'join':first=null;break;}}
+  if(hs!==null)open=true;
+  close(Math.min(endT,evs.at(-1).t+LVT.AWAY));
+  return {out,visits,hc,hms,open,cor,rep};
+}
+function renderWander(now){
+  const W=$('signals-wander');if(EV.mode!=='events'){W.innerHTML='';return;}
+  const rows=[...LV.by].map(([id,evs])=>({id,name:lvName(id),w:lvWander(evs,now)})).filter(r=>r.w).sort((a,b)=>a.name.localeCompare(b.name));
+  const dv=LV.dev,touch=dv.filter(d=>d.touch>0).length,sizes=new Map();for(const d of dv)if(d.w&&d.h){const k=d.w+'×'+d.h;sizes.set(k,(sizes.get(k)||0)+1);}
+  const devLine=dv.length?`Devices (${dv.length} sessions started this day): ${touch} touch, ${dv.length-touch} no touch · screens ${[...sizes].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,6).map(([k,n])=>`${k} ×${n}`).join(', ')}`:'No device information for this day.';
+  const html=rows.length?`<table><tr><th class="name">Student (click for timeline)</th><th>Outside answering</th><th>Menu visits</th><th>Tab hidden</th><th>Hidden time</th><th>Repeat correct</th></tr>${rows.map(r=>{const w=r.w;
+    return `<tr><td class="name link" data-id="${esc(r.id)}">${esc(r.name)}</td><td>${w.visits?lvDur(w.out):'–'}</td><td>${w.visits}</td><td>${w.hc?w.hc+'×':'0'}</td><td>${w.hms?lvDur(w.hms):'–'}${w.open?' +':''}</td><td>${w.cor?Math.round(100*w.rep/w.cor)+'% ('+w.rep+'/'+w.cor+')':'–'}</td></tr>`;}).join('')}</table><p class="note">Outside answering = menus, settings or dialogs left for a new question or spin, only counting visits over 10 s and not counting time the tab was hidden. "+" = the tab was still hidden when the session ended (time unknown). Repeat correct = share of right answers on a question already answered right that day; revising on purpose also does this.</p><p class="note">${esc(devLine)}</p>`:`<p class="note">${esc(devLine)}</p>`;
+  if(html!==LV.wsig){LV.wsig=html;W.innerHTML=html;}
+}
+// ----- Drill-down -----
+function lvItems(evs){
+  const items=[],texts={};let pend=null,run=null,hid=null;
+  const push=(t,kind,cls)=>{run=null;const it={t,kind,cls:cls||''};items.push(it);return it;};
+  for(const e of evs){const d=e.data||{};
+    if(e.type==='question_shown'){texts[d.qid]=d.text||d.prompt||texts[d.qid]||'';pend=push(e.t,'q');Object.assign(pend,{qid:d.qid,text:texts[d.qid],attempt:d.attempt,ans:null});}
+    else if(e.type==='answer'){let it=pend&&!pend.ans&&pend.qid===d.qid?pend:null;if(!it){it=push(e.t,'q');Object.assign(it,{qid:d.qid,text:texts[d.qid]||''});}it.ans=d;}
+    else if(e.type==='click'||e.type==='change'){const key=e.type+'|'+(d.id||'')+'|'+(d.text||'')+'|'+(d.value??'');
+      if(run&&run.key===key){run.n++;run.last=e.t;}else{const it=push(e.t,'click');it.key=key;it.n=1;it.last=e.t;it.what=(e.type==='change'?'changed ':'clicked ')+(d.text||d.id||d.cls||'something')+(e.type==='change'&&d.value!==undefined?' = '+d.value:'');run=it;}}
+    else if(e.type==='dialog'){push(e.t,'dialog').what=(d.id||'dialog')+(d.open?' opened':' closed');}
+    else if(e.type==='visibility'){if(d.state==='hidden'){hid=push(e.t,'hid');hid.until=null;}else if(hid&&hid.until===null){hid.until=e.t;hid=null;}}
+    else if(e.type==='roulette'){const it=push(e.t,'spin');it.d=d;}
+    else if(e.type==='paste_blocked')push(e.t,'paste').what='paste blocked ('+(d.len||0)+' characters)';
+    else if(e.type==='session_start')push(e.t,'start').what=`session started · ${d.w||'?'}×${d.h||'?'}${d.touch>0?' · touch':''}`;
+    else if(e.type==='join')push(e.t,'start').what='joined class';}
+  return items;
+}
+function lvItemRow(it){
+  const tm=`<td class="tm">${lvClock(it.t)}</td>`;
+  if(it.kind==='q'){const a=it.ans,txt=String(it.text||'').replace(/\s+/g,' ');
+    const what=`<span class="qid">${esc(it.qid||'')}</span> ${esc(txt.length>140?txt.slice(0,140)+'…':txt)}`;
+    if(!a)return `<tr class="dim">${tm}<td>${what} <small>(shown, no answer yet)</small></td><td class="res"></td></tr>`;
+    const to=a.how==='timeout',secs=typeof a.ms==='number'?(a.ms/1000).toFixed(1)+' s':'';
+    return `<tr class="${a.ok?'ok':'no'}">${tm}<td>${what}<br><small>${to?'timed out':'entered: '+esc(String(a.entered??'')||'(nothing)')}${a.attempt>1?' · attempt '+a.attempt:''} · ${secs}</small></td><td class="res">${a.ok?'RIGHT':'WRONG'}</td></tr>`;}
+  if(it.kind==='click')return `<tr class="dim">${tm}<td>${esc(it.what)}${it.n>1?` ×${it.n} (over ${lvDur(it.last-it.t)})`:''}</td><td></td></tr>`;
+  if(it.kind==='hid')return `<tr class="away">${tm}<td>tab hidden${it.until===null?' (no return recorded)':' for '+lvDur(it.until-it.t)}</td><td></td></tr>`;
+  if(it.kind==='spin'){const d=it.d,b=d.before,a=d.after,delta=typeof a==='number'&&typeof b==='number'?a-b:null;
+    return `<tr class="spin">${tm}<td>roulette spin${d.slice!==undefined?' · slice '+esc(String(d.slice)):''}${d.win!==undefined?' · '+(d.win?'WIN':'LOSS'):''}${delta===null?'':' · '+(delta>=0?'+$'+delta:'−$'+(-delta))+` (bank $${b} → $${a})`}</td><td></td></tr>`;}
+  return `<tr class="dim">${tm}<td>${esc(it.what)}</td><td></td></tr>`;
+}
+function lvBankSVG(evs){
+  const pts=evs.filter(e=>typeof (e.data||{}).bank==='number').map(e=>[e.t,e.data.bank]);
+  if(pts.length<2)return '<p class="note">Not enough bank data for a graph.</p>';
+  const W=720,H=110,L=40,R=8,T=8,B=16,t0=pts[0][0],t1=pts.at(-1)[0],sp=Math.max(1,t1-t0);
+  const lo=Math.min(0,...pts.map(p=>p[1])),hi=Math.max(1,...pts.map(p=>p[1])),X=t=>(L+(t-t0)/sp*(W-L-R)).toFixed(1),Y=v=>(T+(hi-v)/(hi-lo)*(H-T-B)).toFixed(1);
+  let path='';pts.forEach((p,i)=>{path+=(i?`H${X(p[0])}V${Y(p[1])}`:`M${X(p[0])},${Y(p[1])}`);});
+  const spins=evs.filter(e=>e.type==='roulette').map(e=>{const d=e.data,v=typeof d.after==='number'?d.after:d.bank,win=typeof d.after==='number'&&typeof d.before==='number'?d.after>=d.before:!!d.win;
+    return `<circle class="${win?'win':'lose'}" cx="${X(e.t)}" cy="${Y(typeof v==='number'?v:0)}" r="4"><title>spin ${lvClock(e.t)}: ${typeof d.before==='number'?'$'+d.before+' → $'+d.after:''}</title></circle>`;}).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" id="bank-svg" role="img" aria-label="Bank over time"><line x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}" stroke="currentColor" opacity=".25"/><path class="bl" d="${path}"/>${spins}<text x="2" y="${Y(hi)}" dy="10">$${hi}</text><text x="2" y="${Y(lo)}">$${lo}</text><text x="${L}" y="${H-3}">${lvClock(t0)}</text><text x="${W-R}" y="${H-3}" text-anchor="end">${lvClock(t1)}</text></svg>`;
+}
+function lvStripSVG(evs){
+  if(evs.length<2)return {svg:'',text:''};
+  const W=720,L=40,R=8,t0=evs[0].t,sp=Math.max(1,evs.at(-1).t-t0),X=t=>(L+(t-t0)/sp*(W-L-R)).toFixed(1),w=(a,b)=>Math.max(1,(b-a)/sp*(W-L-R)).toFixed(1);
+  let rects='',act=0,idle=0,hid=0,hidden=false;
+  for(let i=0;i<evs.length-1;i++){const e=evs[i],n=evs[i+1],g=n.t-e.t;if(e.type==='visibility')hidden=(e.data||{}).state==='hidden';if(e.session!==n.session)hidden=false;
+    if(hidden){hid+=g;rects+=`<rect class="gh" x="${X(e.t)}" y="2" width="${w(e.t,n.t)}" height="12"/>`;}
+    else if(g<=LVT.ACTIVE){act+=g;rects+=`<rect class="ga" x="${X(e.t)}" y="2" width="${w(e.t,n.t)}" height="12"/>`;}
+    else idle+=g;}
+  return {svg:`<svg viewBox="0 0 ${W} 18" id="active-svg" role="img" aria-label="Active and idle time"><rect class="gb" x="${L}" y="2" width="${W-L-R}" height="12"/>${rects}<text x="2" y="12">active</text></svg>`,
+    text:`Active ${lvDur(act)} · idle gaps over 30 s ${lvDur(idle)} · tab hidden ${lvDur(hid)}`};
+}
+function renderDrill(){
+  const box=$('drill'),id=LV.sel;if(!id||EV.mode!=='events'){box.hidden=true;LV.drillSig='';return;}
+  const evs=LV.by.get(id)||[],sig=[id,day,unitFilter,evs.length,evs.length?evs.at(-1).n:'',EV.labels[id]].join('|');
+  if(sig===LV.drillSig&&!box.hidden)return;LV.drillSig=sig;
+  const old=box.querySelector('.tl'),keep=old&&LV.drillId===id?old.scrollTop:0;LV.drillId=id;
+  box.hidden=false;
+  if(!evs.length){box.innerHTML=`<h3>${esc(lvName(id))}</h3><button data-close="1">Close</button><p class="note">No events for this student on ${esc(day||'this day')}${unitFilter==='all'?'':' in '+esc(unitFilter)}.</p>`;return;}
+  const items=lvItems(evs),ans=evs.filter(e=>e.type==='answer'),good=ans.filter(e=>e.data.ok).length,strip=lvStripSVG(evs);
+  box.innerHTML=`<h3>${esc(lvName(id))} <button data-close="1">Close</button></h3><p class="note">${ans.length} answers, ${good} right · ${evs.length} events · ${lvClock(evs[0].t)} to ${lvClock(evs.at(-1).t)}</p><p class="note">Bank over time (dots = roulette spins: green up or level, red down)</p>${lvBankSVG(evs)}<p class="note">${esc(strip.text)}</p>${strip.svg}<div class="tl"><table>${items.map(lvItemRow).join('')}</table></div>`;
+  const nt=box.querySelector('.tl');if(nt&&keep)nt.scrollTop=keep;
+}
+function lvSelect(id,scroll){LV.sel=id;LV.drillSig='';for(const [k,t] of LV.tiles){t.sig='';}renderLive();if(scroll)$('drill').scrollIntoView({block:'nearest'});}
+$('live-sec').addEventListener('click',e=>{if(e.target.closest('[data-close]')){LV.sel=null;for(const t of LV.tiles.values())t.sig='';renderLive();return;}const t=e.target.closest('.tile');if(t)lvSelect(t.dataset.id,false);});
+$('live-sec').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const t=e.target.closest('.tile');if(t){e.preventDefault();lvSelect(t.dataset.id,false);}}});
+$('signals-students').addEventListener('click',e=>{const r=e.target.closest('tr[data-id]');if(r)lvSelect(r.dataset.id,true);});
+$('signals-wander').addEventListener('click',e=>{const r=e.target.closest('td[data-id]');if(r)lvSelect(r.dataset.id,true);});
+setInterval(()=>{if(EV.mode==='events')renderLive();},5000);   // statuses depend on the clock, not just on new events
+// Live mode: poll the backend; keep the chosen day and unit between refreshes.
+let liveTimer=null;
+function setFilters(){
+  const days=[...new Set(submissions.map(s=>s.day))].sort();if(!days.includes(day))day=days.at(-1)||null;
+  $('days').innerHTML=days.length>1?'Day: '+days.map(d=>`<button data-day="${d}" aria-pressed="${d===day}">${d}</button>`).join(''):'';
+  const units=[...new Set(submissions.flatMap(s=>s.items.map(it=>it.unit)))].sort();if(unitFilter!=='all'&&!units.includes(unitFilter))unitFilter='all';
+  $('units').innerHTML=units.length>1?'Show: '+['all',...units].map(u=>`<button data-unit="${u}" aria-pressed="${u===unitFilter}">${u==='all'?'everything':u}</button>`).join(''):'';
+}
+async function poll(){
+  const base=$('api').value.trim().replace(/\/+$/,''),code=$('code').value.trim().toUpperCase();if(!base||!code)return;
+  try{
+    const res=await fetch(base+'/api/reports?code='+encodeURIComponent(code),{cache:'no-store'});if(!res.ok)throw new Error(res.status);
+    const reports=await res.json();
+    let hasEvents=false;try{await loadEvents(base,code);hasEvents=EV.events.some(e=>e.type==='answer');}catch{}
+    if(hasEvents){EV.mode='events';submissions=submissionsFromEvents(EV.events,reports);}
+    else{EV.mode='reports';
+    // Show the random animal name; two players with the same name on a day become "Grumpy Gorilla 2".
+    const seen={},label={};
+    for(const r of reports){const base=(globalThis.casinoDisplayName?casinoDisplayName(r.name):r.name)||r.id,k=r.day+'|'+base;seen[k]=(seen[k]||0)+1;label[r.day+'|'+r.id]=seen[k]>1?`${base} ${seen[k]}`:base;}
+    submissions=reports.map((r,order)=>{const data=parsePayload(r.payload);return data&&{who:label[r.day+'|'+r.id],time:r.time,order,...data,written:r.written||[]};}).filter(Boolean);}
+    setFilters();render();
+    $('live').textContent=`live · updated ${new Date().toLocaleTimeString()}`;
+  }catch(e){$('live').textContent=`Can't reach the server (${e.message}); retrying.`;}
+}
+$('api-go').onclick=()=>{clearInterval(liveTimer);poll();liveTimer=setInterval(poll,10000);const q='api='+encodeURIComponent($('api').value.trim())+'&code='+encodeURIComponent($('code').value.trim().toUpperCase());history.replaceState(null,'','?'+q);$('board-link').href='?board=1&'+q;};
+{const q=new URLSearchParams(location.search),api=q.get('api');if(q.get('board'))document.body.classList.add('projector');$('code').value=q.get('code')||'';if(api){$('api').value=api;$('api-go').click();}else $('setup').open=true;}
+$('written-download').onclick=()=>{
+  const rows=[];for(const s of submissions)if(s.day===day)for(const w of s.written||[])rows.push({day:s.day,student:s.who,unit:w.unit,question_id:w.id,question:w.q,answer:w.text,self_mark:w.self?'got it':'not yet'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(rows,null,2)],{type:'application/json'}));a.download=`written-answers-${$('code').value.trim().toUpperCase()||'class'}-${day||'all'}.json`;a.click();
+};
+$('file').onchange=async()=>{const f=$('file').files[0];if(f)load(await f.text());};
+$('paste-go').onclick=()=>load($('paste').value);
+
+// Class links: random code (4 letters + 2 digits, no I/O/0/1) and the three URLs.
+const LUNIT='electricity_magnetism',LAPI='https://rr.hamishhuggard.com';
+function randCode(){const L='ABCDEFGHJKLMNPQRSTUVWXYZ',D='23456789',r=n=>crypto.getRandomValues(new Uint32Array(1))[0]%n;return Array.from({length:4},()=>L[r(L.length)]).join('')+Array.from({length:2},()=>D[r(D.length)]).join('');}
+function renderLinks(){
+  const code=($('lcode').value||'').trim().toUpperCase(),api=($('api').value||LAPI).trim();
+  const site=new URL('../',location.href).href,st=site+'vote.html?code='+encodeURIComponent(code)+'&unit='+LUNIT;
+  const rows=[['Student',st],['Projector',st+'&front=1'],['Teacher dashboard',location.origin+location.pathname+'?code='+encodeURIComponent(code)+'&api='+encodeURIComponent(api)]];
+  $('llinks').innerHTML=code?rows.map(([n,u])=>`<tr><td class="name">${n}</td><td><a href="${esc(u)}" target="_blank">${esc(u)}</a></td><td><button data-u="${esc(u)}">Copy</button></td></tr>`).join(''):'<tr><td>Enter or randomise a code.</td></tr>';
+  $('llinks').querySelectorAll('button').forEach(b=>b.onclick=()=>{navigator.clipboard.writeText(b.dataset.u);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200);});
+}
+$('lcode').value=new URLSearchParams(location.search).get('code')||randCode();
+$('lrand').onclick=()=>{$('lcode').value=randCode();$('code').value=$('lcode').value;renderLinks();};
+$('lcode').oninput=renderLinks;renderLinks();
+</script>
+</body></html>

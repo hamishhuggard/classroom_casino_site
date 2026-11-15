@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Revision Roulette — Class Vote</title>
-<!-- Opening vote for a lesson: one question at a time, every student votes once on their own device, the front of the room shows live bars.
+<!-- Opening vote for a lesson: one question at a time, every student votes once on their own device, the front shows only how many have answered; students can change their vote until the teacher presses CLOSE VOTING & SHOW RESULTS, which reveals bars, % correct (green flash and chime >=80%, orange >=40%, red below) and each student's own result.
      Student link:  vote.html?code=KEA7&unit=electricity_magnetism             (add &q=id1,id2 to choose questions; default is every question of the unit in revision/vote_questions.json)
      Teacher link:  vote.html?code=KEA7&unit=electricity_magnetism&front=1      (project this; it has the buttons)
      After the teacher presses FINISH (or closes/reveals the last question), students get START ANSWERING QUESTIONS, which opens index.html with the same
@@ -50,6 +50,11 @@ body.front{font-size:clamp(22px,3.6vh,46px)}
 .cnt{flex:0 0 4.5em;text-align:right}
 .mis{color:var(--a2-orange);font-size:.7em;margin:0 0 .5em 2.4em}
 .controls{position:sticky;bottom:0;background:#000;padding:.6em 0;border-top:4px double var(--a2-blue);margin-top:1em}
+.flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:9}
+.flash.go{animation:fl 1.6s ease-out}
+@keyframes fl{0%{opacity:.75}100%{opacity:0}}
+.big-n{font-size:2.4em;color:var(--a2-green);margin:.4em 0}
+.score{font-size:1.1em;margin:.5em 0}
 .links{font-size:.5em;color:var(--a2-blue);word-break:break-all;margin-top:1em}
 </style>
 </head>
@@ -85,7 +90,7 @@ function fold(){
     if(e.type==='vote_ctrl'){
       if(d.state==='reset'){s.cur=0;s.state={};s.done=false;s.epoch=e.t;for(const q of QS)s.votes[q.id]={};}
       else if(d.state==='done')s.done=true;
-      else{const i=QS.findIndex(q=>q.id===d.vq);if(i>=0&&['open','closed','revealed'].includes(d.state)){s.cur=i;s.state[d.vq]=d.state;s.done=false;}}
+      else{const i=QS.findIndex(q=>q.id===d.vq);if(i>=0&&['open','closed','revealed'].includes(d.state)){s.cur=i;s.state[d.vq]=d.state==='open'?'open':'revealed';s.done=false;}} // closing voting and revealing are one step now
     }else if(e.type==='vote'){
       const i=QS.findIndex(q=>q.id===d.vq);
       if(i>=0&&i===s.cur&&(s.state[d.vq]||'open')==='open'&&Number.isInteger(d.opt)&&d.opt>=0&&d.opt<QS[i].options.length)s.votes[d.vq][e.id]=d.opt;
@@ -154,13 +159,18 @@ function renderStudent(){
   app.append(el('div',{className:'q',textContent:q.prompt}));
   const reveal=st==='revealed'||(offline&&mine!==null);
   q.options.forEach((o,k)=>{
-    const b=el('button',{className:'opt'+(mine===k?' mine':'')+(reveal?(k===q.correct?' right':' wrong'):''),disabled:mine!==null||st!=='open'},
+    const b=el('button',{className:'opt'+(mine===k?' mine':'')+(reveal?(k===q.correct?' right':' wrong'):''),disabled:st!=='open'},
       el('span',{className:'L',textContent:LET[k]}),el('span',{textContent:o.text}));
     b.onclick=()=>castVote(q,k);app.append(b);
   });
-  if(mine!==null&&st==='open')app.append(el('div',{className:'note',textContent:offline?'VOTE SAVED ON THIS DEVICE.':'VOTE CAST. WAIT FOR THE TEACHER.'}));
-  else if(mine===null&&st==='closed')app.append(el('div',{className:'note',textContent:'VOTING IS CLOSED FOR THIS QUESTION.'}));
-  if(reveal)app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
+  if(mine!==null&&st==='open')app.append(el('div',{className:'note',textContent:offline?'VOTE SAVED ON THIS DEVICE. You can change it.':'VOTE SAVED. You can change it until your teacher closes voting.'}));
+  if(reveal){
+    const cs=Object.values(s.votes[q.id]),tot=cs.length,ok=cs.filter(o=>o===q.correct).length,pc=tot?Math.round(ok/tot*100):null;
+    if(mine===null)app.append(el('div',{className:'note',textContent:'YOU DIDN\'T VOTE ON THIS ONE.'}));
+    else app.append(el('div',{className:'note '+(mine===q.correct?'expl':'warn'),textContent:mine===q.correct?'✓ YOU GOT IT RIGHT':'✗ NOT QUITE. You said '+LET[mine]+'.'}));
+    if(!offline&&pc!==null)app.append(el('div',{className:'score',textContent:`${pc}% OF THE CLASS GOT IT RIGHT (${ok} of ${tot})`}));
+    app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
+  }
   if(offline&&CODE)app.append(el('div',{className:'note warn',textContent:API?'CAN\'T REACH THE CLASS SERVER, so your vote is saved on this device only and your teacher cannot see it. It will be sent if the connection comes back.':'NO CLASS SERVER IS SET UP, so your vote is saved on this device only.'}));
   if(finished)app.append(el('a',{className:'big go',href:startLink(),textContent:'START ANSWERING QUESTIONS'}));
   else if(!offline&&mine!==null&&st==='open'&&events.length===0)app.append(el('div',{className:'meta',textContent:''}));
@@ -173,17 +183,34 @@ function ctrl(state,vq){
   pending.push(e);
   if(API)flush().then(poll);
 }
+let seen={},actx=null;
+function chime0(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch{}} // unlock audio on the button press
+function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();[523,659,784,1047].forEach((f,k)=>{const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+k*.13;o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.3);});}catch{}}
+function celebrate(pct){
+  const col=pct>=80?'#14f53c':pct>=40?'#ff6a3c':'#ff2a2a';
+  let f=document.getElementById('flash');if(!f){f=el('div',{id:'flash',className:'flash'});document.body.append(f);}
+  f.style.background=col;f.classList.remove('go');void f.offsetWidth;f.classList.add('go');
+  if(pct>=80)chime();
+}
 function renderFront(){
   const s=fold(),n=QS.length,i=s.cur,q=QS[i],st=s.state[q.id]||'open';
   document.getElementById('title').textContent='CLASS VOTE';
   const counts=q.options.map(()=>0);
   for(const o of Object.values(s.votes[q.id]))counts[o]++;
   const total=counts.reduce((a,b)=>a+b,0),max=Math.max(1,...counts);
-  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':st==='closed'?'VOTING CLOSED':'ANSWER REVEALED'}${s.done?' · STUDENTS CAN START':''}`;
+  const pct=total?Math.round(counts[q.correct]/total*100):0;
+  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':'VOTING CLOSED'}${s.done?' · STUDENTS CAN START':''}`;
+  if(seen[q.id]==='open'&&st==='revealed')setTimeout(()=>celebrate(pct),0);
+  seen[q.id]=st;
   app.replaceChildren();
   if(!CODE)app.append(el('div',{className:'note warn',textContent:'Add &code=XXXX to this link.'}));
   if(!online)app.append(el('div',{className:'note warn',textContent:API?'CAN\'T REACH THE CLASS SERVER: students\' votes are not arriving. Controls work on this screen only.':'NO CLASS SERVER SET UP (results-config.js): votes cannot be shown.'}));
   app.append(el('div',{className:'q',textContent:q.prompt}));
+  if(st==='open'){
+    q.options.forEach((o,k)=>app.append(el('div',{className:'bar-row'},el('span',{className:'L',textContent:LET[k]}),el('span',{textContent:o.text}))));
+    app.append(el('div',{className:'big-n',textContent:`${total} HAVE ANSWERED`}));
+  }else{
+    app.append(el('div',{className:'score',textContent:`${pct}% CORRECT (${counts[q.correct]} of ${total})`,style:`color:${pct>=80?'#14f53c':pct>=40?'#ff6a3c':'#ff2a2a'}`}));
   q.options.forEach((o,k)=>{
     const rv=st==='revealed',cls='bar-row'+(rv?(k===q.correct?' right':' dim'):'');
     const row=el('div',{className:cls},el('span',{className:'L',textContent:LET[k]}),
@@ -192,12 +219,12 @@ function renderFront(){
     app.append(row);
     if(rv&&k!==q.correct&&o.misconception)app.append(el('div',{className:'mis',textContent:'Idea behind it: '+o.misconception}));
   });
-  app.append(el('div',{className:'meta',textContent:`${total} VOTE${total===1?'':'S'}`}));
+  }
   if(st==='revealed')app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
   const bar=el('div',{className:'controls'});
   const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
-  btn(st==='open'?'CLOSE VOTING':'REOPEN VOTING',()=>ctrl(st==='open'?'closed':'open',q.id),true,st==='revealed');
-  btn('REVEAL ANSWER',()=>ctrl('revealed',q.id),false,st==='revealed');
+  if(st==='open')btn('CLOSE VOTING & SHOW RESULTS',()=>{chime0();ctrl('revealed',q.id);},false);
+  else btn('REOPEN VOTING',()=>ctrl('open',q.id),true);
   if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
   btn(s.done?'STUDENTS CAN START (SENT)':'FINISH: LET STUDENTS START',()=>ctrl('done',''),i<n-1,s.done);
   btn('RESET',()=>{if(confirm('Clear all votes for this class code and start again?'))ctrl('reset','');},true);

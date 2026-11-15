@@ -832,10 +832,10 @@ function levelExplanation(index){if(levels[index].skill)return levels[index].exa
 
 // Prize wheel (Hamish, 9 Nov 2026): no betting. When the variable-ratio schedule fires the wheel spins at once and the slice it
 // lands on is applied to the bank: add or take dollars, multiply, or change by a percentage. 24 slices, each equally likely;
-// +$200 and ×10 are the rare top prizes (one slice each). Bank rounded to whole dollars, never below $0.
+// +$200 is the rare top prize (one slice; the ×10 was removed 16 Nov 2026, too strong). Bank rounded to whole dollars, never below $0.
 const rouletteSlices=[
   {label:'+$10',add:10},{label:'−$10',add:-10},{label:'×2',mul:2},{label:'+$20',add:20},{label:'−25%',pct:-25},{label:'+$50',add:50},
-  {label:'−$20',add:-20},{label:'+10%',pct:10},{label:'×10',mul:10,top:true},{label:'−$10',add:-10},{label:'+$20',add:20},{label:'×0.5',mul:.5},
+  {label:'−$20',add:-20},{label:'+10%',pct:10},{label:'+$50',add:50},{label:'−$10',add:-10},{label:'+$20',add:20},{label:'×0.5',mul:.5},
   {label:'+$10',add:10},{label:'−$50',add:-50},{label:'+$100',add:100},{label:'−10%',pct:-10},{label:'+$10',add:10},{label:'×3',mul:3},
   {label:'−$20',add:-20},{label:'+25%',pct:25},{label:'+$200',add:200,top:true},{label:'−$10',add:-10},{label:'+$20',add:20},{label:'−$20',add:-20}];
 const rouletteWheel=rouletteSlices;   // one pocket per slice (the spin and drawing code index by pocket)

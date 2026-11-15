@@ -278,7 +278,7 @@ function renderFront(){
   const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
   if(st==='open')btn('SHOW ANSWER',()=>{chime0();ctrl('revealed',q.id);},false);
   else if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
-  else btn('LEADERBOARD  ▶',()=>{const u=new URL('results/dashboard.html',location.href);u.searchParams.set('board','1');u.searchParams.set('code',CODE);if(API)u.searchParams.set('api',API);window.open(u.href,'_blank');},false,false);
+  else btn('CLASS RACE  ▶',()=>{const u=new URL('race.html',location.href);u.searchParams.set('code',CODE);if(API)u.searchParams.set('api',API);window.open(u.href,'_blank');},false,false);
   // after the last answer is shown, students get the START ANSWERING QUESTIONS button by themselves
   btn('RESET',()=>{if(confirm('Clear all votes for this class code and start again?'))ctrl('reset','');},true);
   app.append(bar);

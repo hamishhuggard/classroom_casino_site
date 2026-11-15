@@ -37,6 +37,20 @@ button.big[disabled]{opacity:.4;cursor:default}
 button.alt{background:#000;color:var(--a2-violet);border:3px solid var(--a2-violet)}
 button.go{display:block;width:100%;font-size:1.3em;padding:.9em;margin-top:1em;text-align:center;text-decoration:none}
 a.go{background:var(--a2-green);color:#000}
+/* student view: exactly the screen (100vw x 100vh), nothing scrolls */
+body.student{max-width:none;margin:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;padding:1.2vh 3vw;display:flex;flex-direction:column;font-size:min(3.4vh,5.2vw);line-height:1.15}
+body.student h1{display:none}
+body.student .meta{margin:0 0 .3em;font-size:.65em}
+body.student #app{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+body.student #app>*{flex:none}
+body.student .q{margin:.1em 0 .35em;font-size:1em}
+body.student.rv .fig{display:none}
+body.student .fig{flex:1 1 0;min-height:7vh;max-height:30vh;margin:0 0 .35em}
+body.student .fig svg{width:100%;height:100%;max-width:none}
+body.student .opt{margin:.18em 0;padding:.35em .6em;border-width:2px}
+body.student .note{margin:.25em 0;padding:.3em .5em;font-size:.75em;border-width:2px}
+body.student .score{margin:.15em 0;font-size:.8em}
+body.student button.go{margin:.4em 0 0;padding:.6em}
 /* front of the room */
 body.front{max-width:none;margin:0;width:100vw;height:100vh;overflow:hidden;padding:1.6vh 2vw;display:flex;flex-direction:column;font-size:min(3.3vh,1.9vw);line-height:1.2}
 body.front h1{font-size:1.2em;margin:0 0 .15em}
@@ -85,7 +99,7 @@ const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const CODE=tidy(P.get('code')),FRONT=P.get('front')==='1',UNIT=String(P.get('unit')||'electricity_magnetism').replace(/[^a-z0-9_-]/gi,'');
 const API=String(P.get('api')||P.get('results-api')||window.CASINO_RESULTS_API||'').trim().replace(/\/+$/,'');
 const app=document.getElementById('app'),meta=document.getElementById('meta');
-if(FRONT)document.body.classList.add('front');
+document.body.classList.add(FRONT?'front':'student');
 const el=(tag,props,...kids)=>{const e=document.createElement(tag);Object.assign(e,props||{});for(const k of kids.flat())e.append(k);return e;};
 const LET='ABCDEF';
 let QS=[],events=[],cursor=0,online=!!API,lastOk=0,session=Math.random().toString(36).slice(2,10).padEnd(8,'0'),seq=0,pending=[],msg='';
@@ -193,6 +207,7 @@ function renderStudent(){
   app.append(el('div',{className:'q',textContent:q.prompt}));
   if(q.diagram)app.append(el('div',{className:'fig',innerHTML:q.diagram}));
   const reveal=st==='revealed'||(offline&&mine!==null);
+  document.body.classList.toggle('rv',reveal);
   q.options.forEach((o,k)=>{
     const b=el('button',{className:'opt'+(mine===k?' mine':'')+(reveal?(k===q.correct?' right':' wrong'):''),disabled:st!=='open'},
       el('span',{className:'L',textContent:LET[k]}),el('span',{textContent:o.text}));
@@ -221,6 +236,9 @@ function ctrl(state,vq){
 let seen={},actx=null;
 function chime0(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch{}} // unlock audio on the button press
 function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();[523,659,784,1047].forEach((f,k)=>{const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+k*.13;o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.3);});}catch{}}
+// bars grow out from the left over about GROW ms, with rising Apple II ticks; the flash and chime come when they land
+const GROW=1500;let animEnd=0;
+function growSound(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();const n=22;for(let k=0;k<n;k++){const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+k*(GROW/1000/n);o.type='square';o.frequency.value=220+k*28;g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.06);}}catch{}}
 function celebrate(pct){
   const col=pct>=80?'#14f53c':pct>=40?'#ff6a3c':'#ff2a2a';
   let f=document.getElementById('flash');if(!f){f=el('div',{id:'flash',className:'flash'});document.body.append(f);}
@@ -228,14 +246,16 @@ function celebrate(pct){
   if(pct>=80)chime();
 }
 function renderFront(){
+  if(Date.now()<animEnd){setTimeout(render,animEnd-Date.now()+30);return;} // don't redraw the bars mid-growth
   const s=fold(),n=QS.length,i=s.cur,q=QS[i],st=s.state[q.id]||'open';
   document.getElementById('title').textContent='CLASS VOTE';
   const counts=q.options.map(()=>0);
   for(const o of Object.values(s.votes[q.id]))counts[o]++;
   const total=counts.reduce((a,b)=>a+b,0),max=Math.max(1,...counts);
   const pct=total?Math.round(counts[q.correct]/total*100):0;
-  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':'VOTING CLOSED'}${s.done?' · STUDENTS CAN START':''}`;
-  if(seen[q.id]==='open'&&st==='revealed')setTimeout(()=>celebrate(pct),0);
+  meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':'ANSWER SHOWN'}${st!=='open'&&i===n-1?' · STUDENTS CAN START':''}`;
+  const grow=seen[q.id]==='open'&&st==='revealed'; // the answer has just been shown: animate
+  if(grow){animEnd=Date.now()+GROW+80;growSound();setTimeout(()=>celebrate(pct),GROW);}
   seen[q.id]=st;
   app.replaceChildren();
   if(!CODE)app.append(el('div',{className:'note warn',textContent:'Add &code=XXXX to this link.'}));
@@ -252,17 +272,18 @@ function renderFront(){
   q.options.forEach((o,k)=>{
     const rv=st==='revealed',cls='bar-row'+(rv?(k===q.correct?' right':' dim'):'');
     const row=el('div',{className:cls},el('span',{className:'L',textContent:LET[k]}),
-      el('div',{className:'lane'},el('div',{className:'fill',style:`width:${counts[k]/max*100}%`}),el('span',{className:'t',textContent:o.text})),
+      el('div',{className:'lane'},el('div',{className:'fill',style:grow?'width:0':`width:${counts[k]/max*100}%`}),el('span',{className:'t',textContent:o.text})),
       el('span',{className:'cnt',textContent:`${counts[k]}${total?' · '+Math.round(counts[k]/total*100)+'%':''}`}));
     right.append(row);
   });
   }
+  if(grow)requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('.fill').forEach((f,k)=>{f.style.transition=`width ${GROW*(0.25+0.75*counts[k]/max)}ms steps(18,end)`;f.style.width=counts[k]/max*100+'%';});}));
   if(st==='revealed')app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
   const bar=el('div',{className:'controls'});
   const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
-  if(st==='open')btn('CLOSE VOTING',()=>{chime0();ctrl('revealed',q.id);},false);
-  if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
-  btn(s.done?'FINISH (SENT)':'FINISH',()=>ctrl('done',''),i<n-1,s.done);
+  if(st==='open')btn('SHOW ANSWER',()=>{chime0();ctrl('revealed',q.id);},false);
+  else if(i<n-1)btn('NEXT QUESTION',()=>ctrl('open',QS[i+1].id),false,false);
+  // after the last answer is shown, students get the START ANSWERING QUESTIONS button by themselves
   btn('RESET',()=>{if(confirm('Clear all votes for this class code and start again?'))ctrl('reset','');},true);
   app.append(bar);
   const sl=new URL(location.href);sl.searchParams.delete('front');

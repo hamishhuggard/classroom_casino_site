@@ -1,57 +1,109 @@
 {
-  "_note": "Opening vote questions for vote.html. FLAGGED FOR HAMISH TO CHECK: every 'correct' index and explanation was written by Claude on 16 Nov 2026 and has not been checked by a teacher. options[].misconception names the wrong idea a distractor is built to catch (shown to the teacher on the front view after the reveal, never to students before). correct is a 0-based index into options; the options keep a fixed order so votes can be counted by index.",
+  "_note": "Opening vote questions for vote.html. FLAGGED FOR HAMISH TO CHECK: every 'correct' index and explanation was written by Claude on 16 Nov 2026 and has not been checked by a teacher. options[].misconception names the wrong idea a distractor is built to catch (shown to the teacher on the front view after the reveal, never to students before). correct is a 0-based index into options; the options keep a fixed order so votes can be counted by index. 17 Nov 2026: rewritten short, with an inline SVG `diagram` per question and options of a few words.",
   "questions": [
     {
       "id": "em-vote-bulbs",
       "unit": "electricity_magnetism",
-      "prompt": "Identical bulbs and identical batteries are used in three circuits. Circuit X: two bulbs in series with a battery. Circuit Y: two bulbs in parallel with a battery. Circuit Z: one bulb with a battery. Which bulbs are brightest?",
+      "prompt": "Identical bulbs and batteries. Which bulbs are brightest?",
+      "diagram": "<svg viewBox=\"0 0 480 125\" xmlns=\"http://www.w3.org/2000/svg\"><g transform=\"translate(0 0)\"><path d=\"M10 20L130 20\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 90L130 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 20L10 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M130 20L130 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><circle cx=\"45\" cy=\"20\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M35 10L55 30\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M35 30L55 10\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><circle cx=\"95\" cy=\"20\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M85 10L105 30\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M85 30L105 10\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M10 41V50M10 60V69\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M-4 50L24 50\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><path d=\"M3 60L17 60\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><text x=\"70\" y=\"118\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">X</text></g><g transform=\"translate(165 0)\"><path d=\"M10 20L130 20\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 90L130 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 20L10 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M130 20L130 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M70 20L70 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><circle cx=\"70\" cy=\"55\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M60 45L80 65\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M60 65L80 45\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><circle cx=\"130\" cy=\"55\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M120 45L140 65\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M120 65L140 45\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M10 41V50M10 60V69\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M-4 50L24 50\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><path d=\"M3 60L17 60\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><text x=\"70\" y=\"118\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">Y</text></g><g transform=\"translate(335 0)\"><path d=\"M10 20L130 20\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 90L130 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 20L10 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M130 20L130 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><circle cx=\"70\" cy=\"20\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M60 10L80 30\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M60 30L80 10\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M10 41V50M10 60V69\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M-4 50L24 50\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><path d=\"M3 60L17 60\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><text x=\"70\" y=\"118\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">Z</text></g></svg>",
       "options": [
-        { "text": "Both bulbs in X, because the current passes through two bulbs", "misconception": "More bulbs in the circuit means more light" },
-        { "text": "Each bulb in Y only, because parallel circuits are always brighter", "misconception": "Parallel is brighter than a single bulb" },
-        { "text": "The bulb in Z and each bulb in Y, all equally bright", "misconception": null },
-        { "text": "The bulb in Z only, because it is the only bulb", "misconception": "Branches share the battery's energy, so each parallel bulb is dimmer" }
+        {
+          "text": "X bulbs",
+          "misconception": "More bulbs in the circuit means more light"
+        },
+        {
+          "text": "Y bulbs only",
+          "misconception": "Parallel is brighter than a single bulb"
+        },
+        {
+          "text": "Y and Z bulbs",
+          "misconception": null
+        },
+        {
+          "text": "Z bulb only",
+          "misconception": "Branches share the battery's energy, so each parallel bulb is dimmer"
+        }
       ],
       "correct": 2,
-      "explanation": "Each bulb in Y is connected straight across the battery, so it gets the same voltage and the same current as the single bulb in Z. In X the two bulbs share the battery's voltage, so each is dimmer."
+      "explanation": "Each bulb in Y is across the battery, so it gets the same voltage and current as Z. In X the bulbs share the voltage, so each is dimmer."
     },
     {
       "id": "em-vote-series-current",
       "unit": "electricity_magnetism",
-      "prompt": "A battery lights one bulb. A second identical bulb is added in series. What happens to the current in the circuit?",
+      "prompt": "A second bulb is added in series. What happens to the current?",
+      "diagram": "<svg viewBox=\"0 0 340 125\" xmlns=\"http://www.w3.org/2000/svg\"><g transform=\"translate(0 0)\"><path d=\"M10 20L110 20\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 90L110 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 20L10 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M110 20L110 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><circle cx=\"60\" cy=\"20\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M50 10L70 30\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M50 30L70 10\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M10 41V50M10 60V69\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M-4 50L24 50\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><path d=\"M3 60L17 60\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><text x=\"60\" y=\"118\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">ONE BULB</text></g><g transform=\"translate(150 0)\"><path d=\"M10 20L180 20\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 90L180 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M10 20L10 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M180 20L180 90\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><circle cx=\"60\" cy=\"20\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M50 10L70 30\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M50 30L70 10\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><circle cx=\"130\" cy=\"20\" r=\"15\" fill=\"#000\" stroke=\"#ff6a3c\" stroke-width=\"3\"/><path d=\"M120 10L140 30\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M120 30L140 10\" stroke=\"#ff6a3c\" stroke-width=\"2\" fill=\"none\"/><path d=\"M10 41V50M10 60V69\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M-4 50L24 50\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><path d=\"M3 60L17 60\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><text x=\"95\" y=\"118\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">ADD A SECOND</text></g></svg>",
       "options": [
-        { "text": "It stays the same, because the battery has not changed", "misconception": "The battery fixes the current" },
-        { "text": "It gets smaller, because the total resistance is bigger", "misconception": null },
-        { "text": "It gets bigger, because there are more bulbs to push it through", "misconception": "More components means more current" },
-        { "text": "It is used up by the first bulb, so the second bulb gets less", "misconception": "Current is used up (it is energy that is transferred, current is the same all the way round a series loop)" }
+        {
+          "text": "Stays the same",
+          "misconception": "The battery fixes the current"
+        },
+        {
+          "text": "Gets smaller",
+          "misconception": null
+        },
+        {
+          "text": "Gets bigger",
+          "misconception": "More components means more current"
+        },
+        {
+          "text": "Used up by bulb 1",
+          "misconception": "Current is used up (it is energy that is transferred; current is the same all the way round a series loop)"
+        }
       ],
       "correct": 1,
-      "explanation": "Two bulbs in series have twice the resistance of one, so with the same battery voltage the current is halved. The current is the same everywhere in the loop, so both bulbs are equally (and dimly) lit."
+      "explanation": "Two bulbs in series have double the resistance, so the current halves. It is the same everywhere in the loop."
     },
     {
       "id": "em-vote-magnetic",
       "unit": "electricity_magnetism",
-      "prompt": "Which of these objects would a magnet pick up?",
+      "prompt": "Which one does the magnet pick up?",
+      "diagram": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"10\" y=\"10\" width=\"110\" height=\"34\" fill=\"#ff6a3c\"/><rect x=\"120\" y=\"10\" width=\"110\" height=\"34\" fill=\"#14cffd\"/><text x=\"65\" y=\"34\" fill=\"#000\" font-size=\"22\" text-anchor=\"middle\" font-family=\"inherit\">N</text><text x=\"175\" y=\"34\" fill=\"#000\" font-size=\"22\" text-anchor=\"middle\" font-family=\"inherit\">S</text><circle cx=\"40\" cy=\"105\" r=\"14\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M54 105L90 105\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M80 105L80 120\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M90 105L90 120\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><rect x=\"125\" y=\"88\" width=\"30\" height=\"40\" rx=\"4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M125 96L155 96\" stroke=\"#fff\" stroke-width=\"2\" fill=\"none\"/><path d=\"M190 120q8-24 16 0t16 0t16 0\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M270 95L270 130\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\"/><path d=\"M262 95L278 95\" stroke=\"#fff\" stroke-width=\"4\" fill=\"none\"/><text x=\"65\" y=\"146\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">A</text><text x=\"140\" y=\"146\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">B</text><text x=\"206\" y=\"146\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">C</text><text x=\"270\" y=\"146\" fill=\"#fff\" font-size=\"16\" text-anchor=\"middle\" font-family=\"inherit\">D</text></svg>",
       "options": [
-        { "text": "A brass key", "misconception": "All metals are magnetic (brass is copper and zinc)" },
-        { "text": "An aluminium can", "misconception": "All shiny metals are magnetic" },
-        { "text": "A copper wire", "misconception": "Metals that conduct well are magnetic" },
-        { "text": "An iron nail", "misconception": null }
+        {
+          "text": "A: Brass key",
+          "misconception": "All metals are magnetic (brass is copper and zinc)"
+        },
+        {
+          "text": "B: Aluminium can",
+          "misconception": "All shiny metals are magnetic"
+        },
+        {
+          "text": "C: Copper wire",
+          "misconception": "Metals that conduct well are magnetic"
+        },
+        {
+          "text": "D: Iron nail",
+          "misconception": null
+        }
       ],
       "correct": 3,
-      "explanation": "Only a few metals are magnetic: iron, steel, nickel and cobalt. Brass, aluminium and copper are metals but are not attracted to a magnet."
+      "explanation": "Only iron, steel, nickel and cobalt are magnetic. Brass, aluminium and copper are metals but are not attracted."
     },
     {
       "id": "em-vote-electromagnet",
       "unit": "electricity_magnetism",
-      "prompt": "A student wraps wire around an iron nail and connects it to a battery to make an electromagnet. Which ONE change makes the electromagnet stronger?",
+      "prompt": "Which change makes the electromagnet stronger?",
+      "diagram": "<svg viewBox=\"0 0 320 140\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"100\" y=\"56\" width=\"170\" height=\"14\" fill=\"#888\"/><path d=\"M112 40Q121 63 130 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M130 40Q139 63 148 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M148 40Q157 63 166 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M166 40Q175 63 184 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M184 40Q193 63 202 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M202 40Q211 63 220 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M220 40Q229 63 238 86\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M112 40L40 40\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M40 40L40 62\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M40 92L40 120\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M40 120L230 120\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M230 86L230 120\" stroke=\"#ff6a3c\" stroke-width=\"3\" fill=\"none\"/><path d=\"M40 63V72M40 82V91\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M26 72L54 72\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><path d=\"M33 82L47 82\" stroke=\"#14cffd\" stroke-width=\"3\" fill=\"none\"/><text x=\"165\" y=\"24\" fill=\"#14cffd\" font-size=\"14\" text-anchor=\"middle\" font-family=\"inherit\">COIL ON AN IRON NAIL</text><text x=\"40\" y=\"136\" fill=\"#14cffd\" font-size=\"13\" text-anchor=\"middle\" font-family=\"inherit\">BATTERY</text></svg>",
       "options": [
-        { "text": "Reverse the connections to the battery", "misconception": "Reversing the current makes it stronger (it only swaps the poles)" },
-        { "text": "Replace the iron nail with a wooden rod", "misconception": "Any rod will do as a core" },
-        { "text": "Wind more turns of wire around the nail", "misconception": null },
-        { "text": "Use a longer piece of wire to connect the battery to the coil", "misconception": "More wire anywhere means a stronger magnet" }
+        {
+          "text": "Reverse the battery",
+          "misconception": "Reversing the current makes it stronger (it only swaps the poles)"
+        },
+        {
+          "text": "Wooden core",
+          "misconception": "Any rod will do as a core"
+        },
+        {
+          "text": "More turns of wire",
+          "misconception": null
+        },
+        {
+          "text": "Longer lead wires",
+          "misconception": "More wire anywhere means a stronger magnet"
+        }
       ],
       "correct": 2,
-      "explanation": "More turns of wire in the coil makes a stronger magnetic field. So does more current (a bigger voltage) or an iron core. Reversing the battery only swaps the north and south poles, and a wooden core removes the iron, so the magnet gets weaker."
+      "explanation": "More turns in the coil gives a stronger field (so do more current or an iron core). Reversing only swaps the poles."
     }
   ]
 }

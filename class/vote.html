@@ -51,20 +51,15 @@ body.student .opt{margin:.18em 0;padding:.35em .6em;border-width:2px}
 body.student .note{margin:.25em 0;padding:.3em .5em;font-size:.75em;border-width:2px}
 body.student .score{margin:.15em 0;font-size:.8em}
 body.student button.go{margin:.4em 0 0;padding:.6em}
-/* front of the room */
-body.front{max-width:none;margin:0;width:100vw;height:100vh;overflow:hidden;padding:1.6vh 2vw;display:flex;flex-direction:column;font-size:min(3.3vh,1.9vw);line-height:1.2}
-body.front h1{font-size:1.2em;margin:0 0 .15em}
-body.front .meta{margin:0 0 .4em;font-size:.65em}
-body.front #app{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-body.front .q{margin:.2em 0 .5em;font-size:1.05em}
+/* front of the room: the student layout plus a counter and the teacher buttons */
+body.front .big-n{font-size:.9em;margin:.1em 0 0;text-align:center}
+body.front .fig{max-height:24vh}
+body.front .opt{padding:.2em .6em;margin:.12em 0}
 body.front .bar-row{margin:.25em 0}
 body.front .lane{height:1.9em}
-body.front .big-n{font-size:1.8em;margin:.3em 0 0}
-body.front .score{margin:.2em 0;font-size:1em}
-body.front .note{margin:.4em 0;padding:.4em .6em;font-size:.8em}
 body.front .mis{margin:0 0 .3em 2.4em}
-body.front .controls{position:static;margin-top:auto;flex:none;padding:.5em 0 0}
-body.front button.big{font-size:.5em;padding:.45em .8em;border-width:2px}
+body.front .controls{position:static;margin-top:auto;flex:none;padding:.3em 0 0;margin-bottom:.4vh}
+body.front button.big{font-size:1em;padding:.55em 1.8em;border-width:2px}
 body.front .links{display:none}
 .bar-row{display:flex;align-items:center;gap:.6em;margin:.35em 0}
 .bar-row .L{flex:0 0 1.5em;text-align:center;color:var(--a2-violet)}
@@ -78,9 +73,8 @@ body.front .links{display:none}
 .cnt{flex:0 0 4.5em;text-align:right}
 .mis{color:var(--a2-orange);font-size:.7em;margin:0 0 .5em 2.4em}
 .controls{position:sticky;bottom:0;background:#000;padding:.6em 0;border-top:4px double var(--a2-blue);margin-top:1em}
-.flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:9}
-.flash.go{animation:fl 1.6s ease-out}
-@keyframes fl{0%{opacity:.75}100%{opacity:0}}
+.bar-row.hit{animation:fl 1.6s ease-out}
+@keyframes fl{0%,40%{background:var(--hit)}100%{background:transparent}}
 .fig{margin:.3em 0 .6em}.fig svg{display:block;width:100%;max-width:560px;height:auto}
 body.front .cols{display:flex;gap:2.5vw;align-items:flex-start;flex:1;min-height:0}body.front .cols .fig{flex:0 0 44%;margin:0}body.front .cols .fig svg{width:100%;max-width:none;height:auto;max-height:55vh}body.front .right{flex:1;min-width:0}
 .big-n{font-size:2.4em;color:var(--a2-green);margin:.4em 0}
@@ -89,7 +83,7 @@ body.front .cols{display:flex;gap:2.5vw;align-items:flex-start;flex:1;min-height
 </style>
 </head>
 <body>
-<h1 id="title">CLASS VOTE</h1>
+
 <div id="meta" class="meta"></div>
 <div id="app"></div>
 <script>
@@ -99,7 +93,7 @@ const tidy=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const CODE=tidy(P.get('code')),FRONT=P.get('front')==='1',UNIT=String(P.get('unit')||'electricity_magnetism').replace(/[^a-z0-9_-]/gi,'');
 const API=String(P.get('api')||P.get('results-api')||window.CASINO_RESULTS_API||'').trim().replace(/\/+$/,'');
 const app=document.getElementById('app'),meta=document.getElementById('meta');
-document.body.classList.add(FRONT?'front':'student');
+document.body.classList.add('student');if(FRONT)document.body.classList.add('front');
 const el=(tag,props,...kids)=>{const e=document.createElement(tag);Object.assign(e,props||{});for(const k of kids.flat())e.append(k);return e;};
 const LET='ABCDEF';
 let QS=[],events=[],cursor=0,online=!!API,lastOk=0,session=Math.random().toString(36).slice(2,10).padEnd(8,'0'),seq=0,pending=[],msg='';
@@ -200,7 +194,6 @@ function renderStudent(){
   const q=QS[i],st=offline?(myVote(q.id,0)!==null?'revealed':'open'):(s.state[q.id]||'open');
   const mine=myVote(q.id,s.epoch);
   const finished=offline?QS.every(x=>myVote(x.id,0)!==null):(s.done||(i===n-1&&st!=='open'));
-  document.getElementById('title').textContent='VOTE';
   meta.textContent=`QUESTION ${i+1} OF ${n}`+(CODE?` · CLASS ${CODE}`:'');
   app.replaceChildren();
   if(!CODE)app.append(el('div',{className:'note warn',textContent:'This link has no class code. Ask your teacher for the full link.'}));
@@ -237,21 +230,20 @@ let seen={},actx=null;
 function chime0(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();}catch{}} // unlock audio on the button press
 function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();[523,659,784,1047].forEach((f,k)=>{const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+k*.13;o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.3);});}catch{}}
 // bars grow out from the left over about GROW ms, with rising Apple II ticks; the flash and chime come when they land
-const GROW=1500;let animEnd=0;
+const GROW=700;let animEnd=0;
 function growSound(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume();const n=22;for(let k=0;k<n;k++){const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+k*(GROW/1000/n);o.type='square';o.frequency.value=220+k*28;g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.06);}}catch{}}
 function celebrate(pct){
   const col=pct>=80?'#14f53c':pct>=40?'#ff6a3c':'#ff2a2a';
-  let f=document.getElementById('flash');if(!f){f=el('div',{id:'flash',className:'flash'});document.body.append(f);}
-  f.style.background=col;f.classList.remove('go');void f.offsetWidth;f.classList.add('go');
+  const r=document.querySelector('.bar-row.right');
+  if(r){r.style.setProperty('--hit',col);r.classList.remove('hit');void r.offsetWidth;r.classList.add('hit');}
   if(pct>=80)chime();
 }
 function renderFront(){
   if(Date.now()<animEnd){setTimeout(render,animEnd-Date.now()+30);return;} // don't redraw the bars mid-growth
   const s=fold(),n=QS.length,i=s.cur,q=QS[i],st=s.state[q.id]||'open';
-  document.getElementById('title').textContent='CLASS VOTE';
   const counts=q.options.map(()=>0);
   for(const o of Object.values(s.votes[q.id]))counts[o]++;
-  const total=counts.reduce((a,b)=>a+b,0),max=Math.max(1,...counts);
+  const total=counts.reduce((a,b)=>a+b,0),max=Math.max(1,total);
   const pct=total?Math.round(counts[q.correct]/total*100):0;
   meta.textContent=`QUESTION ${i+1} OF ${n} · CLASS ${CODE||'(no code)'} · ${st==='open'?'VOTING OPEN':'ANSWER SHOWN'}${st!=='open'&&i===n-1?' · STUDENTS CAN START':''}`;
   const grow=seen[q.id]==='open'&&st==='revealed'; // the answer has just been shown: animate
@@ -261,11 +253,11 @@ function renderFront(){
   if(!CODE)app.append(el('div',{className:'note warn',textContent:'Add &code=XXXX to this link.'}));
   if(!online)app.append(el('div',{className:'note warn',textContent:API?'CAN\'T REACH THE CLASS SERVER: students\' votes are not arriving. Controls work on this screen only.':'NO CLASS SERVER SET UP (results-config.js): votes cannot be shown.'}));
   app.append(el('div',{className:'q',textContent:q.prompt}));
-  const right=el('div',{className:'right'}),cols=el('div',{className:'cols'});
-  if(q.diagram)cols.append(el('div',{className:'fig',innerHTML:q.diagram}));
-  cols.append(right);app.append(cols);
+  const right=app;
+  document.body.classList.toggle('rv',st!=='open');
+  if(q.diagram)app.append(el('div',{className:'fig',innerHTML:q.diagram}));
   if(st==='open'){
-    q.options.forEach((o,k)=>right.append(el('div',{className:'bar-row'},el('span',{className:'L',textContent:LET[k]}),el('span',{textContent:o.text}))));
+    q.options.forEach((o,k)=>right.append(el('div',{className:'opt'},el('span',{className:'L',textContent:LET[k]}),el('span',{textContent:o.text}))));
     right.append(el('div',{className:'big-n',textContent:`${total} HAVE ANSWERED`}));
   }else{
     right.append(el('div',{className:'score',textContent:`${pct}% CORRECT (${counts[q.correct]} of ${total})`,style:`color:${pct>=80?'#14f53c':pct>=40?'#ff6a3c':'#ff2a2a'}`}));
@@ -277,7 +269,7 @@ function renderFront(){
     right.append(row);
   });
   }
-  if(grow)requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('.fill').forEach((f,k)=>{f.style.transition=`width ${GROW*(0.25+0.75*counts[k]/max)}ms steps(18,end)`;f.style.width=counts[k]/max*100+'%';});}));
+  if(grow)requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('.fill').forEach((f,k)=>{f.style.transition=`width ${GROW*(0.3+0.7*counts[k]/max)}ms steps(12,end)`;f.style.width=counts[k]/max*100+'%';});}));
   if(st==='revealed')app.append(el('div',{className:'note expl',textContent:`ANSWER: ${LET[q.correct]}. ${q.explanation}`}));
   const bar=el('div',{className:'controls'});
   const btn=(text,fn,alt,dis)=>{const b=el('button',{className:'big'+(alt?' alt':''),textContent:text,disabled:!!dis});b.onclick=fn;bar.append(b);};
